@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -42,10 +42,16 @@
 #   include "../renderer/tr_local.h"
 #endif
 
+/**
+ * @brief GL_CheckForExtension
+ * @param[in] ext
+ * @return
+ */
 qboolean GL_CheckForExtension(const char *ext)
 {
 #ifdef FEATURE_RENDERER2
 	int i = 0, exts = 0;
+	
 	glGetIntegerv(GL_NUM_EXTENSIONS, &exts);
 	for (i = 0; i < exts; i++)
 	{
@@ -57,6 +63,7 @@ qboolean GL_CheckForExtension(const char *ext)
 	return qfalse;
 #else
 	const char *ptr = Q_stristr(glConfig.extensions_string, ext);
+	
 	if (ptr == NULL)
 	{
 		return qfalse;
@@ -72,33 +79,51 @@ qboolean GL_CheckForExtension(const char *ext)
 	"machine since it is missing one or more required OpenGL "                             \
 	"extensions. Please update your video card drivers and try again.\n"
 
+/**
+ * @brief GLimp_InitOpenGLContext
+ * @return
+ */
 static qboolean GLimp_InitOpenGLContext()
 {
-
-#ifdef FEATURE_RENDERER2
-	int GLmajor, GLminor;
-#endif
-
+#ifndef FEATURE_RENDERER2 // vanilla or GLES
 	// get vendor
-	Q_strncpyz(glConfig.vendor_string, (char *) qglGetString(GL_VENDOR), sizeof(glConfig.vendor_string));
+	Q_strncpyz(glConfig.vendor_string, (const char *) qglGetString(GL_VENDOR), sizeof(glConfig.vendor_string));
 
 	// get renderer
-	Q_strncpyz(glConfig.renderer_string, (char *) qglGetString(GL_RENDERER), sizeof(glConfig.renderer_string));
+	Q_strncpyz(glConfig.renderer_string, (const char *) qglGetString(GL_RENDERER), sizeof(glConfig.renderer_string));
 	if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
 	{
 		glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;
 	}
 
 	// get GL version
-	Q_strncpyz(glConfig.version_string, (char *) qglGetString(GL_VERSION), sizeof(glConfig.version_string));
+	Q_strncpyz(glConfig.version_string, (const char *) qglGetString(GL_VERSION), sizeof(glConfig.version_string));
 
 	Com_Printf("GL_VENDOR: %s\n", glConfig.vendor_string);
 	Com_Printf("GL_RENDERER: %s\n", glConfig.renderer_string);
 	Com_Printf("GL_VERSION: %s\n", glConfig.version_string);
 
-#ifndef FEATURE_RENDERER2
 	Com_Printf("Using vanilla renderer\n");
-#else
+#else // FEATURE_RENDERER2
+	int GLmajor, GLminor;
+
+	// get vendor
+	Q_strncpyz(glConfig.vendor_string, (const char *) glGetString(GL_VENDOR), sizeof(glConfig.vendor_string));
+
+	// get renderer
+	Q_strncpyz(glConfig.renderer_string, (const char *) glGetString(GL_RENDERER), sizeof(glConfig.renderer_string));
+	if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
+	{
+		glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;
+	}
+
+	// get GL version
+	Q_strncpyz(glConfig.version_string, (const char *) glGetString(GL_VERSION), sizeof(glConfig.version_string));
+
+	Com_Printf("GL_VENDOR: %s\n", glConfig.vendor_string);
+	Com_Printf("GL_RENDERER: %s\n", glConfig.renderer_string);
+	Com_Printf("GL_VERSION: %s\n", glConfig.version_string);
+
 	// get shading language version
 	Q_strncpyz(glConfig2.shadingLanguageVersion, (char *)glGetString(GL_SHADING_LANGUAGE_VERSION), sizeof(glConfig2.shadingLanguageVersion));
 	sscanf(glConfig2.shadingLanguageVersion, "%d.%d", &glConfig2.glslMajorVersion, &glConfig2.glslMinorVersion);
@@ -129,11 +154,29 @@ static qboolean GLimp_InitOpenGLContext()
 
 #ifdef FEATURE_RENDERER2
 
+/**
+ * @brief Glimp_DebugCallback
+ * @param source    - unused
+ * @param type      - unused
+ * @param id        - unused
+ * @param severity  - unused
+ * @param length    - unused
+ * @param[in] message
+ * @param userParam - unused
+ */
 void GLAPIENTRY Glimp_DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const GLvoid *userParam)
 {
 	Ren_Warning("Driver message: %s\n", message);
 }
 
+/**
+ * @brief GLimp_CheckForVersionExtension
+ * @param[in] ext
+ * @param[in] coresince
+ * @param[in] required
+ * @param[in] var
+ * @return
+ */
 static qboolean GLimp_CheckForVersionExtension(const char *ext, int coresince, qboolean required, cvar_t *var)
 {
 	qboolean result = qfalse;
@@ -174,6 +217,9 @@ static qboolean GLimp_CheckForVersionExtension(const char *ext, int coresince, q
 	return result;
 }
 
+/**
+ * @brief GLimp_InitExtensionsR2
+ */
 static void GLimp_InitExtensionsR2(void)
 {
 	Com_Printf("Initializing OpenGL extensions\n");
@@ -193,7 +239,7 @@ static void GLimp_InitExtensionsR2(void)
 	// GL_ARB_occlusion_query
 	glConfig2.occlusionQueryAvailable = qfalse;
 	glConfig2.occlusionQueryBits      = 0;
-	if (GLimp_CheckForVersionExtension("GL_ARB_occlusion_query", 150, qfalse, r_ext_occlusion_query))
+	if (GLimp_CheckForVersionExtension("GL_ARB_occlusion_query", 150, qfalse, r_extOcclusionQuery))
 	{
 		glConfig2.occlusionQueryAvailable = qtrue;
 		glGetQueryivARB(GL_SAMPLES_PASSED, GL_QUERY_COUNTER_BITS, &glConfig2.occlusionQueryBits);
@@ -229,45 +275,45 @@ static void GLimp_InitExtensionsR2(void)
 	GL_CheckErrors();
 
 	glConfig2.textureNPOTAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_ARB_texture_non_power_of_two", 300, qfalse, r_ext_texture_non_power_of_two))
+	if (GLimp_CheckForVersionExtension("GL_ARB_texture_non_power_of_two", 300, qfalse, r_extTextureNonPowerOfTwo))
 	{
 		glConfig2.textureNPOTAvailable = qtrue;
 	}
 
 	glConfig2.drawBuffersAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_ARB_draw_buffers", /* -1 */ 300, qfalse, r_ext_draw_buffers))
+	if (GLimp_CheckForVersionExtension("GL_ARB_draw_buffers", /* -1 */ 300, qfalse, r_extDrawBuffers))
 	{
 		glGetIntegerv(GL_MAX_DRAW_BUFFERS_ARB, &glConfig2.maxDrawBuffers);
 		glConfig2.drawBuffersAvailable = qtrue;
 	}
 
 	glConfig2.textureHalfFloatAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_ARB_half_float_pixel", 300, qfalse, r_ext_half_float_pixel))
+	if (GLimp_CheckForVersionExtension("GL_ARB_half_float_pixel", 300, qfalse, r_extHalfFloatPixel))
 	{
 		glConfig2.textureHalfFloatAvailable = qtrue;
 	}
 
 	glConfig2.textureFloatAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_ARB_texture_float", 300, qfalse, r_ext_texture_float))
+	if (GLimp_CheckForVersionExtension("GL_ARB_texture_float", 300, qfalse, r_extTextureFloat))
 	{
 		glConfig2.textureFloatAvailable = qtrue;
 	}
 
 	glConfig2.ARBTextureCompressionAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_ARB_texture_compression", 300, qfalse, r_ext_compressed_textures))
+	if (GLimp_CheckForVersionExtension("GL_ARB_texture_compression", 300, qfalse, r_extCompressedTextures))
 	{
 		glConfig2.ARBTextureCompressionAvailable = qtrue;
 		glConfig.textureCompression              = TC_NONE;
 	}
 
 	glConfig2.vertexArrayObjectAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_ARB_vertex_array_object", 300, qfalse, r_ext_vertex_array_object))
+	if (GLimp_CheckForVersionExtension("GL_ARB_vertex_array_object", 300, qfalse, r_extVertexArrayObject))
 	{
 		glConfig2.vertexArrayObjectAvailable = qtrue;
 	}
 
 	// GL_EXT_texture_compression_s3tc
-	if (GLimp_CheckForVersionExtension("GL_EXT_texture_compression_s3tc", -1, qfalse, r_ext_compressed_textures))
+	if (GLimp_CheckForVersionExtension("GL_EXT_texture_compression_s3tc", -1, qfalse, r_extCompressedTextures))
 	{
 		glConfig.textureCompression = TC_S3TC_ARB;
 	}
@@ -279,24 +325,24 @@ static void GLimp_InitExtensionsR2(void)
 	}
 
 	glConfig2.stencilWrapAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_EXT_stencil_wrap", 210, qfalse, r_ext_stencil_wrap))
+	if (GLimp_CheckForVersionExtension("GL_EXT_stencil_wrap", 210, qfalse, r_extStencilWrap))
 	{
 		glConfig2.stencilWrapAvailable = qtrue;
 	}
 
 	glConfig2.textureAnisotropyAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_EXT_texture_filter_anisotropic", -1, qfalse, r_ext_texture_filter_anisotropic))
+	if (GLimp_CheckForVersionExtension("GL_EXT_texture_filter_anisotropic", -1, qfalse, r_extTextureFilterAnisotropic))
 	{
 		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig2.maxTextureAnisotropy);
 		glConfig2.textureAnisotropyAvailable = qtrue;
 	}
 	GL_CheckErrors();
 
-	GLimp_CheckForVersionExtension("GL_EXT_stencil_two_side", 210, qfalse, r_ext_stencil_two_side);
-	GLimp_CheckForVersionExtension("GL_EXT_depth_bounds_test", 170, qfalse, r_ext_depth_bounds_test);
+	GLimp_CheckForVersionExtension("GL_EXT_stencil_two_side", 210, qfalse, r_extStencilTwoSide);
+	GLimp_CheckForVersionExtension("GL_EXT_depth_bounds_test", 170, qfalse, r_extDepthBoundsTest);
 
 	glConfig2.framebufferObjectAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_EXT_framebuffer_object", 300, qfalse, r_ext_packed_depth_stencil))
+	if (GLimp_CheckForVersionExtension("GL_EXT_framebuffer_object", 300, qfalse, r_extPackedDepthStencil))
 	{
 		glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE_EXT, &glConfig2.maxRenderbufferSize);
 		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS_EXT, &glConfig2.maxColorAttachments);
@@ -306,13 +352,13 @@ static void GLimp_InitExtensionsR2(void)
 	GL_CheckErrors();
 
 	glConfig2.framebufferPackedDepthStencilAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_EXT_packed_depth_stencil", 300, qfalse, r_ext_packed_depth_stencil))
+	if (GLimp_CheckForVersionExtension("GL_EXT_packed_depth_stencil", 300, qfalse, r_extPackedDepthStencil))
 	{
 		glConfig2.framebufferPackedDepthStencilAvailable = qtrue;
 	}
 
 	glConfig2.framebufferBlitAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_EXT_framebuffer_blit", 300, qfalse, r_ext_framebuffer_blit))
+	if (GLimp_CheckForVersionExtension("GL_EXT_framebuffer_blit", 300, qfalse, r_extFramebufferBlit))
 	{
 		glConfig2.framebufferBlitAvailable = qtrue;
 	}
@@ -320,7 +366,7 @@ static void GLimp_InitExtensionsR2(void)
 	// GL_EXTX_framebuffer_mixed_formats not used
 
 	glConfig2.generateMipmapAvailable = qfalse;
-	if (GLimp_CheckForVersionExtension("GL_SGIS_generate_mipmap", 140, qfalse, r_ext_generate_mipmap))
+	if (GLimp_CheckForVersionExtension("GL_SGIS_generate_mipmap", 140, qfalse, r_extGenerateMipmap))
 	{
 		glConfig2.generateMipmapAvailable = qtrue;
 	}
@@ -361,6 +407,9 @@ static void GLimp_InitExtensionsR2(void)
 
 #ifndef FEATURE_RENDERER2
 
+/**
+ * @brief GLimp_InitExtensions
+ */
 static void GLimp_InitExtensions(void)
 {
 	if (!r_allowExtensions->integer)
@@ -378,7 +427,7 @@ static void GLimp_InitExtensions(void)
 	if (GLEW_ARB_texture_compression &&
 	    GLEW_EXT_texture_compression_s3tc)
 	{
-		if (r_ext_compressed_textures->value)
+		if (r_extCompressedTextures->value != 0.f)
 		{
 			glConfig.textureCompression = TC_S3TC_ARB;
 			Com_Printf("...found OpenGL extension - GL_EXT_texture_compression_s3tc\n");
@@ -400,7 +449,7 @@ static void GLimp_InitExtensions(void)
 	{
 		if (GLEW_S3_s3tc)
 		{
-			if (r_ext_compressed_textures->value)
+			if (r_extCompressedTextures->value != 0.f)
 			{
 				glConfig.textureCompression = TC_S3TC;
 				Com_Printf("...found OpenGL extension - GL_S3_s3tc\n");
@@ -425,7 +474,7 @@ static void GLimp_InitExtensions(void)
 	glConfig.textureEnvAddAvailable = qfalse;
 	if (GLEW_EXT_texture_env_add)
 	{
-		if (r_ext_texture_env_add->integer)
+		if (r_extTextureEnvAdd->integer)
 		{
 			glConfig.textureEnvAddAvailable = qtrue;
 			Com_Printf("...found OpenGL extension - GL_EXT_texture_env_add\n");
@@ -462,7 +511,7 @@ static void GLimp_InitExtensions(void)
 #else
 	if (GLEW_ARB_multitexture)
 	{
-		if (r_ext_multitexture->value)
+		if (r_extMultitexture->value != 0.f)
 		{
 			GLint glint = 0;
 
@@ -492,13 +541,25 @@ static void GLimp_InitExtensions(void)
 }
 #endif
 
+/**
+ * @brief Glimp_ClearScreen
+ */
 void Glimp_ClearScreen(void)
 {
+#ifndef FEATURE_RENDERER2 // vanilla or GLES
 	qglClearColor(0, 0, 0, 1);
 	qglClear(GL_COLOR_BUFFER_BIT);
+#else
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+#endif
 	ri.GLimp_SwapFrame();
 }
 
+/**
+ * @brief RE_InitOpenGlSubsystems
+ * @return
+ */
 int RE_InitOpenGlSubsystems(void)
 {
 #ifndef FEATURE_RENDERER_GLES
@@ -532,6 +593,9 @@ int RE_InitOpenGlSubsystems(void)
 	return qtrue;
 }
 
+/**
+ * @brief RE_InitOpenGl
+ */
 void RE_InitOpenGl(void)
 {
 	//Clear the screen with a black color thanks
@@ -542,10 +606,11 @@ void RE_InitOpenGl(void)
 
 	// Get extension strings
 #ifndef FEATURE_RENDERER2
-	Q_strncpyz(glConfig.extensions_string, ( char * ) glGetString(GL_EXTENSIONS), sizeof(glConfig.extensions_string));
+	Q_strncpyz(glConfig.extensions_string, (const char *) glGetString(GL_EXTENSIONS), sizeof(glConfig.extensions_string));
 #else
 	{
 		int i = 0, exts = 0;
+		
 		glGetIntegerv(GL_NUM_EXTENSIONS, &exts);
 		glConfig.extensions_string[0] = 0;
 		for (i = 0; i < exts; i++)
@@ -565,10 +630,13 @@ void RE_InitOpenGl(void)
 #ifdef FEATURE_RENDERER2
 	GLimp_InitExtensionsR2(); // renderer2
 #else
-	GLimp_InitExtensions(); // vanilla renderer
+	GLimp_InitExtensions(); // vanilla and GLES renderer
 #endif
 }
 
+/**
+ * @brief R_DoGLimpShutdown
+ */
 void R_DoGLimpShutdown(void)
 {
 	ri.GLimp_Shutdown();
@@ -576,32 +644,64 @@ void R_DoGLimpShutdown(void)
 	Com_Memset(&glState, 0, sizeof(glState));
 }
 
+/**
+ * @brief Workaround for ri.Printf's 1024 characters buffer limit.
+ * @param[in] string
+ */
+void R_PrintLongString(const char *string)
+{
+	char       buffer[1024];
+	const char *p   = string;
+	int        size = strlen(string);
+
+	while (size > 0)
+	{
+		Q_strncpyz(buffer, p, sizeof(buffer));
+		Ren_Print("%s", buffer);
+		p    += 1023;
+		size -= 1023;
+	}
+}
+
 #ifdef USE_RENDERER_DLOPEN
-void QDECL Com_Printf(const char *msg, ...)
+/**
+ * @brief Com_Printf
+ * @param[in] msg
+ */
+void QDECL Com_Printf(const char *fmt, ...)
 {
 	va_list argptr;
 	char    text[1024];
 
-	va_start(argptr, msg);
-	Q_vsnprintf(text, sizeof(text), msg, argptr);
+	va_start(argptr, fmt);
+	Q_vsnprintf(text, sizeof(text), fmt, argptr);
 	va_end(argptr);
 
 	Ren_Print("%s", text);
 }
 
-void QDECL Com_DPrintf(const char *msg, ...)
+/**
+ * @brief Com_DPrintf
+ * @param[in] msg
+ */
+void QDECL Com_DPrintf(const char *fmt, ...)
 {
 	va_list argptr;
 	char    text[1024];
 
-	va_start(argptr, msg);
-	Q_vsnprintf(text, sizeof(text), msg, argptr);
+	va_start(argptr, fmt);
+	Q_vsnprintf(text, sizeof(text), fmt, argptr);
 	va_end(argptr);
 
 	Ren_Developer("%s", text);
 }
 
-void QDECL Com_Error(int level, const char *error, ...)
+/**
+ * @brief Com_Error
+ * @param[in] code
+ * @param[in] error
+ */
+void QDECL Com_Error(int code, const char *error, ...)
 {
 	va_list argptr;
 	char    text[1024];
@@ -610,6 +710,6 @@ void QDECL Com_Error(int level, const char *error, ...)
 	Q_vsnprintf(text, sizeof(text), error, argptr);
 	va_end(argptr);
 
-	ri.Error(level, "%s", text);
+	ri.Error(code, "%s", text);
 }
 #endif

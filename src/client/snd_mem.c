@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -53,13 +53,17 @@ short *sfxScratchBuffer  = NULL;
 sfx_t *sfxScratchPointer = NULL;
 int   sfxScratchIndex    = 0;
 
-void SND_free(sndBuffer *v)
+void SND_Com_Dealloc(sndBuffer *v)
 {
 	*(sndBuffer **)v = freelist;
 	freelist         = (sndBuffer *)v;
 	inUse           += sizeof(sndBuffer);
 }
 
+/**
+ * @brief SND_malloc
+ * @return
+ */
 sndBuffer *SND_malloc(void)
 {
 	sndBuffer *v;
@@ -79,6 +83,9 @@ redo:
 	return v;
 }
 
+/**
+ * @brief SND_setup
+ */
 void SND_setup(void)
 {
 	sndBuffer *p, *q;
@@ -88,13 +95,14 @@ void SND_setup(void)
 	cv  = Cvar_Get("com_soundMegs", DEF_COMSOUNDMEGS, CVAR_LATCH | CVAR_ARCHIVE);
 	scs = (cv->integer * 512); // q3 uses a value of 1536 - reverted to genuine ET value
 
-	buffer = malloc(scs * sizeof(sndBuffer));
+	buffer = Com_Allocate(scs * sizeof(sndBuffer));
 	if (!buffer)
 	{
-		Com_Error(ERR_FATAL, "Sound buffer failed to allocate %1.1f megs", (float)scs / (1024 * 1024));
+		Com_Error(ERR_FATAL, "Sound buffer failed to allocate %1.1f megs", (double)(scs / (1024.f * 1024.f)));
 	}
+
 	// allocate the stack based hunk allocator
-	sfxScratchBuffer = malloc(SND_CHUNK_SIZE * sizeof(short) * 4);      //Hunk_Alloc(SND_CHUNK_SIZE * sizeof(short) * 4);
+	sfxScratchBuffer = Com_Allocate(SND_CHUNK_SIZE * sizeof(short) * 4);      //Hunk_Alloc(SND_CHUNK_SIZE * sizeof(short) * 4);
 	if (!sfxScratchBuffer)
 	{
 		Com_Error(ERR_FATAL, "Unable to allocate sound scratch buffer");
@@ -115,26 +123,33 @@ void SND_setup(void)
 	Com_Printf("Sound memory manager started\n");
 }
 
+/**
+ * @brief SND_shutdown
+ */
 void SND_shutdown(void)
 {
-	free(sfxScratchBuffer);
-	free(buffer);
+	Com_Dealloc(sfxScratchBuffer);
+	Com_Dealloc(buffer);
 }
 
-/*
-================
-ResampleSfx
-
-resample / decimate to the current source rate
-================
-*/
+/**
+ * @brief Resample / decimate to the current source rate
+ * @param[in] sfx
+ * @param[in] channels
+ * @param[in] inrate
+ * @param[in] inwidth
+ * @param[in] samples
+ * @param[in] data
+ * @param compressed - unused
+ * @return
+ */
 static int ResampleSfx(sfx_t *sfx, int channels, int inrate, int inwidth, int samples, byte *data, qboolean compressed)
 {
 	float     stepscale = (float)inrate / dma.speed;  // this is usually 0.5, 1, or 2
-	int       outcount  = samples / stepscale;
+	int       outcount  = (int)(samples / stepscale);
 	int       srcsample;
 	int       i, j;
-	int       sample, samplefrac = 0, fracstep = stepscale * 256 * channels;
+	int       sample, samplefrac = 0, fracstep = (int)(stepscale * 256 * channels);
 	int       part;
 	sndBuffer *chunk = sfx->soundData;
 
@@ -151,7 +166,7 @@ static int ResampleSfx(sfx_t *sfx, int channels, int inrate, int inwidth, int sa
 			}
 			else
 			{
-				sample = (int)((unsigned char)(data[srcsample + j]) - 128) << 8;
+				sample = (unsigned int)((unsigned char)(data[srcsample + j]) - 128) << 8;
 			}
 			part = (i * channels + j) & (SND_CHUNK_SIZE - 1);
 			if (part == 0)
@@ -176,19 +191,22 @@ static int ResampleSfx(sfx_t *sfx, int channels, int inrate, int inwidth, int sa
 	return outcount;
 }
 
-/*
-================
-ResampleSfx
-
-resample / decimate to the current source rate
-================
-*/
+/**
+ * @brief Resample / decimate to the current source rate
+ * @param[in] sfx
+ * @param[in] channels
+ * @param[in] inrate
+ * @param[in] inwidth
+ * @param[in] samples
+ * @param[in] data
+ * @return
+ */
 static int ResampleSfxRaw(short *sfx, int channels, int inrate, int inwidth, int samples, byte *data)
 {
 	float stepscale = (float)inrate / dma.speed;  // this is usually 0.5, 1, or 2
-	int   outcount  = samples / stepscale;
+	int   outcount  = (int)(samples / stepscale);
 	int   srcsample, i, j, sample;
-	int   samplefrac = 0, fracstep = stepscale * 256 * channels;
+	int   samplefrac = 0, fracstep = (int)(stepscale * 256 * channels);
 
 	for (i = 0 ; i < outcount ; i++)
 	{
@@ -213,14 +231,12 @@ static int ResampleSfxRaw(short *sfx, int channels, int inrate, int inwidth, int
 
 //=============================================================================
 
-/*
-==============
-S_LoadSound
-
-The filename may be different than sfx->name in the case
-of a forced fallback of a player specific sound
-==============
-*/
+/**
+ * @brief The filename may be different than sfx->name in the case
+ * of a forced fallback of a player specific sound
+ * @param[in,out] sfx
+ * @return
+ */
 qboolean S_LoadSound(sfx_t *sfx)
 {
 	byte       *data;
@@ -233,9 +249,10 @@ qboolean S_LoadSound(sfx_t *sfx)
 		return qfalse;
 	}
 
-	if (!FS_FOpenFileRead(sfx->soundName, NULL, qfalse))
+	if (FS_FOpenFileRead(sfx->soundName, NULL, qfalse) <= 0)
 	{
-		Com_DPrintf(S_COLOR_RED "ERROR: sound file \"%s\" does not exist\n", sfx->soundName);
+		// changed from debug to common print - let admins know and fix such missing files ...
+		Com_Printf(S_COLOR_RED "ERROR: sound file \"%s\" does not exist or can't be read\n", sfx->soundName);
 		return qfalse;
 	}
 
@@ -304,7 +321,10 @@ qboolean S_LoadSound(sfx_t *sfx)
 	return qtrue;
 }
 
+/**
+ * @brief S_DisplayFreeMemory
+ */
 void S_DisplayFreeMemory(void)
 {
-	Com_Printf("%d bytes (%6.2f MB) free sound buffer memory, %d bytes (%6.2f MB) total used.\n", inUse, inUse / Square(1024.f), totalInUse, totalInUse / Square(1024.f));
+	Com_Printf("%d bytes (%6.2f MB) free sound buffer memory, %d bytes (%6.2f MB) total used.\n", inUse, (double)(inUse / Square(1024.f)), totalInUse, (double)(totalInUse / Square(1024.f)));
 }

@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -43,17 +43,18 @@
 #endif
 
 /**
- * @param[in,out] player Player Entity
+ * @brief Called just before a snapshot is sent to the given player.
  *
- * Called just before a snapshot is sent to the given player.
- * Totals up all damage and generates both the player_state_t
+ * @details Totals up all damage and generates both the player_state_t
  * damage values to that client for pain blends and kicks, and
  * global pain sound events for all clients.
+ *
+ * @param[in,out] player Player Entity
  */
 void P_DamageFeedback(gentity_t *player)
 {
 	gclient_t *client = player->client;
-	float     count;
+	int       count;
 
 	if (client->ps.pm_type == PM_DEAD)
 	{
@@ -88,8 +89,8 @@ void P_DamageFeedback(gentity_t *player)
 		vec3_t angles;
 
 		vectoangles(client->damage_from, angles);
-		client->ps.damagePitch = angles[PITCH] / 360.0 * 256;
-		client->ps.damageYaw   = angles[YAW] / 360.0 * 256;
+		client->ps.damagePitch = angles[PITCH] / 360.0f * 256;
+		client->ps.damageYaw   = angles[YAW] / 360.0f * 256;
 	}
 
 	// play an apropriate pain sound
@@ -209,7 +210,7 @@ void P_WorldEffects(gentity_t *ent)
 			{
 				gentity_t *attacker = g_entities + ent->flameBurnEnt;
 
-				G_Damage(ent, attacker, attacker, NULL, NULL, weaponTable[WP_FLAMETHROWER].damage, DAMAGE_NO_KNOCKBACK, MOD_FLAMETHROWER);
+				G_Damage(ent, attacker, attacker, NULL, NULL, GetWeaponTableData(WP_FLAMETHROWER)->damage, DAMAGE_NO_KNOCKBACK, MOD_FLAMETHROWER);
 			}
 		}
 	}
@@ -225,19 +226,26 @@ void G_SetClientSound(gentity_t *ent)
 }
 
 #ifdef FEATURE_OMNIBOT
+/**
+ * @brief PushBot
+ * @param[in] ent
+ * @param[in] other
+ */
 void PushBot(gentity_t *ent, gentity_t *other)
 {
 	vec3_t dir, ang, f, r;
 	float  oldspeed;
 	float  s;
 
-	// dont push when mounted in certain stationary weapons or scripted not to be pushed
-	if (other->client)
+	if (!other->client)
 	{
-		if (Bot_Util_AllowPush(other->client->ps.weapon) == qfalse || !other->client->sess.botPush)
-		{
-			return;
-		}
+		return;
+	}
+
+	// dont push when mounted in certain stationary weapons or scripted not to be pushed
+	if (Bot_Util_AllowPush(other->client->ps.weapon) == qfalse || !other->client->sess.botPush)
+	{
+		return;
 	}
 
 	oldspeed = VectorLength(other->client->ps.velocity);
@@ -254,7 +262,7 @@ void PushBot(gentity_t *ent, gentity_t *other)
 	r[2] = 0;
 
 	VectorMA(other->client->ps.velocity, 200, f, other->client->ps.velocity);
-	s = 100 * ((level.time + (ent->s.number * 1000)) % 4000 < 2000 ? 1.0 : -1.0);
+	s = 100 * ((level.time + (ent->s.number * 1000)) % 4000 < 2000 ? 1.0f : -1.0f);
 	VectorMA(other->client->ps.velocity, s, r, other->client->ps.velocity);
 
 	if (VectorLengthSquared(other->client->ps.velocity) > Square(oldspeed))
@@ -347,6 +355,8 @@ qboolean ReadyToConstruct(gentity_t *ent, gentity_t *constructible, qboolean upd
 //==============================================================
 
 /**
+ * @brief ClientImpacts
+ *
  * @param[in] ent Entity
  * @param[in] pm  Player Move
  */
@@ -356,7 +366,7 @@ void ClientImpacts(gentity_t *ent, pmove_t *pm)
 	gentity_t *other;
 	trace_t   trace;
 
-	memset(&trace, 0, sizeof(trace));
+	Com_Memset(&trace, 0, sizeof(trace));
 	for (i = 0 ; i < pm->numtouch ; i++)
 	{
 		for (j = 0 ; j < i ; j++)
@@ -483,7 +493,7 @@ void G_TouchTriggers(gentity_t *ent)
 			}
 		}
 
-		memset(&trace, 0, sizeof(trace));
+		Com_Memset(&trace, 0, sizeof(trace));
 
 		if (hit->touch)
 		{
@@ -492,13 +502,11 @@ void G_TouchTriggers(gentity_t *ent)
 	}
 }
 
-/*
-=================
-G_SpectatorAttackFollow
-
-returns true if a player was found to follow
-=================
-*/
+/**
+ * @brief G_SpectatorAttackFollow
+ * @param ent
+ * @return true if a player was found to follow, otherwise false
+ */
 qboolean G_SpectatorAttackFollow(gentity_t *ent)
 {
 	trace_t       tr;
@@ -536,6 +544,11 @@ qboolean G_SpectatorAttackFollow(gentity_t *ent)
 	return qfalse;
 }
 
+/**
+ * @brief SpectatorThink
+ * @param[in,out] ent
+ * @param[in] ucmd
+ */
 void SpectatorThink(gentity_t *ent, usercmd_t *ucmd)
 {
 	gclient_t *client       = ent->client;
@@ -581,7 +594,7 @@ void SpectatorThink(gentity_t *ent, usercmd_t *ucmd)
 		}
 
 		// set up for pmove
-		memset(&pm, 0, sizeof(pm));
+		Com_Memset(&pm, 0, sizeof(pm));
 		pm.ps            = &client->ps;
 		pm.pmext         = &client->pmext;
 		pm.character     = client->pers.character;
@@ -675,7 +688,6 @@ void SpectatorThink(gentity_t *ent, usercmd_t *ucmd)
 	         (((client->buttons & BUTTON_ACTIVATE) && !(client->oldbuttons & BUTTON_ACTIVATE)) || ucmd->upmove > 0) &&
 	         G_allowFollow(ent, TEAM_AXIS) && G_allowFollow(ent, TEAM_ALLIES))
 	{
-
 		StopFollowing(ent);
 	}
 #ifdef FEATURE_MULTIVIEW
@@ -684,13 +696,14 @@ void SpectatorThink(gentity_t *ent, usercmd_t *ucmd)
 }
 
 /**
- * @return Returns qfalse if the client is dropped
- * @param client Client
- *
  * @brief
  * g_inactivity and g_spectatorinactivity :
  * Values have to be higher then 10 seconds, that is the time after the warn message is sent.
  * (if it's lower than that value, it will not work at all)
+ *
+ * @param[in,out] client Client
+ *
+ * @return Returns qfalse if the client is dropped
  */
 qboolean ClientInactivityTimer(gclient_t *client)
 {
@@ -718,7 +731,7 @@ qboolean ClientInactivityTimer(gclient_t *client)
 	if (client->pers.cmd.forwardmove || client->pers.cmd.rightmove || client->pers.cmd.upmove ||
 	    (client->pers.cmd.wbuttons & (WBUTTON_ATTACK2 | WBUTTON_LEANLEFT | WBUTTON_LEANRIGHT))  ||
 	    (client->pers.cmd.buttons & BUTTON_ATTACK) ||
-	    (client->ps.eFlags & (EF_MOUNTEDTANK | EF_MG42_ACTIVE | EF_AAGUN_ACTIVE)) ||
+	    BG_PlayerMounted(client->ps.eFlags) ||
 	    (client->ps.pm_type == PM_DEAD /*&& !(client->ps.eFlags & EF_PLAYDEAD)*/))     // playdead sets PM_DEAD, so check if playing dead ...
 	{
 		client->inactivityWarning = qfalse;
@@ -734,8 +747,8 @@ qboolean ClientInactivityTimer(gclient_t *client)
 		return qtrue;
 	}
 
-	// No inactivity for localhost and shrubbot-set clients
-	if (client->pers.localClient /*|| G_shrubbot_permission(&g_entities[client-level.clients], SBF_ACTIVITY)*/)    // FIXME: refs?, how to deal with game manager
+	// No inactivity for localhost
+	if (client->pers.localClient)
 	{
 		return qtrue;
 	}
@@ -774,7 +787,7 @@ qboolean ClientInactivityTimer(gclient_t *client)
 		{
 			if (inTeam)
 			{
-				SetTeam(&g_entities[client - level.clients], "s", qtrue, -1, -1, qfalse);
+				SetTeam(&g_entities[client - level.clients], "s", qtrue, WP_NONE, WP_NONE, qfalse);
 				client->inactivityWarning     = qfalse;
 				client->inactivityTime        = level.time + 1000 * inactivityspec;
 				client->inactivitySecondsLeft = inactivityspec;
@@ -915,6 +928,7 @@ void ClientTimerActions(gentity_t *ent, int msec)
 }
 
 /**
+ * @brief ClientIntermissionThink
  * @param[in,out] client Client
  */
 void ClientIntermissionThink(gclient_t *client)
@@ -932,6 +946,11 @@ void ClientIntermissionThink(gclient_t *client)
 	client->wbuttons    = client->pers.cmd.wbuttons;
 }
 
+/**
+ * @brief G_FallDamage
+ * @param[in,out] ent
+ * @param[in] event
+ */
 void G_FallDamage(gentity_t *ent, int event)
 {
 	int damage;
@@ -946,7 +965,7 @@ void G_FallDamage(gentity_t *ent, int event)
 		// this damage is used for stats (pushing players to death) - ensure we gib
 		if (ent->health > 0)
 		{
-			damage = ent->health - GIB_HEALTH + 1;
+			damage = GIB_DAMAGE(ent->health);
 		}
 		else
 		{
@@ -986,11 +1005,11 @@ void G_FallDamage(gentity_t *ent, int event)
 }
 
 /**
+ * @brief Events will be passed on to the clients for presentation,
+ * but any server game effects are handled here
+ *
  * @param[in] ent              Pointer to Entity
  * @param     oldEventSequence Old event sequence number
- *
- * Events will be passed on to the clients for presentation,
- * but any server game effects are handled here
  */
 void ClientEvents(gentity_t *ent, int oldEventSequence)
 {
@@ -1023,13 +1042,19 @@ void ClientEvents(gentity_t *ent, int oldEventSequence)
 			// reset player disguise on firing mounted mg
 			ent->client->ps.powerups[PW_OPS_DISGUISED] = 0;
 			ent->client->disguiseClientNum             = -1;
+
+			if (g_misc.integer & G_MISC_LOOSE_SPAWN_PROTECTION)
+			{
+				ent->client->ps.powerups[PW_INVULNERABLE] = 0;
+			}
+
 			mg42_fire(ent);
 
 			// Only 1 stats bin for mg42
 #ifndef DEBUG_STATS
 			if (g_gamestate.integer == GS_PLAYING)
 #endif
-			ent->client->sess.aWeaponStats[BG_WeapStatForWeapon(WP_MOBILE_MG42)].atts++;
+			ent->client->sess.aWeaponStats[GetWeaponTableData(WP_MOBILE_MG42)->indexWeaponStat].atts++;
 			break;
 		case EV_FIRE_WEAPON_MOUNTEDMG42:
 			if (!(self = ent->tankLink))
@@ -1041,7 +1066,13 @@ void ClientEvents(gentity_t *ent, int oldEventSequence)
 			ent->client->ps.powerups[PW_OPS_DISGUISED] = 0;
 			ent->client->disguiseClientNum             = -1;
 
+			if (g_misc.integer & G_MISC_LOOSE_SPAWN_PROTECTION)
+			{
+				ent->client->ps.powerups[PW_INVULNERABLE] = 0;
+			}
+
 			mountedmg42_fire(ent);
+
 			// Only 1 stats bin for mg42
 #ifndef DEBUG_STATS
 			if (g_gamestate.integer == GS_PLAYING)
@@ -1049,11 +1080,11 @@ void ClientEvents(gentity_t *ent, int oldEventSequence)
 			{
 				if (self->s.density & 8)
 				{
-					ent->client->sess.aWeaponStats[BG_WeapStatForWeapon(WP_MOBILE_BROWNING)].atts++;
+					ent->client->sess.aWeaponStats[GetWeaponTableData(WP_MOBILE_BROWNING)->indexWeaponStat].atts++;
 				}
 				else
 				{
-					ent->client->sess.aWeaponStats[BG_WeapStatForWeapon(WP_MOBILE_MG42)].atts++;
+					ent->client->sess.aWeaponStats[GetWeaponTableData(WP_MOBILE_MG42)->indexWeaponStat].atts++;
 				}
 			}
 			break;
@@ -1062,11 +1093,21 @@ void ClientEvents(gentity_t *ent, int oldEventSequence)
 			ent->client->ps.powerups[PW_OPS_DISGUISED] = 0;
 			ent->client->disguiseClientNum             = -1;
 
+			if (g_misc.integer & G_MISC_LOOSE_SPAWN_PROTECTION)
+			{
+				ent->client->ps.powerups[PW_INVULNERABLE] = 0;
+			}
+
 			aagun_fire(ent);
 			break;
 		case EV_FIRE_WEAPON:
 		case EV_FIRE_WEAPONB:
 		case EV_FIRE_WEAPON_LASTSHOT:
+			if (g_misc.integer & G_MISC_LOOSE_SPAWN_PROTECTION)
+			{
+				ent->client->ps.powerups[PW_INVULNERABLE] = 0;
+			}
+
 			FireWeapon(ent);
 			break;
 		default:
@@ -1076,6 +1117,7 @@ void ClientEvents(gentity_t *ent, int oldEventSequence)
 }
 
 /**
+ * @brief WolfFindMedic
  * @param[in,out] self Current Player Entity
  */
 void WolfFindMedic(gentity_t *self)
@@ -1133,7 +1175,7 @@ void WolfFindMedic(gentity_t *self)
 		end[2] += cl->ps.viewheight;
 
 		trap_Trace(&tr, start, NULL, NULL, end, self->s.number, CONTENTS_SOLID);
-		if (tr.fraction < 0.95)
+		if (tr.fraction < 0.95f)
 		{
 			continue;
 		}
@@ -1156,15 +1198,15 @@ void WolfFindMedic(gentity_t *self)
 }
 
 /**
- * @param[in,out] ent Entity
- *
- * This will be called once for each client frame, which will
+ * @brief This will be called once for each client frame, which will
  * usually be a couple times for each server frame on fast clients.
  *
  * If "g_synchronousClients 1" is set, this will be called exactly
  * once for each server frame, which makes for smooth demo recording.
+ *
+ * @param[in,out] ent Entity
  */
-void ClientThink_real(gentity_t *ent)
+void ClientThink_real(gentity_t *ent, qboolean skipServerTime)
 {
 	int       msec, oldEventSequence;
 	pmove_t   pm;
@@ -1220,15 +1262,18 @@ void ClientThink_real(gentity_t *ent)
 	// end zinx etpro antiwarp
 
 	// sanity check the command time to prevent speedup cheating
-	if (ucmd->serverTime > level.time + 200 && !G_DoAntiwarp(ent))
+	if (!skipServerTime)
 	{
-		ucmd->serverTime = level.time + 200;
-		//G_Printf("serverTime <<<<<\n" );
-	}
-	if (ucmd->serverTime < level.time - 1000 && !G_DoAntiwarp(ent))
-	{
-		ucmd->serverTime = level.time - 1000;
-		//G_Printf("serverTime >>>>>\n" );
+		if (ucmd->serverTime > level.time + 200)
+		{
+			ucmd->serverTime = level.time + 200;
+			//G_Printf("serverTime <<<<<\n" );
+		}
+		if (ucmd->serverTime < level.time - 1000)
+		{
+			ucmd->serverTime = level.time - 1000;
+			//G_Printf("serverTime >>>>>\n" );
+		}
 	}
 
 	msec = ucmd->serverTime - client->ps.commandTime;
@@ -1255,7 +1300,7 @@ void ClientThink_real(gentity_t *ent)
 
 	// zinx etpro antiwarp
 	client->pers.pmoveMsec = pmove_msec.integer;
-	if (G_DoAntiwarp(ent) && (pmove_fixed.integer || client->pers.pmoveFixed))
+	if (!skipServerTime && (pmove_fixed.integer || client->pers.pmoveFixed))
 	{
 		ucmd->serverTime = ((ucmd->serverTime + client->pers.pmoveMsec - 1) /
 		                    client->pers.pmoveMsec) * client->pers.pmoveMsec;
@@ -1361,9 +1406,9 @@ void ClientThink_real(gentity_t *ent)
 	// set up for pmove
 	oldEventSequence = client->ps.eventSequence;
 
-	client->currentAimSpreadScale = (float)client->ps.aimSpreadScale / 255.0;
+	client->currentAimSpreadScale = client->ps.aimSpreadScale / 255.0f;
 
-	memset(&pm, 0, sizeof(pm));
+	Com_Memset(&pm, 0, sizeof(pm));
 
 	pm.ps        = &client->ps;
 	pm.pmext     = &client->pmext;
@@ -1434,14 +1479,6 @@ void ClientThink_real(gentity_t *ent)
 
 		client->pers.lastBattleSenseBonusTime = level.timeCurrent;
 		client->combatState                   = COMBATSTATE_COLD; // cool down again
-	}
-
-	// bit hacky, stop the slight lag from client -> server even on locahost, switching back to the weapon you were holding
-	// and then back to what weapon you should have, became VERY noticible for the kar98/carbine + gpg40, esp now i've added the
-	// animation locking
-	if (level.time - client->pers.lastSpawnTime < 1000)
-	{
-		pm.cmd.weapon = client->ps.weapon;
 	}
 
 	Pmove(&pm); // monsterslick
@@ -1541,7 +1578,9 @@ void ClientThink_real(gentity_t *ent)
 		ent->client->pmext.sprintTime = SPRINTTIME;
 	}
 
-	if (g_entities[ent->client->ps.identifyClient].team == ent->team && g_entities[ent->client->ps.identifyClient].client)
+	if (g_entities[ent->client->ps.identifyClient].inuse && g_entities[ent->client->ps.identifyClient].client &&
+	    (ent->client->sess.sessionTeam == g_entities[ent->client->ps.identifyClient].client->sess.sessionTeam ||
+	     g_entities[ent->client->ps.identifyClient].client->ps.powerups[PW_OPS_DISGUISED]))
 	{
 		ent->client->ps.identifyClientHealth = g_entities[ent->client->ps.identifyClient].health;
 	}
@@ -1606,7 +1645,7 @@ void ClientThink_real(gentity_t *ent)
 	}
 
 	// debug hitboxes
-	if(g_debugPlayerHitboxes.integer & 2)
+	if (g_debugPlayerHitboxes.integer & 2)
 	{
 		gentity_t    *head;
 		vec3_t       maxs;
@@ -1614,10 +1653,10 @@ void ClientThink_real(gentity_t *ent)
 
 		VectorCopy(ent->r.maxs, maxs);
 		maxs[2] = ClientHitboxMaxZ(ent);
-		G_RailBox(ent->r.currentOrigin, ent->r.mins, maxs, tv(0.f,0.f,1.f), ent->s.number);
+		G_RailBox(ent->r.currentOrigin, ent->r.mins, maxs, tv(0.f, 0.f, 1.f), ent->s.number);
 
 		head = G_BuildHead(ent, &refent, qtrue);
-		G_RailBox(head->r.currentOrigin, head->r.mins, head->r.maxs, tv(0.f,0.f,1.f), head->s.number|HITBOXBIT_HEAD);
+		G_RailBox(head->r.currentOrigin, head->r.mins, head->r.maxs, tv(0.f, 0.f, 1.f), head->s.number | HITBOXBIT_HEAD);
 		G_FreeEntity(head);
 	}
 
@@ -1634,16 +1673,16 @@ void ClientThink_real(gentity_t *ent)
  * @param[in,out] ent Entity
  * @param[in]     cmd User Command
  */
-void ClientThink_cmd(gentity_t *ent, usercmd_t *cmd)
+void ClientThink_cmd(gentity_t *ent, usercmd_t *cmd, qboolean skipServerTime)
 {
 	ent->client->pers.oldcmd = ent->client->pers.cmd;
 	ent->client->pers.cmd    = *cmd;
-	ClientThink_real(ent);
+	ClientThink_real(ent, skipServerTime);
 }
 
 /**
  * @brief A new command has arrived from the client
- * @param clientNum Client Number from 0 to MAX_CLIENTS
+ * @param[in] clientNum Client Number from 0 to MAX_CLIENTS
  */
 void ClientThink(int clientNum)
 {
@@ -1664,12 +1703,13 @@ void ClientThink(int clientNum)
 		}
 		else
 		{
-			ClientThink_cmd(ent, &newcmd);
+			ClientThink_cmd(ent, &newcmd, qfalse);
 		}
 	}
 }
 
 /**
+ * @brief G_RunClient
  * @param[in,out] ent Entity
  */
 void G_RunClient(gentity_t *ent)
@@ -1704,6 +1744,7 @@ void G_RunClient(gentity_t *ent)
 }
 
 /**
+ * @brief SpectatorClientEndFrame
  * @param[in,out] ent Spectator Entity
  */
 void SpectatorClientEndFrame(gentity_t *ent)
@@ -1723,19 +1764,26 @@ void SpectatorClientEndFrame(gentity_t *ent)
 		int i;
 		ent->client->ps.stats[STAT_XP] = 0;
 
-		for (i = 0; i < SK_NUM_SKILLS; ++i)
+		if ((g_gametype.integer == GT_WOLF_CAMPAIGN && (g_campaigns[level.currentCampaign].current != 0 && !level.newCampaign)) ||
+		    (g_gametype.integer == GT_WOLF_LMS && g_currentRound.integer != 0))
 		{
-			ent->client->ps.stats[STAT_XP] += ent->client->sess.skillpoints[i];
+			for (i = 0; i < SK_NUM_SKILLS; ++i)
+			{
+				ent->client->ps.stats[STAT_XP] += ent->client->sess.skillpoints[i];
+			}
 		}
-
-		// to avoid overflows for big XP values(>= 32768), count each overflow and add it
-		// again in cg_draw.c at display time
-		ent->client->ps.stats[STAT_XP_OVERFLOW] = ent->client->ps.stats[STAT_XP] >> 15;     // >>15 == /32768
-		ent->client->ps.stats[STAT_XP]          = ent->client->ps.stats[STAT_XP] & 0x7FFF;
+		else
+		{
+			for (i = 0; i < SK_NUM_SKILLS; ++i)
+			{
+				// current map XPs only
+				ent->client->ps.stats[STAT_XP] += ent->client->sess.skillpoints[i] - ent->client->sess.startskillpoints[i];
+			}
+		}
 	}
 
 	// if we are doing a chase cam or a remote view, grab the latest info
-	if ((ent->client->sess.spectatorState == SPECTATOR_FOLLOW) || (ent->client->ps.pm_flags & PMF_LIMBO))
+	if (ent->client->sess.spectatorState == SPECTATOR_FOLLOW || (ent->client->ps.pm_flags & PMF_LIMBO))
 	{
 		int       clientNum, testtime;
 		gclient_t *cl;
@@ -1760,7 +1808,7 @@ void SpectatorClientEndFrame(gentity_t *ent)
 			ent->client->pers.lastReinforceTime = testtime;
 		}
 
-		if (g_gametype.integer != GT_WOLF_LMS)
+		if (g_gametype.integer != GT_WOLF_LMS && g_gamestate.integer == GS_PLAYING)
 		{
 			if ((g_maxlives.integer > 0 || g_alliedmaxlives.integer > 0 || g_axismaxlives.integer > 0)
 			    && ent->client->ps.persistant[PERS_RESPAWNS_LEFT] == 0)
@@ -1881,6 +1929,14 @@ void SpectatorClientEndFrame(gentity_t *ent)
 				}
 			}
 		}
+		else
+		{
+			if (clientNum == -1) // level.follow1/follow2 couldn't be found
+			{
+				ent->client->sess.spectatorState = SPECTATOR_FREE;
+				ClientBegin(ent->client - level.clients);
+			}
+		}
 	}
 
 	// we are at a free-floating spec state for a player,
@@ -1901,7 +1957,9 @@ void SpectatorClientEndFrame(gentity_t *ent)
 // to be safe to return them to PLAYERSOLID
 
 /**
+ * @brief StuckInClient
  * @param[in,out] self Current Player Entity
+ * @return
  */
 qboolean StuckInClient(gentity_t *self)
 {
@@ -1959,6 +2017,11 @@ qboolean StuckInClient(gentity_t *self)
 extern vec3_t playerMins, playerMaxs;
 #define WR_PUSHAMOUNT 25
 
+/**
+ * @brief WolfRevivePushEnt
+ * @param[in,out] self
+ * @param[in,out] other
+ */
 void WolfRevivePushEnt(gentity_t *self, gentity_t *other)
 {
 	vec3_t dir, push;
@@ -1988,8 +2051,10 @@ void WolfRevivePushEnt(gentity_t *self, gentity_t *other)
 }
 
 /**
+ * @brief WolfReviveBbox
  * @param[in,out] self Current Player Entity
- * @note completely revived for capsules
+ *
+ * @note Completely revived for capsules
  */
 void WolfReviveBbox(gentity_t *self)
 {
@@ -1998,9 +2063,9 @@ void WolfReviveBbox(gentity_t *self)
 	gentity_t *hit = G_TestEntityPosition(self);
 	vec3_t    mins, maxs;
 
-	if (hit && (hit->s.number == ENTITYNUM_WORLD || (hit->client && (hit->client->ps.persistant[PERS_HWEAPON_USE] || (hit->client->ps.eFlags & EF_MOUNTEDTANK)))))
+	if (hit && (hit->s.number == ENTITYNUM_WORLD || (hit->client && BG_PlayerMounted(hit->client->ps.eFlags))))
 	{
-		G_DPrintf("WolfReviveBbox: Player stuck in world or MG42 using player\n");
+		G_DPrintf("WolfReviveBbox: Player stuck in world or MG 42 using player\n");
 		// Move corpse directly to the person who revived them
 		if (self->props_frame_state >= 0)
 		{
@@ -2056,11 +2121,11 @@ void WolfReviveBbox(gentity_t *self)
 }
 
 /**
- * @param[in,out] ent Entity
- *
- * Called at the end of each server frame for each connected client
+ * @brief Called at the end of each server frame for each connected client
  * A fast client will have multiple ClientThink for each ClientEndFrame,
  * while a slow client may have multiple ClientEndFrame between ClientThink.
+ *
+ * @param[in,out] ent Entity
  */
 void ClientEndFrame(gentity_t *ent)
 {
@@ -2080,7 +2145,7 @@ void ClientEndFrame(gentity_t *ent)
 	}
 
 	// don't count skulled player time
-	if (g_gamestate.integer == GS_PLAYING && !(ent->client->sess.sessionTeam == TEAM_SPECTATOR || ent->client->ps.pm_flags & PMF_LIMBO || ent->client->ps.stats[STAT_HEALTH] <= 0))
+	if (g_gamestate.integer == GS_PLAYING && !(ent->client->sess.sessionTeam == TEAM_SPECTATOR || (ent->client->ps.pm_flags & PMF_LIMBO) || ent->client->ps.stats[STAT_HEALTH] <= 0))
 	{
 		ent->client->sess.time_played += level.time - level.previousTime;
 	}
@@ -2089,7 +2154,7 @@ void ClientEndFrame(gentity_t *ent)
 	if (g_skillRating.integer && !(level.time % 2000))
 	{
 		level.axisProb   = G_CalculateWinProbability(TEAM_AXIS);
-		level.alliesProb = 1.0 - level.axisProb;
+		level.alliesProb = 1.0f - level.axisProb;
 	}
 #endif
 
@@ -2103,28 +2168,37 @@ void ClientEndFrame(gentity_t *ent)
 		return;
 	}
 
-	// turn off any expired powerups
+	// turn off any expired powerups (we do this for PW_INVULNERABLE and PW_ADRENALINE only !!!))
 	// range changed for MV
-	for (i = 0 ; i < PW_NUM_POWERUPS ; i++)
+	for (i = 1 ; i < PW_NUM_POWERUPS ; i++)  // start st PW_NONE + 1, PW_NONE is unused
 	{
-		// FIXME: do a switch
-		// these aren't dependant on level.time
-		if (i == PW_NOFATIGUE ||
-		    ent->client->ps.powerups[i] == 0
-		    || i == PW_OPS_CLASS_1
-		    || i == PW_OPS_CLASS_2
-		    || i == PW_OPS_CLASS_3
-		    || i == PW_OPS_DISGUISED
-		    //|| i == PW_REDFLAG // FIXME - not dependant to level time?
-		    //|| i == PW_BLUEFLAG
-		    )
+		// this isn't dependant on level.time
+		if (ent->client->ps.powerups[i] == 0)
 		{
 			continue;
 		}
+
+		// these aren't dependant on level.time
+		switch (i)
+		{
+		case PW_NOFATIGUE:
+		case PW_OPS_CLASS_1:
+		case PW_OPS_CLASS_2:
+		case PW_OPS_CLASS_3:
+		case PW_OPS_DISGUISED:
+		case PW_REDFLAG:
+		case PW_BLUEFLAG:
+#ifdef FEATURE_MULTIVIEW
+		case PW_MVCLIENTLIST: // client list never expires
+#endif
+			continue;
+		default:
+			break;
+		}
+
 		// If we're paused, update powerup timers accordingly.
 		// Make sure we dont let stuff like CTF flags expire.
-		if (level.match_pause != PAUSE_NONE &&
-		    ent->client->ps.powerups[i] != INT_MAX)
+		if (level.match_pause != PAUSE_NONE && ent->client->ps.powerups[i] != INT_MAX)
 		{
 			ent->client->ps.powerups[i] += level.time - level.previousTime;
 		}
@@ -2136,15 +2210,22 @@ void ClientEndFrame(gentity_t *ent)
 	}
 
 	ent->client->ps.stats[STAT_XP] = 0;
-	for (i = 0; i < SK_NUM_SKILLS; i++)
+	if ((g_gametype.integer == GT_WOLF_CAMPAIGN && (g_campaigns[level.currentCampaign].current != 0 && !level.newCampaign)) ||
+	    (g_gametype.integer == GT_WOLF_LMS && g_currentRound.integer != 0))
 	{
-		ent->client->ps.stats[STAT_XP] += ent->client->sess.skillpoints[i];
+		for (i = 0; i < SK_NUM_SKILLS; ++i)
+		{
+			ent->client->ps.stats[STAT_XP] += ent->client->sess.skillpoints[i];
+		}
 	}
-
-	// to avoid overflows for big XP values(>= 32768), count each overflow and add it
-	// again in cg_draw.c at display time
-	ent->client->ps.stats[STAT_XP_OVERFLOW] = ent->client->ps.stats[STAT_XP] >> 15;     // >>15 == /32768
-	ent->client->ps.stats[STAT_XP]          = ent->client->ps.stats[STAT_XP] & 0x7FFF;  // & 0x7FFF == %32768
+	else
+	{
+		for (i = 0; i < SK_NUM_SKILLS; ++i)
+		{
+			// current map XPs only
+			ent->client->ps.stats[STAT_XP] += ent->client->sess.skillpoints[i] - ent->client->sess.startskillpoints[i];
+		}
+	}
 
 	// If we're paused, make sure other timers stay in sync
 	//		--> Any new things in ET we should worry about?
@@ -2228,7 +2309,7 @@ void ClientEndFrame(gentity_t *ent)
 
 	// mark as not missing updates initially
 	ent->client->ps.eFlags &= ~EF_CONNECTION;
-	ent->s.eFlags &= ~EF_CONNECTION;
+	ent->s.eFlags          &= ~EF_CONNECTION;
 
 	// see how many frames the client has missed
 	frames = level.framenum - ent->client->lastUpdateFrame - 1;
@@ -2260,7 +2341,7 @@ void ClientEndFrame(gentity_t *ent)
 #endif
 
 	// debug hitboxes
-	if(g_debugPlayerHitboxes.integer & 1)
+	if (g_debugPlayerHitboxes.integer & 1)
 	{
 		gentity_t    *head;
 		vec3_t       maxs;
@@ -2268,10 +2349,10 @@ void ClientEndFrame(gentity_t *ent)
 
 		VectorCopy(ent->r.maxs, maxs);
 		maxs[2] = ClientHitboxMaxZ(ent);
-		G_RailBox(ent->r.currentOrigin, ent->r.mins, maxs, tv(0.f,1.f,0.f), ent->s.number);
+		G_RailBox(ent->r.currentOrigin, ent->r.mins, maxs, tv(0.f, 1.f, 0.f), ent->s.number);
 
 		head = G_BuildHead(ent, &refent, qtrue);
-		G_RailBox(head->r.currentOrigin, head->r.mins, head->r.maxs, tv(0.f,1.f,0.f), ent->s.number|HITBOXBIT_HEAD);
+		G_RailBox(head->r.currentOrigin, head->r.mins, head->r.maxs, tv(0.f, 1.f, 0.f), ent->s.number | HITBOXBIT_HEAD);
 		G_FreeEntity(head);
 	}
 

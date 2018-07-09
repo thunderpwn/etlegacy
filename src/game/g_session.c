@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -37,19 +37,15 @@
 #include "g_local.h"
 #include "../../etmain/ui/menudef.h"
 
-/*
-=======================================================================
-  SESSION DATA
-=======================================================================
+/**
+ * SESSION DATA
 */
 
-/*
-================
-G_WriteClientSessionData
-
-Called on game shutdown
-================
-*/
+/**
+ * @brief Called on game shutdown
+ * @param[in] client
+ * @param[in] restart
+ */
 void G_WriteClientSessionData(gclient_t *client, qboolean restart)
 {
 #ifdef FEATURE_MULTIVIEW
@@ -65,15 +61,15 @@ void G_WriteClientSessionData(gclient_t *client, qboolean restart)
 
 #ifdef FEATURE_MULTIVIEW
 #ifdef FEATURE_RATING
-	s = va("%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %f %f %f %f %i %i %i %i %i %i %i %i",
+	s = va("%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %f %f %f %f %i %i %i %i %i %i %i %i",
 #else
-	s = va("%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
+	s = va("%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
 #endif
 #else
 #ifdef FEATURE_RATING
-	s = va("%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %f %f %f %f %i %i %i %i %i %i",
+	s = va("%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %f %f %f %f %i %i %i %i %i %i",
 #else
-	s = va("%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
+	s = va("%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
 #endif
 #endif
 	       client->sess.sessionTeam,
@@ -87,7 +83,6 @@ void G_WriteClientSessionData(gclient_t *client, qboolean restart)
 	       client->sess.latchPlayerWeapon,
 	       client->sess.latchPlayerWeapon2,
 
-	       client->sess.coach_team,
 	       client->sess.referee,
 	       client->sess.spec_invite,
 	       client->sess.spec_team,
@@ -154,13 +149,10 @@ void G_WriteClientSessionData(gclient_t *client, qboolean restart)
 	}
 }
 
-/*
-================
-G_ClientSwap
-
-Client swap handling
-================
-*/
+/**
+ * @brief Client swap handling
+ * @param[in,out] client
+ */
 void G_ClientSwap(gclient_t *client)
 {
 	int flags = 0;
@@ -200,9 +192,32 @@ void G_ClientSwap(gclient_t *client)
 	client->sess.spec_team = flags;
 }
 
+/**
+ * @brief G_CalcRank
+ * @param[in,out] client
+ */
 void G_CalcRank(gclient_t *client)
 {
 	int i, highestskill = 0;
+
+#ifdef FEATURE_RATING
+	if (g_skillRating.integer)
+	{
+		for (i = 0; i < SK_NUM_SKILLS; i++)
+		{
+			G_SetPlayerSkill(client, i);
+		}
+
+		client->sess.rank = (int)(MAX(client->sess.mu - 3 * client->sess.sigma, 0.f) / (2 * MU) * NUM_EXPERIENCE_LEVELS);
+
+		if (client->sess.rank > 10)
+		{
+			client->sess.rank = 10;
+		}
+
+		return;
+	}
+#endif
 
 	for (i = 0; i < SK_NUM_SKILLS; i++)
 	{
@@ -237,13 +252,10 @@ void G_CalcRank(gclient_t *client)
 	}
 }
 
-/*
-================
-G_ReadSessionData
-
-Called on a reconnect
-================
-*/
+/**
+ * @brief Called on a reconnect
+ * @param[in] client
+ */
 void G_ReadSessionData(gclient_t *client)
 {
 #ifdef FEATURE_MULTIVIEW
@@ -257,15 +269,15 @@ void G_ReadSessionData(gclient_t *client)
 
 #ifdef FEATURE_MULTIVIEW
 #ifdef FEATURE_RATING
-	sscanf(s, "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %f %f %f %f %i %i %i %i %i %i %i %i",
+	sscanf(s, "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %f %f %f %f %i %i %i %i %i %i %i %i",
 #else
-	sscanf(s, "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
+	sscanf(s, "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
 #endif
 #else
 #ifdef FEATURE_RATING
-	sscanf(s, "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %f %f %f %f %i %i %i %i %i %i",
+	sscanf(s, "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %f %f %f %f %i %i %i %i %i %i",
 #else
-	sscanf(s, "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
+	sscanf(s, "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
 #endif
 #endif
 	       (int *)&client->sess.sessionTeam,
@@ -273,13 +285,12 @@ void G_ReadSessionData(gclient_t *client)
 	       (int *)&client->sess.spectatorState,
 	       &client->sess.spectatorClient,
 	       &client->sess.playerType,
-	       &client->sess.playerWeapon,
-	       &client->sess.playerWeapon2,
+		   (int *)&client->sess.playerWeapon,
+		   (int *)&client->sess.playerWeapon2,
 	       &client->sess.latchPlayerType,
-	       &client->sess.latchPlayerWeapon,
-	       &client->sess.latchPlayerWeapon2,
+		   (int *)&client->sess.latchPlayerWeapon,
+		   (int *)&client->sess.latchPlayerWeapon2,
 
-	       &client->sess.coach_team,
 	       &client->sess.referee,
 	       &client->sess.spec_invite,
 	       &client->sess.spec_team,
@@ -381,14 +392,12 @@ void G_ReadSessionData(gclient_t *client)
 	}
 }
 
-/*
-================
-G_InitSessionData
-
-Called on a first-time connect
-================
-*/
-void G_InitSessionData(gclient_t *client, char *userinfo)
+/**
+ * @brief Called on a first-time connect
+ * @param[in] client
+ * @param userinfo
+ */
+void G_InitSessionData(gclient_t *client, const char *userinfo)
 {
     clientSession_t *sess = &client->sess;
 
@@ -399,22 +408,21 @@ void G_InitSessionData(gclient_t *client, char *userinfo)
     sess->spectatorTime = level.time;
 
     sess->latchPlayerType = sess->playerType = 0;
-    sess->latchPlayerWeapon = sess->playerWeapon = 0;
-    sess->latchPlayerWeapon2 = sess->playerWeapon2 = 0;
+    sess->latchPlayerWeapon = sess->playerWeapon = WP_NONE;
+    sess->latchPlayerWeapon2 = sess->playerWeapon2 = WP_NONE;
 
     sess->spawnObjectiveIndex = 0;
 
-    memset(sess->ignoreClients, 0, sizeof(sess->ignoreClients));
+    Com_Memset(sess->ignoreClients, 0, sizeof(sess->ignoreClients));
 
     sess->muted = qfalse;
-    memset(sess->skill, 0, sizeof(sess->skill));
-    memset(sess->skillpoints, 0, sizeof(sess->skillpoints));
-    memset(sess->startskillpoints, 0, sizeof(sess->startskillpoints));
-    memset(sess->medals, 0, sizeof(sess->medals));
+    Com_Memset(sess->skill, 0, sizeof(sess->skill));
+    Com_Memset(sess->skillpoints, 0, sizeof(sess->skillpoints));
+    Com_Memset(sess->startskillpoints, 0, sizeof(sess->startskillpoints));
+    Com_Memset(sess->medals, 0, sizeof(sess->medals));
     sess->rank = 0;
     sess->startxptotal = 0;
 
-    sess->coach_team = 0;
     // we set ref in ClientUserinfoChanged
     sess->referee = RL_NONE; // (client->pers.localClient) ? RL_REFEREE : RL_NONE;
     sess->spec_invite = 0;
@@ -427,11 +435,9 @@ void G_InitSessionData(gclient_t *client, char *userinfo)
     G_WriteClientSessionData(client, qfalse);
 }
 
-/*
-==================
-G_InitWorldSession
-==================
-*/
+/**
+ * @brief G_InitWorldSession
+ */
 void G_InitWorldSession(void)
 {
     char s[MAX_STRING_CHARS];
@@ -552,11 +558,10 @@ void G_InitWorldSession(void)
 	}
 }
 
-/*
-==================
-G_WriteSessionData
-==================
-*/
+/**
+ * @brief G_WriteSessionData
+ * @param[in] restart
+ */
 void G_WriteSessionData(qboolean restart)
 {
     int  i;

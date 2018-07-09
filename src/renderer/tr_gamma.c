@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -61,6 +61,9 @@ const char *simpleGammaFrag = "#version 110\n"
                               "gl_FragColor = vec4(pow(texture2D(u_CurrentMap, vec2(gl_TexCoord[0])).rgb, vec3(1.0 / u_gamma)), 1);\n"
                               "}\n";
 
+/**
+ * @brief R_BuildGammaProgram
+ */
 static void R_BuildGammaProgram(void)
 {
 	GLint compiled;
@@ -85,7 +88,7 @@ static void R_BuildGammaProgram(void)
 		{
 			GLchar *compiler_log;
 
-			compiler_log = (GLchar *) malloc(blen);
+			compiler_log = (GLchar *) Com_Allocate(blen);
 
 			glGetInfoLogARB(gammaProgram.vertexShader, blen, &slen, compiler_log);
 			Ren_Fatal("Failed to compile the gamma vertex shader reason: %s\n", compiler_log);
@@ -113,7 +116,8 @@ static void R_BuildGammaProgram(void)
 
 	glLinkProgramARB(gammaProgram.program);
 
-	glGetProgramivARB(gammaProgram.program, GL_LINK_STATUS, &compiled); // this throws glGetError() = 0x500
+	glGetObjectParameterivARB(gammaProgram.program, GL_OBJECT_LINK_STATUS_ARB, &compiled);
+
 	if (!compiled)
 	{
 		Ren_Fatal("Failed to link gamma shaders\n");
@@ -127,6 +131,9 @@ static void R_BuildGammaProgram(void)
 	glUseProgramObjectARB(0);
 }
 
+/**
+ * @brief R_ScreenGamma
+ */
 void R_ScreenGamma(void)
 {
 	if (gammaProgram.program)
@@ -167,6 +174,9 @@ void R_ScreenGamma(void)
 	}
 }
 
+/**
+ * @brief R_InitGamma
+ */
 void R_InitGamma(void)
 {
 	byte *data;
@@ -186,7 +196,7 @@ void R_InitGamma(void)
 	data = (byte *)ri.Hunk_AllocateTempMemory(glConfig.vidWidth * glConfig.vidHeight * 4);
 	if (!data)
 	{
-		Ren_Print("WARNING: R_InitGamma() can't allocate temp memory\n"); // fatal?
+		Ren_Print("WARNING: R_InitGamma() can't allocate temp memory\n"); // TODO: fatal?
 		return;
 	}
 
@@ -203,6 +213,9 @@ void R_InitGamma(void)
 	R_BuildGammaProgram();
 }
 
+/**
+ * @brief R_ShutdownGamma
+ */
 void R_ShutdownGamma(void)
 {
 	if (gammaProgram.program)

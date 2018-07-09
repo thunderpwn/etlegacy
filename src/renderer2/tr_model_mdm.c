@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -39,6 +39,16 @@
 
 const float mdmLODResolutions[MD3_MAX_LODS] = { 1.0f, 0.75f, 0.5f, 0.35f };
 
+/**
+ * @brief AddSurfaceToVBOSurfacesListMDM
+ * @param[in] vboSurfaces
+ * @param[in] vboTriangles
+ * @param[in] mdm
+ * @param[in] surf
+ * @param[in] skinIndex
+ * @param numBoneReferences - unused
+ * @param[in] boneReferences
+ */
 static void AddSurfaceToVBOSurfacesListMDM(growList_t *vboSurfaces, growList_t *vboTriangles, mdmModel_t *mdm, mdmSurfaceIntern_t *surf, int skinIndex, int numBoneReferences, int boneReferences[MAX_BONES])
 {
 	int             j, k, lod;
@@ -233,8 +243,8 @@ static void AddSurfaceToVBOSurfacesListMDM(growList_t *vboSurfaces, growList_t *
 	vboSurf->vbo->ofsBinormals       = ofsBinormals;
 	vboSurf->vbo->ofsNormals         = ofsNormals;
 	vboSurf->vbo->ofsColors          = ofsNormals;
-	vboSurf->vbo->ofsLightCoords     = 0; // not required anyway
-	vboSurf->vbo->ofsLightDirections = 0; // not required anyway
+	//vboSurf->vbo->ofsLightCoords     = 0; // not required anyway
+	//vboSurf->vbo->ofsLightDirections = 0; // not required anyway
 	vboSurf->vbo->ofsBoneIndexes     = ofsBoneIndexes;
 	vboSurf->vbo->ofsBoneWeights     = ofsBoneWeights;
 
@@ -377,7 +387,14 @@ static void AddSurfaceToVBOSurfacesListMDM(growList_t *vboSurfaces, growList_t *
 	 */
 }
 
-qboolean R_LoadMDM(model_t *mod, void *buffer, const char *modName)
+/**
+ * @brief R_LoadMDM
+ * @param[in,out] mod
+ * @param[in,out] buffer
+ * @param[in] name
+ * @return
+ */
+qboolean R_LoadMDM(model_t *mod, void *buffer, const char *name)
 {
 	int         i, j, k;
 	mdmHeader_t *mdm = ( mdmHeader_t * ) buffer;
@@ -400,7 +417,7 @@ qboolean R_LoadMDM(model_t *mod, void *buffer, const char *modName)
 
 	if (version != MDM_VERSION)
 	{
-		Ren_Warning("R_LoadMDM: %s has wrong version (%i should be %i)\n", modName, version, MDM_VERSION);
+		Ren_Warning("R_LoadMDM: %s has wrong version (%i should be %i)\n", name, version, MDM_VERSION);
 		return qfalse;
 	}
 
@@ -409,7 +426,7 @@ qboolean R_LoadMDM(model_t *mod, void *buffer, const char *modName)
 	mod->dataSize += sizeof(mdmModel_t);
 
 	//mdm = mod->mdm = ri.Hunk_Alloc(size, h_low);
-	//memcpy(mdm, buffer, LittleLong(pinmodel->ofsEnd));
+	//Com_Memcpy(mdm, buffer, LittleLong(pinmodel->ofsEnd));
 
 	mdmModel = mod->mdm = ri.Hunk_Alloc(sizeof(mdmModel_t), h_low);
 
@@ -524,13 +541,13 @@ qboolean R_LoadMDM(model_t *mod, void *buffer, const char *modName)
 		if (mdmSurf->numVerts > SHADER_MAX_VERTEXES)
 		{
 			Ren_Drop("R_LoadMDM: %s has more than %i verts on a surface (%i)",
-			         modName, SHADER_MAX_VERTEXES, mdmSurf->numVerts);
+			         name, SHADER_MAX_VERTEXES, mdmSurf->numVerts);
 		}
 
 		if (mdmSurf->numTriangles > SHADER_MAX_TRIANGLES)
 		{
 			Ren_Drop("R_LoadMDM: %s has more than %i triangles on a surface (%i)",
-			         modName, SHADER_MAX_TRIANGLES, mdmSurf->numTriangles);
+			         name, SHADER_MAX_TRIANGLES, mdmSurf->numTriangles);
 		}
 
 		// register the shaders
@@ -591,7 +608,7 @@ qboolean R_LoadMDM(model_t *mod, void *buffer, const char *modName)
 				         j, v->numWeights, MAX_WEIGHTS, i, modName);
 #else
 				Ren_Warning("WARNING: R_LoadMDM: vertex %i requires %i instead of maximum %i weights on surface (%i) in model '%s'\n",
-				            j, v->numWeights, MAX_WEIGHTS, i, modName);
+				            j, v->numWeights, MAX_WEIGHTS, i, name);
 #endif
 			}
 
@@ -761,7 +778,7 @@ qboolean R_LoadMDM(model_t *mod, void *buffer, const char *modName)
 				bb = (dv[1]->texCoords[0] - dv[0]->texCoords[0]) * (dv[2]->texCoords[1] - dv[0]->texCoords[1]) - (dv[2]->texCoords[0] - dv[0]->texCoords[0]) * (dv[1]->texCoords[1] -
 				                                                                                                                                                dv[0]->texCoords[1]);
 
-				if (fabs(bb) < 0.00000001f)
+				if (Q_fabs(bb) < 0.00000001f)
 				{
 					continue;
 				}
@@ -831,28 +848,26 @@ qboolean R_LoadMDM(model_t *mod, void *buffer, const char *modName)
 		}
 #endif
 
-#if 0
-
-		// do another extra smoothing for normals to avoid flat shading
-		for (j = 0; j < surf->numVerts; j++)
+		if (r_smoothNormals->integer & FLAGS_SMOOTH_MDM) // do another extra smoothing for normals to avoid flat shading
 		{
-			for (k = 0; k < surf->numVerts; k++)
+			for (j = 0; j < surf->numVerts; j++)
 			{
-				if (j == k)
+				for (k = 0; k < surf->numVerts; k++)
 				{
-					continue;
+					if (j == k)
+					{
+						continue;
+					}
+
+					if (VectorCompare(surf->verts[j].position, surf->verts[k].position))
+					{
+						VectorAdd(surf->verts[j].normal, surf->verts[k].normal, surf->verts[j].normal);
+					}
 				}
 
-				if (VectorCompare(surf->verts[j].position, surf->verts[k].position))
-				{
-					VectorAdd(surf->verts[j].normal, surf->verts[k].normal, surf->verts[j].normal);
-				}
+				VectorNormalize(surf->verts[j].normal);
 			}
-
-			VectorNormalize(surf->verts[j].normal);
 		}
-
-#endif
 	}
 
 	// split the surfaces into VBO surfaces by the maximum number of GPU vertex skinning bones
@@ -865,7 +880,7 @@ qboolean R_LoadMDM(model_t *mod, void *buffer, const char *modName)
 		int numBoneReferences;
 		int boneReferences[MAX_BONES];
 
-		Com_InitGrowList(&vboSurfaces, 10);
+		Com_InitGrowList(&vboSurfaces, 32);
 
 		for (i = 0, surf = mdmModel->surfaces; i < mdmModel->numSurfaces; i++, surf++)
 		{
@@ -937,7 +952,7 @@ qboolean R_LoadMDM(model_t *mod, void *buffer, const char *modName)
 
 				if (!vboTriangles.currentElements)
 				{
-					Ren_Warning("R_LoadMDM: could not add triangles to a remaining VBO surface for model '%s'\n", modName);
+					Ren_Warning("R_LoadMDM: could not add triangles to a remaining VBO surface for model '%s'\n", name);
 					break;
 				}
 

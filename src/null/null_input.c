@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -34,26 +34,50 @@
 
 #include "../client/client.h"
 
+/**
+ * @brief IN_Init
+ */
 void IN_Init(void)
 {
 }
 
+/**
+ * @brief IN_Frame
+ */
 void IN_Frame(void)
 {
 }
 
+/**
+ * @brief IN_Shutdown
+ */
 void IN_Shutdown(void)
 {
 }
 
+/**
+ * @brief IN_MouseEvent
+ * @param mstate
+ *
+ * @note Unused
+ */
 void IN_MouseEvent(int mstate)
 {
 }
 
+/**
+ * @brief IN_Activate
+ * @param active
+ *
+ * @note Unused
+ */
 void IN_Activate(qboolean active)
 {
 }
 
+/**
+ * @brief IN_Restart
+ */
 void IN_Restart(void)
 {
 }

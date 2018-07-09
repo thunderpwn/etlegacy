@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -36,19 +36,25 @@
 
 void propExplosion(gentity_t *ent);
 
-/*
-==============
-alarmbox_updateparts
-==============
-*/
+/**
+ * @brief alarmbox_updateparts
+ * @param[in] ent
+ * @param[in] matestoo
+ */
 void alarmbox_updateparts(gentity_t *ent, qboolean matestoo)
 {
-	gentity_t *t, *mate;
-	qboolean  alarming = (ent->s.frame == 1);
+	gentity_t *t = NULL;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	// update teammates
 	if (matestoo)
 	{
+		gentity_t *mate;
+
 		for (mate = ent->teammaster; mate; mate = mate->teamchain)
 		{
 			if (mate == ent)
@@ -56,12 +62,12 @@ void alarmbox_updateparts(gentity_t *ent, qboolean matestoo)
 				continue;
 			}
 
-			if (!(mate->active))       // don't update dead alarm boxes, they stay dead
+			if (!mate->active)       // don't update dead alarm boxes, they stay dead
 			{
 				continue;
 			}
 
-			if (!(ent->active))       // destroyed, so just turn teammates off
+			if (!ent->active)       // destroyed, so just turn teammates off
 			{
 				mate->s.frame = 0;
 			}
@@ -80,53 +86,48 @@ void alarmbox_updateparts(gentity_t *ent, qboolean matestoo)
 		return;
 	}
 
-	t = NULL;
 	while ((t = G_FindByTargetname(t, ent->target)) != NULL)
 	{
 		if (t == ent)
 		{
 			G_Printf("WARNING: Entity used itself.\n");
+			continue;
 		}
-		else
-		{
-			// give the dlight the sound
-			if (!Q_stricmp(t->classname, "dlight"))
-			{
-				t->soundLoop = ent->soundLoop;
 
-				if (alarming)
-				{
-					if (!(t->r.linked))
-					{
-						G_UseEntity(t, ent, 0);
-					}
-				}
-				else
-				{
-					if (t->r.linked)
-					{
-						G_UseEntity(t, ent, 0);
-					}
-				}
-			}
-			// alarmbox can tell script_trigger about activation
-			// (but don't trigger if dying, only activation)
-			else if (!Q_stricmp(t->classname, "target_script_trigger"))
+		if (!Q_stricmp(t->classname, "dlight"))    // give the dlight the sound
+		{
+			t->soundLoop = ent->soundLoop;
+
+			if (ent->s.frame == 1)
 			{
-				if (ent->active)     // not dead
+				if (!t->r.linked)
 				{
 					G_UseEntity(t, ent, 0);
 				}
+			}
+			else if (t->r.linked)
+			{
+				G_UseEntity(t, ent, 0);
+			}
+		}
+		// alarmbox can tell script_trigger about activation
+		// (but don't trigger if dying, only activation)
+		else if (!Q_stricmp(t->classname, "target_script_trigger"))
+		{
+			if (ent->active)     // not dead
+			{
+				G_UseEntity(t, ent, 0);
 			}
 		}
 	}
 }
 
-/*
-==============
-alarmbox_use
-==============
-*/
+/**
+ * @brief alarmbox_use
+ * @param[in,out] ent
+ * @param[in] other
+ * @param foo - unused
+ */
 void alarmbox_use(gentity_t *ent, gentity_t *other, gentity_t *foo)
 {
 	if (!(ent->active))
@@ -134,14 +135,7 @@ void alarmbox_use(gentity_t *ent, gentity_t *other, gentity_t *foo)
 		return;
 	}
 
-	if (ent->s.frame)
-	{
-		ent->s.frame = 0;
-	}
-	else
-	{
-		ent->s.frame = 1;
-	}
+	ent->s.frame = !(qboolean)ent->s.frame;
 
 	alarmbox_updateparts(ent, qtrue);
 	if (other->client)
@@ -151,12 +145,15 @@ void alarmbox_use(gentity_t *ent, gentity_t *other, gentity_t *foo)
 	//	G_Printf("touched alarmbox\n");
 }
 
-/*
-==============
-alarmbox_die
-==============
-*/
-void alarmbox_die(gentity_t *ent, gentity_t *inflictor, gentity_t *attacker, int damage, int mod)
+/**
+ * @brief alarmbox_die
+ * @param[in,out] ent
+ * @param inflictor - unused
+ * @param attacker - unused
+ * @param damage - unused
+ * @param mod - unused
+ */
+void alarmbox_die(gentity_t *ent, gentity_t *inflictor, gentity_t *attacker, int damage, meansOfDeath_t mod)
 {
 	propExplosion(ent);
 	ent->s.frame    = 2;
@@ -165,11 +162,10 @@ void alarmbox_die(gentity_t *ent, gentity_t *inflictor, gentity_t *attacker, int
 	alarmbox_updateparts(ent, qtrue);
 }
 
-/*
-==============
-alarmbox_finishspawning
-==============
-*/
+/**
+ * @brief alarmbox_finishspawning
+ * @param[in] ent
+ */
 void alarmbox_finishspawning(gentity_t *ent)
 {
 	gentity_t *mate;
@@ -184,22 +180,28 @@ void alarmbox_finishspawning(gentity_t *ent)
 	alarmbox_updateparts(ent, qtrue);
 }
 
-/*QUAKED alarm_box (1 0 1) START_ON
-You need to have an origin brush as part of this entity
-current alarm box model is (8 x 16 x 28)
-"health" defaults to 10
-
-"noise" the sound to play over the system (this would be the siren sound)
-
-START_ON means the button is pushed in, any dlights are cycling, and alarms are sounding
-
-"team" key/value is valid for teamed alarm boxes
-teamed alarm_boxes work in tandem (switches/lights syncronize)
-target a box to dlights to have them activate/deactivate with the system (use a stylestring that matches the cycletime for the alarmbox sound)
-alarm sound locations are also placed in the dlights, so wherever you place an attached dlight, you will hear the alarm
-model: the model used is "models/mapobjects/electronics/alarmbox.md3"
-place the origin at the center of your trigger box
-*/
+/**
+ * @brief SP_alarm_box
+ *
+ * @details
+ * QUAKED alarm_box (1 0 1) START_ON
+ * You need to have an origin brush as part of this entity
+ * current alarm box model is (8 x 16 x 28)
+ * "health" defaults to 10
+ *
+ * "noise" the sound to play over the system (this would be the siren sound)
+ *
+ * START_ON means the button is pushed in, any dlights are cycling, and alarms are sounding
+ *
+ * "team" key/value is valid for teamed alarm boxes
+ * teamed alarm_boxes work in tandem (switches/lights syncronize)
+ * target a box to dlights to have them activate/deactivate with the system (use a stylestring that matches the cycletime for the alarmbox sound)
+ * alarm sound locations are also placed in the dlights, so wherever you place an attached dlight, you will hear the alarm
+ * model: the model used is "models/mapobjects/electronics/alarmbox.md3"
+ * place the origin at the center of your trigger box
+ *
+ * @param[in,out] ent
+ */
 void SP_alarm_box(gentity_t *ent)
 {
 	char *s;
@@ -226,7 +228,7 @@ void SP_alarm_box(gentity_t *ent)
 	G_SetAngle(ent, ent->s.angles);
 
 	// FIXME: temp
-	G_Printf("Alarm: %f %f %f\n", ent->s.origin[0], ent->s.origin[1], ent->s.origin[2]);
+	G_Printf("Alarm: %f %f %f\n", (double)ent->s.origin[0], (double)ent->s.origin[1], (double)ent->s.origin[2]);
 
 	if (!ent->health)
 	{

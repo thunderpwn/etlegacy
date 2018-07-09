@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -47,44 +47,65 @@
 
 #define GET_BUFFER_SIZE 1024 * 256
 
-// initialize once
+/**
+ * @var dl_initialized
+ * @brief Initialize once
+ */
 static int dl_initialized = 0;
 
 static CURLM *dl_multi   = NULL;
 static CURL  *dl_request = NULL;
 static FILE  *dl_file    = NULL;
 
+/**
+ * @struct write_result_s
+ */
 typedef struct write_result_s
 {
 	char *data;
 	int pos;
 } write_result_t;
 
-/*
-============
-Write to file
-============
-*/
+/**
+ * @brief DL_cb_FWriteFile
+ * @param[in] ptr
+ * @param[in] size
+ * @param[in] nmemb
+ * @param[in] stream
+ * @return
+ */
 static size_t DL_cb_FWriteFile(void *ptr, size_t size, size_t nmemb, void *stream)
 {
 	FILE *file = (FILE *)stream;
 	return fwrite(ptr, size, nmemb, file);
 }
 
-/*
-============
-Print progress
-============
-*/
+/**
+ * @brief DL_cb_Progress
+ * @param clientp - unused
+ * @param dltotal - unused
+ * @param[in] dlnow
+ * @param ultotal - unused
+ * @param ulnow   - unused
+ * @return
+ *
+ * @note cl_downloadSize and cl_downloadTime are set by the Q3 protocol...
+ * and it would probably be expensive to verify them here.
+ */
 static int DL_cb_Progress(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
 {
-	/* cl_downloadSize and cl_downloadTime are set by the Q3 protocol...
-	   and it would probably be expensive to verify them here.   -zinx */
-
 	Cvar_SetValue("cl_downloadCount", (float)dlnow);
 	return 0;
 }
 
+/**
+ * @brief DL_write_function
+ * @param[in] ptr
+ * @param[in] size
+ * @param[in] nmemb
+ * @param[out] stream
+ * @return
+ */
 size_t DL_write_function(void *ptr, size_t size, size_t nmemb, void *stream)
 {
 	write_result_t *result = (write_result_t *)stream;
@@ -95,12 +116,15 @@ size_t DL_write_function(void *ptr, size_t size, size_t nmemb, void *stream)
 		return 0;
 	}
 
-	memcpy(result->data + result->pos, ptr, size * nmemb);
+	Com_Memcpy(result->data + result->pos, ptr, size * nmemb);
 	result->pos += size * nmemb;
 
 	return size * nmemb;
 }
 
+/**
+ * @brief DL_InitDownload
+ */
 void DL_InitDownload(void)
 {
 	if (dl_initialized)
@@ -117,11 +141,9 @@ void DL_InitDownload(void)
 	dl_initialized = 1;
 }
 
-/*
-================
-DL_Shutdown
-================
-*/
+/**
+ * @brief DL_Shutdown
+ */
 void DL_Shutdown(void)
 {
 	if (!dl_initialized)
@@ -137,12 +159,14 @@ void DL_Shutdown(void)
 	dl_initialized = 0;
 }
 
-/*
-===============
-inspired from http://www.w3.org/Library/Examples/LoadToFile.c
-setup the download, return once we have a connection
-===============
-*/
+/**
+ * @brief Inspired from http://www.w3.org/Library/Examples/LoadToFile.c
+ * setup the download, return once we have a connection
+ *
+ * @param localName
+ * @param remoteName
+ * @return
+ */
 int DL_BeginDownload(char *localName, const char *remoteName)
 {
 	char referer[MAX_STRING_CHARS + 5 /*"ET://"*/];
@@ -153,7 +177,7 @@ int DL_BeginDownload(char *localName, const char *remoteName)
 		return 0;
 	}
 
-	if (!localName || !remoteName)
+	if (!localName[0] || !remoteName[0])
 	{
 		Com_Printf(S_COLOR_RED "DL_BeginDownload: Error - empty download URL or empty local file name\n");
 		return 0;
@@ -190,13 +214,32 @@ int DL_BeginDownload(char *localName, const char *remoteName)
 	curl_easy_setopt(dl_request, CURLOPT_FOLLOWLOCATION, 1);
 	curl_easy_setopt(dl_request, CURLOPT_MAXREDIRS, 5);
 
-	curl_multi_add_handle(dl_multi, dl_request);
+#ifdef FEATURE_OPENSSL
+#if 0
+	curl_easy_setopt(dl_request, CURLOPT_CAINFO, "./cert.crt");
+#else
+	curl_easy_setopt(dl_request, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_easy_setopt(dl_request, CURLOPT_SSL_VERIFYPEER, 0);
+#endif
+#endif
+
+	if (curl_multi_add_handle(dl_multi, dl_request) != CURLM_OK)
+	{
+		Com_Printf(S_COLOR_RED  "DL_BeginDownload: Error - invalid handle.\n");
+	}
 
 	Cvar_Set("cl_downloadName", remoteName);
 
 	return 1;
 }
 
+/**
+ * @brief DL_GetString
+ * @param[in] url
+ * @return
+ *
+ * @note Unused
+ */
 char *DL_GetString(const char *url)
 {
 	CURL     *curl = NULL;
@@ -216,7 +259,7 @@ char *DL_GetString(const char *url)
 
 	curl = curl_easy_init();
 
-	data = (char *)malloc(GET_BUFFER_SIZE);
+	data = (char *)Com_Allocate(GET_BUFFER_SIZE);
 	if (!data)
 	{
 		goto error_get;
@@ -229,9 +272,17 @@ char *DL_GetString(const char *url)
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, va("%s %s", APP_NAME "/" APP_VERSION, curl_version()));
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, DL_write_function);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &write_result);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&write_result);
+
+#ifdef FEATURE_OPENSSL
+#if 0
+	curl_easy_setopt(dl_request, CURLOPT_CAINFO, "./cert.crt");
+#else
+	curl_easy_setopt(dl_request, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_easy_setopt(dl_request, CURLOPT_SSL_VERIFYPEER, 0);
+#endif
+#endif
 
 	status = curl_easy_perform(curl);
 	if (status != 0)
@@ -262,13 +313,18 @@ error_get:
 
 	if (data)
 	{
-		free(data);
+		Com_Dealloc(data);
 	}
 
 	return NULL;
 }
 
-// (maybe this should be CL_DL_DownloadLoop)
+/**
+ * @brief DL_DownloadLoop
+ * @return
+ *
+ * @note maybe this should be CL_DL_DownloadLoop
+ */
 dlStatus_t DL_DownloadLoop(void)
 {
 	CURLMcode  status;

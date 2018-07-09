@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -31,19 +31,22 @@
  */
 /**
  * @file renderer2/tr_shade.c
+ *
+ * @brief THIS ENTIRE FILE IS BACK END!
+ * This file deals with applying shaders to surface data in the tess struct.
  */
 
 #include "tr_local.h"
 
 /*
-=================================================================================
-THIS ENTIRE FILE IS BACK END!
-
-This file deals with applying shaders to surface data in the tess struct.
-=================================================================================
-*/
-
-/*
+ * @brief MyMultiDrawElements
+ * @param[in] mode
+ * @param[in] count
+ * @param[in] type
+ * @param[in] indices
+ * @param[in] primcount
+ *
+ * @note Unused
 static void MyMultiDrawElements(GLenum mode, const GLsizei *count, GLenum type, const void* *indices, GLsizei primcount)
 {
     int			i;
@@ -56,6 +59,9 @@ static void MyMultiDrawElements(GLenum mode, const GLsizei *count, GLenum type, 
 }
 */
 
+/**
+ * @brief Tess_DrawElements
+ */
 void Tess_DrawElements()
 {
 	if ((tess.numIndexes == 0 || tess.numVertexes == 0) && tess.multiDrawPrimitives == 0)
@@ -115,6 +121,9 @@ SURFACE SHADERS
 
 shaderCommands_t tess;
 
+/**
+ * @brief BindLightMap
+ */
 static void BindLightMap()
 {
 	image_t *lightmap;
@@ -137,11 +146,9 @@ static void BindLightMap()
 	GL_Bind(lightmap);
 }
 
-/*
-=================
-BindDeluxeMap
-=================
-*/
+/**
+ * @brief BindDeluxeMap
+ */
 static void BindDeluxeMap()
 {
 	image_t *deluxemap;
@@ -164,13 +171,9 @@ static void BindDeluxeMap()
 	GL_Bind(deluxemap);
 }
 
-/*
-================
-DrawTris
-
-Draws triangle outlines for debugging
-================
-*/
+/**
+ * @brief Draws triangle outlines for debugging
+ */
 static void DrawTris()
 {
 	vec_t *color;
@@ -237,16 +240,21 @@ static void DrawTris()
 	glDepthRange(0, 1);
 }
 
-/*
-==============
-Tess_Begin
-
-We must set some things up before beginning any tesselation,
-because a surface may be forced to perform a Tess_End due
-to overflow.
-==============
-*/
 // *INDENT-OFF*
+/**
+ * @brief We must set some things up before beginning any tesselation,
+ * because a surface may be forced to perform a Tess_End due
+ * to overflow.
+ *
+ * @param stageIteratorFunc
+ * @param stageIteratorFunc2
+ * @param[in] surfaceShader
+ * @param[in] lightShader
+ * @param[in] skipTangentSpaces
+ * @param[in] skipVBO
+ * @param[in] lightmapNum
+ * @param[in] fogNum
+ */
 void Tess_Begin(void (*stageIteratorFunc)(),
                 void (*stageIteratorFunc2)(),
                 shader_t *surfaceShader, shader_t *lightShader,
@@ -256,11 +264,11 @@ void Tess_Begin(void (*stageIteratorFunc)(),
                 int fogNum)
 {
 	shader_t *state;
-	qboolean isSky;
+	qboolean isSky = qfalse;
 
-	tess.numIndexes  = 0;
-	tess.numVertexes = 0;
-
+	tess.numIndexes          = 0;
+	tess.numVertexes         = 0;
+	tess.attribsSet          = 0;
 	tess.multiDrawPrimitives = 0;
 
 	// materials are optional
@@ -271,6 +279,11 @@ void Tess_Begin(void (*stageIteratorFunc)(),
 		tess.surfaceShader    = state;
 		tess.surfaceStages    = state->stages;
 		tess.numSurfaceStages = state->numStages;
+
+		if (state->isSky)
+		{
+			isSky = qtrue;
+		}
 	}
 	else
 	{
@@ -279,15 +292,6 @@ void Tess_Begin(void (*stageIteratorFunc)(),
 		tess.numSurfaceStages = 0;
 		tess.surfaceShader    = NULL;
 		tess.surfaceStages    = NULL;
-	}
-
-	if (state != NULL && state->isSky != qfalse)
-	{
-		isSky = qtrue;
-	}
-	else
-	{
-		isSky = qfalse;
 	}
 
 	tess.lightShader = lightShader;
@@ -309,6 +313,7 @@ void Tess_Begin(void (*stageIteratorFunc)(),
 			tess.stageIteratorFunc2 = &Tess_StageIteratorGeneric;
 		}
 	}
+	/*
 	else if (tess.stageIteratorFunc == &Tess_StageIteratorDepthFill)
 	{
 		if (isSky)
@@ -317,6 +322,7 @@ void Tess_Begin(void (*stageIteratorFunc)(),
 			tess.stageIteratorFunc2 = &Tess_StageIteratorDepthFill;
 		}
 	}
+	*/
 
 	tess.skipTangentSpaces = skipTangentSpaces;
 	tess.skipVBO           = skipVBO;
@@ -327,15 +333,100 @@ void Tess_Begin(void (*stageIteratorFunc)(),
 }
 // *INDENT-ON*
 
+/**
+ * @brief clipping portal plane in world space
+ */
+void clipPortalPlane() // static for now - might be used in tr_main.c and tr_sky.c
+{
+	vec4_t plane;
+
+	plane[0] = backEnd.viewParms.portalPlane.normal[0];
+	plane[1] = backEnd.viewParms.portalPlane.normal[1];
+	plane[2] = backEnd.viewParms.portalPlane.normal[2];
+	plane[3] = backEnd.viewParms.portalPlane.dist;
+	SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+}
+
+typedef struct rgbaGen_s {
+	colorGen_t color;
+	alphaGen_t alpha;
+} rgbaGen_t;
+
+/**
+ * @brief getRgbaGen
+ *
+ * @param pStage
+ * @param lightmapNum
+ */
+static rgbaGen_t getRgbaGen(shaderStage_t *pStage, int lightmapNum)
+{
+    // always exclude the sky
+    if (tess.surfaceShader->isSky)
+    {
+        rgbaGen_t rgbaGen = { pStage->rgbGen, pStage->alphaGen };
+
+        return rgbaGen;
+    }
+    else
+    {
+        qboolean isVertexLit           = (qboolean) (lightmapNum == LIGHTMAP_BY_VERTEX || lightmapNum == LIGHTMAP_WHITEIMAGE);
+        qboolean shouldForceCgenVertex = (qboolean) (isVertexLit && pStage->rgbGen == CGEN_IDENTITY);
+        qboolean shouldForceAgenVertex = (qboolean) (isVertexLit && pStage->alphaGen == AGEN_IDENTITY);
+        int colorGen                   = shouldForceCgenVertex ? CGEN_VERTEX : pStage->rgbGen;
+        int alphaGen                   = shouldForceAgenVertex ? AGEN_VERTEX : pStage->alphaGen;
+        rgbaGen_t rgbaGen              = { colorGen, alphaGen };
+
+        return rgbaGen;
+    }
+}
+
+/**
+ * @brief getRgbaGenForColorModulation
+ *
+ * @param pStage
+ * @param lightmapNum
+ */
+static rgbaGen_t getRgbaGenForColorModulation(shaderStage_t *pStage, int lightmapNum)
+{
+	rgbaGen_t rgbaGen;
+
+	rgbaGen = getRgbaGen(pStage, lightmapNum);
+
+	// u_ColorGen
+	switch (rgbaGen.color)
+	{
+	case CGEN_VERTEX:
+	case CGEN_ONE_MINUS_VERTEX:
+		break;
+	default:
+		rgbaGen.color = CGEN_CONST;
+		break;
+	}
+
+	// u_AlphaGen
+	switch (rgbaGen.alpha)
+	{
+	case AGEN_VERTEX:
+	case AGEN_ONE_MINUS_VERTEX:
+		break;
+	default:
+		rgbaGen.alpha = AGEN_CONST;
+		break;
+	}
+
+	return rgbaGen;
+}
+
+/**
+ * @brief Render_generic
+ * @param[in] stage
+ */
 static void Render_generic(int stage)
 {
-	shaderStage_t *pStage;
-	colorGen_t    rgbGen;
-	alphaGen_t    alphaGen;
+	shaderStage_t *pStage = tess.surfaceStages[stage];
+	rgbaGen_t     rgbaGen;
 
 	Ren_LogComment("--- Render_generic ---\n");
-
-	pStage = tess.surfaceStages[stage];
 
 	GL_State(pStage->stateBits);
 
@@ -354,38 +445,16 @@ static void Render_generic(int stage)
 	if (pStage->tcGen_Environment)
 	{
 		// calculate the environment texcoords in object space
-		SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.orientation.viewOrigin);
+		// origin for object, vieworigin for camera here we need to use object for reflections
+		SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin);
 	}
 
 	// u_AlphaTest
 	GLSL_SetUniform_AlphaTest(pStage->stateBits);
 
+	rgbaGen = getRgbaGenForColorModulation(pStage, tess.lightmapNum);
 
-	// u_ColorGen
-	switch (pStage->rgbGen)
-	{
-	case CGEN_VERTEX:
-	case CGEN_ONE_MINUS_VERTEX:
-		rgbGen = pStage->rgbGen;
-		break;
-	default:
-		rgbGen = CGEN_CONST;
-		break;
-	}
-
-	// u_AlphaGen
-	switch (pStage->alphaGen)
-	{
-	case AGEN_VERTEX:
-	case AGEN_ONE_MINUS_VERTEX:
-		alphaGen = pStage->alphaGen;
-		break;
-	default:
-		alphaGen = AGEN_CONST;
-		break;
-	}
-
-	GLSL_SetUniform_ColorModulate(trProg.gl_genericShader, rgbGen, alphaGen);
+	GLSL_SetUniform_ColorModulate(trProg.gl_genericShader, rgbaGen.color, rgbaGen.alpha);
 	SetUniformVec4(UNIFORM_COLOR, tess.svars.color);
 	SetUniformMatrix16(UNIFORM_MODELMATRIX, MODEL_MATRIX);
 	SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
@@ -410,15 +479,7 @@ static void Render_generic(int stage)
 
 	if (backEnd.viewParms.isPortal)
 	{
-		vec4_t plane;
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	// bind u_ColorMap
@@ -433,21 +494,22 @@ static void Render_generic(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_vertexLighting_DBS_entity
+ * @param[in] stage
+ */
 static void Render_vertexLighting_DBS_entity(int stage)
 {
-	vec3_t        viewOrigin;
-	vec3_t        ambientColor;
-	vec3_t        lightDir;
-	vec4_t        lightColor;
-	uint32_t      stateBits;
 	shaderStage_t *pStage       = tess.surfaceStages[stage];
 	qboolean      normalMapping = qfalse;
 
 	Ren_LogComment("--- Render_vertexLighting_DBS_entity ---\n");
 
-	stateBits = pStage->stateBits;
-	GL_State(stateBits);
-	if (r_normalMapping->integer && (pStage->bundle[TB_NORMALMAP].image[0] != NULL))
+	GL_State(pStage->stateBits);
+
+	// if there's no image tr.flatImage is used
+	//if (r_normalMapping->integer && (pStage->bundle[TB_NORMALMAP].image[0] != NULL))
+	if (r_normalMapping->integer)
 	{
 		normalMapping = qtrue;
 	}
@@ -462,28 +524,32 @@ static void Render_vertexLighting_DBS_entity(int stage)
 	                          USE_PARALLAX_MAPPING, normalMapping && r_parallaxMapping->integer && tess.surfaceShader->parallax,
 	                          USE_REFLECTIVE_SPECULAR, normalMapping && tr.cubeHashTable != NULL);
 
+	if (tess.surfaceShader->numDeforms)
+	{
+		// u_DeformGen
+		//GLSL_SetUniform_DeformParms(tess.surfaceShader->deforms, tess.surfaceShader->numDeforms);
+		SetUniformFloat(UNIFORM_TIME, backEnd.refdef.floatTime); // u_time
+	}
+
 	// now we are ready to set the shader program uniforms
 	if (glConfig2.vboVertexSkinningAvailable && tess.vboVertexSkinning)
 	{
 		SetUniformMatrix16ARR(UNIFORM_BONEMATRIX, tess.boneMatrices, MAX_BONES);
 	}
 
+	if (r_wrapAroundLighting->integer)
+	{
+		SetUniformFloat(UNIFORM_LIGHTWRAPAROUND, RB_EvalExpression(&pStage->wrapAroundLightingExp, 0));
+	}
+
 	// set uniforms
-	VectorCopy(backEnd.viewParms.orientation.origin, viewOrigin);   // in world space
-	VectorCopy(backEnd.currentEntity->ambientLight, ambientColor);
 	//ClampColor(ambientColor);
-	VectorCopy(backEnd.currentEntity->directedLight, lightColor);
-	//ClampColor(directedLight);
-
-	// lightDir = L vector which means surface to light
-	VectorCopy(backEnd.currentEntity->lightDir, lightDir);
-
 	// u_AlphaTest
 	GLSL_SetUniform_AlphaTest(pStage->stateBits);
-	SetUniformVec3(UNIFORM_AMBIENTCOLOR, ambientColor);
-	SetUniformVec3(UNIFORM_VIEWORIGIN, viewOrigin);
-	SetUniformVec3(UNIFORM_LIGHTDIR, lightDir);
-	SetUniformVec3(UNIFORM_LIGHTCOLOR, lightColor);
+	SetUniformVec3(UNIFORM_AMBIENTCOLOR, backEnd.currentEntity->ambientLight);
+	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin); // in world space
+	SetUniformVec3(UNIFORM_LIGHTDIR, backEnd.currentEntity->lightDir); // = L vector which means surface to light
+	SetUniformVec3(UNIFORM_LIGHTCOLOR, backEnd.currentEntity->directedLight);
 
 	SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
 	SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
@@ -503,20 +569,12 @@ static void Render_vertexLighting_DBS_entity(int stage)
 
 	if (backEnd.viewParms.isPortal)
 	{
-		vec4_t plane;
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	// bind u_DiffuseMap
 	SelectTexture(TEX_DIFFUSE);
 	GL_Bind(pStage->bundle[TB_DIFFUSEMAP].image[0]);
-
 	SetUniformMatrix16(UNIFORM_DIFFUSETEXTUREMATRIX, tess.svars.texMatrices[TB_DIFFUSEMAP]);
 
 	if (normalMapping)
@@ -547,7 +605,7 @@ static void Render_vertexLighting_DBS_entity(int stage)
 
 		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);
 
-		//if(r_reflectionMapping->integer)
+		if (tr.cubeHashTable != NULL)
 		{
 			cubemapProbe_t *cubeProbeNearest;
 			cubemapProbe_t *cubeProbeSecondNearest;
@@ -558,7 +616,7 @@ static void Render_vertexLighting_DBS_entity(int stage)
 			}
 			else
 			{
-				// FIXME position
+				// FIXME position (this shouldn't occure - we are in entity renderer)
 				R_FindTwoNearestCubeMaps(backEnd.viewParms.orientation.origin, &cubeProbeNearest, &cubeProbeSecondNearest);
 			}
 
@@ -583,6 +641,9 @@ static void Render_vertexLighting_DBS_entity(int stage)
 				SelectTexture(TEX_ENVMAP0);
 				GL_Bind(cubeProbeSecondNearest->cubemap);
 
+				SelectTexture(TEX_ENVMAP1);
+				GL_Bind(tr.whiteCubeImage);
+
 				// u_EnvironmentInterpolation
 				SetUniformFloat(UNIFORM_ENVIRONMENTINTERPOLATION, 0.0);
 			}
@@ -595,8 +656,8 @@ static void Render_vertexLighting_DBS_entity(int stage)
 				GL_Bind(cubeProbeNearest->cubemap);
 
 				// bind u_EnvironmentMap1
-				//SelectTexture(TEX_ENVMAP1);
-				//GL_Bind(cubeProbeNearest->cubemap);
+				SelectTexture(TEX_ENVMAP1);
+				GL_Bind(tr.whiteCubeImage);
 
 				// u_EnvironmentInterpolation
 				SetUniformFloat(UNIFORM_ENVIRONMENTINTERPOLATION, 0.0);
@@ -612,7 +673,7 @@ static void Render_vertexLighting_DBS_entity(int stage)
 				}
 				else
 				{
-					// FIXME position
+					// FIXME position (this shouldn't occure - we are in entity renderer)
 					cubeProbeNearestDistance       = Distance(backEnd.viewParms.orientation.origin, cubeProbeNearest->origin);
 					cubeProbeSecondNearestDistance = Distance(backEnd.viewParms.orientation.origin, cubeProbeSecondNearest->origin);
 				}
@@ -642,20 +703,23 @@ static void Render_vertexLighting_DBS_entity(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_vertexLighting_DBS_world
+ * @param[in] stage
+ */
 static void Render_vertexLighting_DBS_world(int stage)
 {
-	vec3_t        viewOrigin;
-	uint32_t      stateBits;
-	colorGen_t    colorGen;
-	alphaGen_t    alphaGen;
 	shaderStage_t *pStage       = tess.surfaceStages[stage];
 	qboolean      normalMapping = qfalse;
+	rgbaGen_t     rgbaGen;
 
 	Ren_LogComment("--- Render_vertexLighting_DBS_world ---\n");
 
-	stateBits = pStage->stateBits;
+	GL_State(pStage->stateBits);
 
-	if (r_normalMapping->integer && (pStage->bundle[TB_NORMALMAP].image[0] != NULL))
+	// if there's no image tr.flatImage is used
+	//if (r_normalMapping->integer && (pStage->bundle[TB_NORMALMAP].image[0] != NULL))
+	if (r_normalMapping->integer)
 	{
 		normalMapping = qtrue;
 	}
@@ -669,8 +733,7 @@ static void Render_vertexLighting_DBS_world(int stage)
 	// now we are ready to set the shader program uniforms
 
 	// set uniforms
-	VectorCopy(backEnd.orientation.viewOrigin, viewOrigin);
-
+	
 	GL_CheckErrors();
 
 	// u_DeformGen
@@ -680,45 +743,19 @@ static void Render_vertexLighting_DBS_world(int stage)
 		SetUniformFloat(UNIFORM_TIME, backEnd.refdef.floatTime);
 	}
 
-	// u_ColorModulate
-	switch (pStage->rgbGen)
-	{
-	case CGEN_VERTEX:
-	case CGEN_ONE_MINUS_VERTEX:
-		colorGen = pStage->rgbGen;
-		break;
-	default:
-		colorGen = CGEN_CONST;
-		break;
-	}
+	rgbaGen = getRgbaGenForColorModulation(pStage, tess.lightmapNum);
 
-	switch (pStage->alphaGen)
-	{
-	case AGEN_VERTEX:
-		alphaGen = pStage->alphaGen;
-		break;
-	case AGEN_ONE_MINUS_VERTEX:
-		alphaGen = pStage->alphaGen;
-
-		/*
-		alphaGen = AGEN_VERTEX;
-		stateBits &= ~(GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS);
-		stateBits |= (GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
-		*/
-		break;
-	default:
-		alphaGen = AGEN_CONST;
-		break;
-	}
-
-	GL_State(stateBits);
-
-	GLSL_SetUniform_ColorModulate(trProg.gl_vertexLightingShader_DBS_world, colorGen, alphaGen);
+	GLSL_SetUniform_ColorModulate(trProg.gl_vertexLightingShader_DBS_world, rgbaGen.color, rgbaGen.alpha);
 	SetUniformVec4(UNIFORM_COLOR, tess.svars.color);
-	SetUniformFloat(UNIFORM_LIGHTWRAPAROUND, RB_EvalExpression(&pStage->wrapAroundLightingExp, 0));
-	SetUniformVec3(UNIFORM_VIEWORIGIN, viewOrigin);
+
+	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.viewOrigin);
 	SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
 	GLSL_SetUniform_AlphaTest(pStage->stateBits);
+
+	if (r_wrapAroundLighting->integer)
+	{
+		SetUniformFloat(UNIFORM_LIGHTWRAPAROUND, RB_EvalExpression(&pStage->wrapAroundLightingExp, 0));
+	}
 
 	if (r_parallaxMapping->integer)
 	{
@@ -730,20 +767,12 @@ static void Render_vertexLighting_DBS_world(int stage)
 
 	if (backEnd.viewParms.isPortal)
 	{
-		float plane[4];
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	// bind u_DiffuseMap
 	SelectTexture(TEX_DIFFUSE);
 	GL_Bind(pStage->bundle[TB_DIFFUSEMAP].image[0]);
-
 	SetUniformMatrix16(UNIFORM_DIFFUSETEXTUREMATRIX, tess.svars.texMatrices[TB_DIFFUSEMAP]);
 
 	if (normalMapping)
@@ -782,40 +811,22 @@ static void Render_vertexLighting_DBS_world(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_lightMapping
+ * @param[in] stage
+ * @param[in] asColorMap
+ * @param[in] normalMapping
+ */
 static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalMapping)
 {
-	shaderStage_t *pStage;
-	uint32_t      stateBits;
-	colorGen_t    rgbGen;
-	alphaGen_t    alphaGen;
+	shaderStage_t *pStage   = tess.surfaceStages[stage];
+	uint32_t      stateBits = pStage->stateBits;
+	rgbaGen_t     rgbaGen;
 
 	Ren_LogComment("--- Render_lightMapping ---\n");
 
-	pStage = tess.surfaceStages[stage];
+	rgbaGen = getRgbaGenForColorModulation(pStage, tess.lightmapNum);
 
-	stateBits = pStage->stateBits;
-
-	switch (pStage->rgbGen)
-	{
-	case CGEN_VERTEX:
-	case CGEN_ONE_MINUS_VERTEX:
-		rgbGen = pStage->rgbGen;
-		break;
-	default:
-		rgbGen = CGEN_CONST;
-		break;
-	}
-
-	switch (pStage->alphaGen)
-	{
-	case AGEN_VERTEX:
-	case AGEN_ONE_MINUS_VERTEX:
-		alphaGen = pStage->alphaGen;
-		break;
-	default:
-		alphaGen = AGEN_CONST;
-		break;
-	}
 
 	if (r_showLightMaps->integer)
 	{
@@ -824,7 +835,8 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 
 	GL_State(stateBits);
 
-	if (pStage->bundle[TB_NORMALMAP].image[0] == NULL)
+	// enable by cvar - if there's no image tr.flatImage is used
+	if (!r_normalMapping->integer)
 	{
 		normalMapping = qfalse;
 	}
@@ -847,7 +859,7 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 	SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
 	SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
 	GLSL_SetUniform_AlphaTest(pStage->stateBits);
-	GLSL_SetUniform_ColorModulate(trProg.gl_lightMappingShader, rgbGen, alphaGen);
+	GLSL_SetUniform_ColorModulate(trProg.gl_lightMappingShader, rgbaGen.color, rgbaGen.alpha);
 	SetUniformVec4(UNIFORM_COLOR, tess.svars.color);
 
 	if (r_parallaxMapping->integer)
@@ -860,15 +872,7 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 
 	if (backEnd.viewParms.isPortal)
 	{
-		vec4_t plane;
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	// bind u_DiffuseMap
@@ -880,7 +884,6 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 	else
 	{
 		GL_Bind(pStage->bundle[TB_DIFFUSEMAP].image[0]);
-
 		SetUniformMatrix16(UNIFORM_DIFFUSETEXTUREMATRIX, tess.svars.texMatrices[TB_DIFFUSEMAP]);
 	}
 
@@ -936,18 +939,20 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_depthFill
+ * @param[in] stage
+ *
+ */
 static void Render_depthFill(int stage)
 {
-	shaderStage_t *pStage;
+	shaderStage_t *pStage = tess.surfaceStages[stage];
 	vec4_t        ambientColor;
-	uint32_t      stateBits;
+	rgbaGen_t     rgbaGen;
 
 	Ren_LogComment("--- Render_depthFill ---\n");
 
-	pStage     = tess.surfaceStages[stage];
-	stateBits  = pStage->stateBits;
-	stateBits &= ~(GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS | GLS_ATEST_BITS);
-	stateBits |= GLS_DEPTHMASK_TRUE;
+	rgbaGen = getRgbaGenForColorModulation(pStage, tess.lightmapNum);
 
 	GL_State(pStage->stateBits);
 
@@ -960,14 +965,15 @@ static void Render_depthFill(int stage)
 	                          USE_TCGEN_ENVIRONMENT, pStage->tcGen_Environment);
 
 	// set uniforms
+
 	if (pStage->tcGen_Environment)
 	{
 		// calculate the environment texcoords in object space
-		SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.orientation.viewOrigin);
+		SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.viewOrigin);
 	}
 
 	GLSL_SetUniform_AlphaTest(pStage->stateBits);
-	GLSL_SetUniform_ColorModulate(trProg.gl_genericShader, CGEN_CONST, AGEN_CONST);
+	GLSL_SetUniform_ColorModulate(trProg.gl_genericShader, rgbaGen.color, rgbaGen.alpha);
 
 	// u_Color
 	if (r_precomputedLighting->integer)
@@ -987,7 +993,9 @@ static void Render_depthFill(int stage)
 	}
 	ambientColor[3] = 1;
 
+	// FIXME? see u_AmbientColor in depthFill glsl
 	SetUniformVec4(UNIFORM_COLOR, ambientColor);
+	//SetUniformVec3(UNIFORM_AMBIENTCOLOR, backEnd.currentEntity->ambientLight);
 
 	SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
 	SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
@@ -1006,15 +1014,7 @@ static void Render_depthFill(int stage)
 
 	if (backEnd.viewParms.isPortal)
 	{
-		vec4_t plane;
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	// bind u_ColorMap
@@ -1038,17 +1038,18 @@ static void Render_depthFill(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_shadowFill
+ * @param[in] stage
+ */
 static void Render_shadowFill(int stage)
 {
-	shaderStage_t *pStage;
-	uint32_t      stateBits;
+	shaderStage_t *pStage   = tess.surfaceStages[stage];
+	uint32_t      stateBits = pStage->stateBits;
 
 	Ren_LogComment("--- Render_shadowFill ---\n");
 
-	pStage = tess.surfaceStages[stage];
-
 	// remove blend modes
-	stateBits  = pStage->stateBits;
 	stateBits &= ~(GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS);
 
 	GL_State(stateBits);
@@ -1103,15 +1104,7 @@ static void Render_shadowFill(int stage)
 
 	if (backEnd.viewParms.isPortal)
 	{
-		vec4_t plane;
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	// bind u_ColorMap
@@ -1133,22 +1126,25 @@ static void Render_shadowFill(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_forwardLighting_DBS_omni
+ * @param[in] diffuseStage
+ * @param[in] attenuationXYStage
+ * @param[in] attenuationZStage
+ * @param[in] light
+ */
 static void Render_forwardLighting_DBS_omni(shaderStage_t *diffuseStage,
                                             shaderStage_t *attenuationXYStage,
                                             shaderStage_t *attenuationZStage, trRefLight_t *light)
 {
-	vec3_t     viewOrigin;
-	vec3_t     lightOrigin;
-	vec4_t     lightColor;
 	float      shadowTexelSize;
-	colorGen_t colorGen;
-	alphaGen_t alphaGen;
 	qboolean   normalMapping;
 	qboolean   shadowCompare;
+	rgbaGen_t  rgbaGen;
 
 	Ren_LogComment("--- Render_forwardLighting_DBS_omni ---\n");
-
-	if (r_normalMapping->integer && (diffuseStage->bundle[TB_NORMALMAP].image[0] != NULL))
+	//let cvar decide
+	if (r_normalMapping->integer)
 	{
 		normalMapping = qtrue;
 	}
@@ -1180,29 +1176,9 @@ static void Render_forwardLighting_DBS_omni(shaderStage_t *diffuseStage,
 	// now we are ready to set the shader program uniforms
 
 	// u_ColorModulate
-	switch (diffuseStage->rgbGen)
-	{
-	case CGEN_VERTEX:
-	case CGEN_ONE_MINUS_VERTEX:
-		colorGen = diffuseStage->rgbGen;
-		break;
-	default:
-		colorGen = CGEN_CONST;
-		break;
-	}
+	rgbaGen = getRgbaGenForColorModulation(diffuseStage, tess.lightmapNum);
 
-	switch (diffuseStage->alphaGen)
-	{
-	case AGEN_VERTEX:
-	case AGEN_ONE_MINUS_VERTEX:
-		alphaGen = diffuseStage->alphaGen;
-		break;
-	default:
-		alphaGen = AGEN_CONST;
-		break;
-	}
-
-	GLSL_SetUniform_ColorModulate(trProg.gl_forwardLightingShader_omniXYZ, colorGen, alphaGen);
+	GLSL_SetUniform_ColorModulate(trProg.gl_forwardLightingShader_omniXYZ, rgbaGen.color, rgbaGen.alpha);
 	SetUniformVec4(UNIFORM_COLOR, tess.svars.color);
 
 	if (r_parallaxMapping->integer)
@@ -1215,9 +1191,6 @@ static void Render_forwardLighting_DBS_omni(shaderStage_t *diffuseStage,
 	}
 
 	// set uniforms
-	VectorCopy(backEnd.viewParms.orientation.origin, viewOrigin);
-	VectorCopy(light->origin, lightOrigin);
-	VectorCopy(tess.svars.color, lightColor);
 
 	if (shadowCompare)
 	{
@@ -1228,12 +1201,16 @@ static void Render_forwardLighting_DBS_omni(shaderStage_t *diffuseStage,
 		shadowTexelSize = 1.0f;
 	}
 
-	SetUniformVec3(UNIFORM_VIEWORIGIN, viewOrigin);
-	SetUniformVec3(UNIFORM_LIGHTORIGIN, lightOrigin);
-	SetUniformVec3(UNIFORM_LIGHTCOLOR, lightColor);
+	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin);
+	SetUniformVec3(UNIFORM_LIGHTORIGIN, light->origin);
+	SetUniformVec3(UNIFORM_LIGHTCOLOR, tess.svars.color);
 	SetUniformFloat(UNIFORM_LIGHTRADIUS, light->sphereRadius);
 	SetUniformFloat(UNIFORM_LIGHTSCALE, light->l.scale);
-	SetUniformFloat(UNIFORM_LIGHTWRAPAROUND, RB_EvalExpression(&diffuseStage->wrapAroundLightingExp, 0));
+	if (r_wrapAroundLighting->integer)
+	{
+		SetUniformFloat(UNIFORM_LIGHTWRAPAROUND, RB_EvalExpression(&diffuseStage->wrapAroundLightingExp, 0));
+	}
+	
 	SetUniformMatrix16(UNIFORM_LIGHTATTENUATIONMATRIX, light->attenuationMatrix2);
 
 	GL_CheckErrors();
@@ -1269,15 +1246,7 @@ static void Render_forwardLighting_DBS_omni(shaderStage_t *diffuseStage,
 
 	if (backEnd.viewParms.isPortal)
 	{
-		vec4_t plane;
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	GL_CheckErrors();
@@ -1336,9 +1305,9 @@ static void Render_forwardLighting_DBS_omni(shaderStage_t *diffuseStage,
 		GL_Bind(tr.shadowCubeFBOImage[light->shadowLOD]);
 	}
 
-	// bind u_RandomMap
-	SelectTexture(TEX_RANDOM);
-	GL_Bind(tr.randomNormalsImage);
+	// bind u_RandomMap (not used - see forwardLighting_fp)
+	//SelectTexture(TEX_RANDOM);
+	//GL_Bind(tr.randomNormalsImage);
 
 	GLSL_SetRequiredVertexPointers(trProg.gl_forwardLightingShader_omniXYZ);
 
@@ -1347,37 +1316,32 @@ static void Render_forwardLighting_DBS_omni(shaderStage_t *diffuseStage,
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_forwardLighting_DBS_proj
+ * @param[in] diffuseStage
+ * @param[in] attenuationXYStage
+ * @param[in] attenuationZStage
+ * @param[in] light
+ */
 static void Render_forwardLighting_DBS_proj(shaderStage_t *diffuseStage,
                                             shaderStage_t *attenuationXYStage,
                                             shaderStage_t *attenuationZStage, trRefLight_t *light)
 {
-	vec3_t     viewOrigin;
-	vec3_t     lightOrigin;
-	vec4_t     lightColor;
 	float      shadowTexelSize;
-	colorGen_t colorGen;
-	alphaGen_t alphaGen;
-	qboolean   normalMapping;
-	qboolean   shadowCompare;
+	qboolean   normalMapping = qfalse;
+	qboolean   shadowCompare = qfalse;
+	rgbaGen_t rgbaGen;
 
 	Ren_LogComment("--- Render_fowardLighting_DBS_proj ---\n");
-
-	if (r_normalMapping->integer && (diffuseStage->bundle[TB_NORMALMAP].image[0] != NULL))
+	//let cvar decide
+	if (r_normalMapping->integer)
 	{
 		normalMapping = qtrue;
-	}
-	else
-	{
-		normalMapping = qfalse;
 	}
 
 	if (r_shadows->integer >= SHADOWING_ESM16 && !light->l.noShadows && light->shadowLOD >= 0)
 	{
 		shadowCompare = qtrue;
-	}
-	else
-	{
-		shadowCompare = qfalse;
 	}
 
 	// choose right shader program ----------------------------------
@@ -1395,29 +1359,9 @@ static void Render_forwardLighting_DBS_proj(shaderStage_t *diffuseStage,
 	// now we are ready to set the shader program uniforms
 
 	// u_ColorModulate
-	switch (diffuseStage->rgbGen)
-	{
-	case CGEN_VERTEX:
-	case CGEN_ONE_MINUS_VERTEX:
-		colorGen = diffuseStage->rgbGen;
-		break;
-	default:
-		colorGen = CGEN_CONST;
-		break;
-	}
+	rgbaGen = getRgbaGenForColorModulation(diffuseStage, tess.lightmapNum);
 
-	switch (diffuseStage->alphaGen)
-	{
-	case AGEN_VERTEX:
-	case AGEN_ONE_MINUS_VERTEX:
-		alphaGen = diffuseStage->alphaGen;
-		break;
-	default:
-		alphaGen = AGEN_CONST;
-		break;
-	}
-
-	GLSL_SetUniform_ColorModulate(trProg.gl_forwardLightingShader_projXYZ, colorGen, alphaGen);
+	GLSL_SetUniform_ColorModulate(trProg.gl_forwardLightingShader_projXYZ, rgbaGen.color, rgbaGen.alpha);
 	SetUniformVec4(UNIFORM_COLOR, tess.svars.color);
 
 	if (r_parallaxMapping->integer)
@@ -1430,9 +1374,6 @@ static void Render_forwardLighting_DBS_proj(shaderStage_t *diffuseStage,
 	}
 
 	// set uniforms
-	VectorCopy(backEnd.viewParms.orientation.origin, viewOrigin);
-	VectorCopy(light->origin, lightOrigin);
-	VectorCopy(tess.svars.color, lightColor);
 
 	if (shadowCompare)
 	{
@@ -1443,12 +1384,15 @@ static void Render_forwardLighting_DBS_proj(shaderStage_t *diffuseStage,
 		shadowTexelSize = 1.0f;
 	}
 
-	SetUniformVec3(UNIFORM_VIEWORIGIN, viewOrigin);
-	SetUniformVec3(UNIFORM_LIGHTORIGIN, lightOrigin);
-	SetUniformVec3(UNIFORM_LIGHTCOLOR, lightColor);
+	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin);
+	SetUniformVec3(UNIFORM_LIGHTORIGIN, light->origin);
+	SetUniformVec3(UNIFORM_LIGHTCOLOR, tess.svars.color);
 	SetUniformFloat(UNIFORM_LIGHTRADIUS, light->sphereRadius);
 	SetUniformFloat(UNIFORM_LIGHTSCALE, light->l.scale);
-	SetUniformFloat(UNIFORM_LIGHTWRAPAROUND, RB_EvalExpression(&diffuseStage->wrapAroundLightingExp, 0));
+	if (r_wrapAroundLighting->integer)
+	{
+		SetUniformFloat(UNIFORM_LIGHTWRAPAROUND, RB_EvalExpression(&diffuseStage->wrapAroundLightingExp, 0));
+	}
 	SetUniformMatrix16(UNIFORM_LIGHTATTENUATIONMATRIX, light->attenuationMatrix2);
 
 	GL_CheckErrors();
@@ -1485,15 +1429,7 @@ static void Render_forwardLighting_DBS_proj(shaderStage_t *diffuseStage,
 
 	if (backEnd.viewParms.isPortal)
 	{
-		vec4_t plane;
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	GL_CheckErrors();
@@ -1552,9 +1488,9 @@ static void Render_forwardLighting_DBS_proj(shaderStage_t *diffuseStage,
 		GL_Bind(tr.shadowMapFBOImage[light->shadowLOD]);
 	}
 
-	// bind u_RandomMap
-	SelectTexture(TEX_RANDOM);
-	GL_Bind(tr.randomNormalsImage);
+	// bind u_RandomMap (not used - see forwardLighting_fp)
+	//SelectTexture(TEX_RANDOM);
+	//GL_Bind(tr.randomNormalsImage);
 
 	GLSL_SetRequiredVertexPointers(trProg.gl_forwardLightingShader_projXYZ);
 
@@ -1563,23 +1499,26 @@ static void Render_forwardLighting_DBS_proj(shaderStage_t *diffuseStage,
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_forwardLighting_DBS_directional
+ * @param[in] diffuseStage
+ * @param attenuationXYStage - unused
+ * @param attenuationZStage - unused
+ * @param[in] light
+ */
 static void Render_forwardLighting_DBS_directional(shaderStage_t *diffuseStage,
                                                    shaderStage_t *attenuationXYStage,
                                                    shaderStage_t *attenuationZStage, trRefLight_t *light)
 {
-#if 1
-	vec3_t     viewOrigin;
 	vec3_t     lightDirection;
-	vec4_t     lightColor;
 	float      shadowTexelSize;
-	colorGen_t colorGen;
-	alphaGen_t alphaGen;
 	qboolean   normalMapping = qfalse;
 	qboolean   shadowCompare = qfalse;
+	rgbaGen_t  rgbaGen;
 
 	Ren_LogComment("--- Render_forwardLighting_DBS_directional ---\n");
-
-	if (r_normalMapping->integer && (diffuseStage->bundle[TB_NORMALMAP].image[0] != NULL))
+	//let cvar decide
+	if (r_normalMapping->integer)
 	{
 		normalMapping = qtrue;
 	}
@@ -1605,29 +1544,9 @@ static void Render_forwardLighting_DBS_directional(shaderStage_t *diffuseStage,
 	// now we are ready to set the shader program uniforms
 
 	// u_ColorModulate
-	switch (diffuseStage->rgbGen)
-	{
-	case CGEN_VERTEX:
-	case CGEN_ONE_MINUS_VERTEX:
-		colorGen = diffuseStage->rgbGen;
-		break;
-	default:
-		colorGen = CGEN_CONST;
-		break;
-	}
+	rgbaGen = getRgbaGenForColorModulation(diffuseStage, tess.lightmapNum);
 
-	switch (diffuseStage->alphaGen)
-	{
-	case AGEN_VERTEX:
-	case AGEN_ONE_MINUS_VERTEX:
-		alphaGen = diffuseStage->alphaGen;
-		break;
-	default:
-		alphaGen = AGEN_CONST;
-		break;
-	}
-
-	GLSL_SetUniform_ColorModulate(trProg.gl_forwardLightingShader_directionalSun, colorGen, alphaGen);
+	GLSL_SetUniform_ColorModulate(trProg.gl_forwardLightingShader_directionalSun, rgbaGen.color, rgbaGen.alpha);
 	SetUniformVec4(UNIFORM_COLOR, tess.svars.color);
 
 	if (r_parallaxMapping->integer)
@@ -1639,7 +1558,6 @@ static void Render_forwardLighting_DBS_directional(shaderStage_t *diffuseStage,
 	}
 
 	// set uniforms
-	VectorCopy(backEnd.viewParms.orientation.origin, viewOrigin);
 
 #if 1
 	VectorCopy(tr.sunDirection, lightDirection);
@@ -1647,7 +1565,6 @@ static void Render_forwardLighting_DBS_directional(shaderStage_t *diffuseStage,
 	VectorCopy(light->direction, lightDirection);
 #endif
 
-	VectorCopy(tess.svars.color, lightColor);
 
 	if (shadowCompare)
 	{
@@ -1658,12 +1575,15 @@ static void Render_forwardLighting_DBS_directional(shaderStage_t *diffuseStage,
 		shadowTexelSize = 1.0f;
 	}
 
-	SetUniformVec3(UNIFORM_VIEWORIGIN, viewOrigin);
+	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin);
 	SetUniformVec3(UNIFORM_LIGHTDIR, lightDirection);
-	SetUniformVec3(UNIFORM_LIGHTCOLOR, lightColor);
+	SetUniformVec3(UNIFORM_LIGHTCOLOR, tess.svars.color);
 	SetUniformFloat(UNIFORM_LIGHTRADIUS, light->sphereRadius);
 	SetUniformFloat(UNIFORM_LIGHTSCALE, light->l.scale);
-	SetUniformFloat(UNIFORM_LIGHTWRAPAROUND, RB_EvalExpression(&diffuseStage->wrapAroundLightingExp, 0));
+	if (r_wrapAroundLighting->integer)
+	{
+		SetUniformFloat(UNIFORM_LIGHTWRAPAROUND, RB_EvalExpression(&diffuseStage->wrapAroundLightingExp, 0));
+	}
 	SetUniformMatrix16(UNIFORM_LIGHTATTENUATIONMATRIX, light->attenuationMatrix2);
 
 	GL_CheckErrors();
@@ -1702,15 +1622,7 @@ static void Render_forwardLighting_DBS_directional(shaderStage_t *diffuseStage,
 
 	if (backEnd.viewParms.isPortal)
 	{
-		vec4_t plane;
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	GL_CheckErrors();
@@ -1790,9 +1702,12 @@ static void Render_forwardLighting_DBS_directional(shaderStage_t *diffuseStage,
 	Tess_DrawElements();
 
 	GL_CheckErrors();
-#endif
 }
 
+/**
+ * @brief Render_reflection_CB
+ * @param[in] stage
+ */
 static void Render_reflection_CB(int stage)
 {
 	shaderStage_t *pStage = tess.surfaceStages[stage];
@@ -1802,7 +1717,7 @@ static void Render_reflection_CB(int stage)
 
 	GL_State(pStage->stateBits);
 
-	if (r_normalMapping->integer && (pStage->bundle[TB_NORMALMAP].image[0] != NULL))
+	if (r_normalMapping->integer)
 	{
 		normalMapping = qtrue;
 	}
@@ -1863,9 +1778,12 @@ static void Render_reflection_CB(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_refraction_C
+ * @param[in] stage
+ */
 static void Render_refraction_C(int stage)
 {
-	vec3_t        viewOrigin;
 	shaderStage_t *pStage = tess.surfaceStages[stage];
 
 	Ren_LogComment("--- Render_refraction_C ---\n");
@@ -1877,9 +1795,7 @@ static void Render_refraction_C(int stage)
 	GLSL_VertexAttribsState(ATTR_POSITION | ATTR_NORMAL);
 
 	// set uniforms
-	VectorCopy(backEnd.viewParms.orientation.origin, viewOrigin); // in world space
-
-	SetUniformVec3(UNIFORM_VIEWORIGIN, viewOrigin);
+	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin); // in world space
 	SetUniformFloat(UNIFORM_REFRACTIONINDEX, RB_EvalExpression(&pStage->refractionIndexExp, 1.0));
 	SetUniformFloat(UNIFORM_FRESNELPOWER, RB_EvalExpression(&pStage->fresnelPowerExp, 2.0));
 	SetUniformFloat(UNIFORM_FRESNELSCALE, RB_EvalExpression(&pStage->fresnelScaleExp, 2.0));
@@ -1902,9 +1818,12 @@ static void Render_refraction_C(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_dispersion_C
+ * @param[in] stage
+ */
 static void Render_dispersion_C(int stage)
 {
-	vec3_t        viewOrigin;
 	shaderStage_t *pStage = tess.surfaceStages[stage];
 	float         eta;
 	float         etaDelta;
@@ -1919,13 +1838,13 @@ static void Render_dispersion_C(int stage)
 	GLSL_VertexAttribsState(ATTR_POSITION | ATTR_NORMAL);
 
 	// set uniforms
-	VectorCopy(backEnd.viewParms.orientation.origin, viewOrigin);   // in world space
 	eta      = RB_EvalExpression(&pStage->etaExp, (float)1.1);
 	etaDelta = RB_EvalExpression(&pStage->etaDeltaExp, (float)-0.02);
 
-	SetUniformVec3(UNIFORM_VIEWORIGIN, viewOrigin);
+	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin);  // in world space
 	{
 		vec3_t temp = { eta, eta + etaDelta, eta + (etaDelta * 2) };
+		
 		SetUniformVec3(UNIFORM_ETARATIO, temp);
 	}
 	SetUniformFloat(UNIFORM_FRESNELPOWER, RB_EvalExpression(&pStage->fresnelPowerExp, 2.0f));
@@ -1949,6 +1868,10 @@ static void Render_dispersion_C(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_skybox
+ * @param[in] stage
+ */
 static void Render_skybox(int stage)
 {
 	shaderStage_t *pStage = tess.surfaceStages[stage];
@@ -1966,15 +1889,7 @@ static void Render_skybox(int stage)
 	// u_PortalPlane
 	if (backEnd.viewParms.isPortal)
 	{
-		vec4_t plane;
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	// bind u_ColorMap
@@ -1988,6 +1903,10 @@ static void Render_skybox(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_screen
+ * @param[in] stage
+ */
 static void Render_screen(int stage)
 {
 	shaderStage_t *pStage = tess.surfaceStages[stage];
@@ -2021,6 +1940,10 @@ static void Render_screen(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_portal
+ * @param[in] stage
+ */
 static void Render_portal(int stage)
 {
 	shaderStage_t *pStage = tess.surfaceStages[stage];
@@ -2057,6 +1980,10 @@ static void Render_portal(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_heatHaze
+ * @param[in] stage
+ */
 static void Render_heatHaze(int stage)
 {
 	uint32_t      stateBits;
@@ -2067,10 +1994,13 @@ static void Render_heatHaze(int stage)
 
 	if (r_heatHazeFix->integer && glConfig2.framebufferBlitAvailable)
 	{
-		FBO_t    *previousFBO;
-		uint32_t stateBits;
+		FBO_t     *previousFBO;
+		uint32_t  stateBits;
+		rgbaGen_t rgbaGen;
 
 		Ren_LogComment("--- HEATHAZE FIX BEGIN ---\n");
+
+		rgbaGen = getRgbaGenForColorModulation(pStage, tess.lightmapNum);
 
 		// capture current color buffer for u_CurrentMap
 		/*
@@ -2125,7 +2055,7 @@ static void Render_heatHaze(int stage)
 		                          USE_TCGEN_ENVIRONMENT, qfalse);
 		// end choose right shader program ------------------------------
 
-		GLSL_SetUniform_ColorModulate(trProg.gl_genericShader, CGEN_CONST, AGEN_CONST);
+		GLSL_SetUniform_ColorModulate(trProg.gl_genericShader, rgbaGen.color, rgbaGen.alpha);
 		SetUniformVec4(UNIFORM_COLOR, colorRed);
 		SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
 		SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
@@ -2148,15 +2078,7 @@ static void Render_heatHaze(int stage)
 
 		if (backEnd.viewParms.isPortal)
 		{
-			vec4_t plane;
-
-			// clipping plane in world space
-			plane[0] = backEnd.viewParms.portalPlane.normal[0];
-			plane[1] = backEnd.viewParms.portalPlane.normal[1];
-			plane[2] = backEnd.viewParms.portalPlane.normal[2];
-			plane[3] = backEnd.viewParms.portalPlane.dist;
-
-			SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+			clipPortalPlane();
 		}
 
 		// bind u_ColorMap
@@ -2247,9 +2169,12 @@ static void Render_heatHaze(int stage)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Render_liquid
+ * @param[in] stage
+ */
 static void Render_liquid(int stage)
 {
-	vec3_t        viewOrigin;
 	float         fogDensity;
 	shaderStage_t *pStage = tess.surfaceStages[stage];
 
@@ -2263,16 +2188,14 @@ static void Render_liquid(int stage)
 	GLSL_VertexAttribsState(ATTR_POSITION | ATTR_TEXCOORD | ATTR_TANGENT | ATTR_BINORMAL | ATTR_NORMAL | ATTR_COLOR);
 
 	// set uniforms
-	VectorCopy(backEnd.viewParms.orientation.origin, viewOrigin);   // in world space
+	fogDensity = RB_EvalExpression(&pStage->fogDensityExp, 0.001f);
 
-	fogDensity = RB_EvalExpression(&pStage->fogDensityExp, 0.001);
-
-	SetUniformVec3(UNIFORM_VIEWORIGIN, viewOrigin);
-	SetUniformFloat(UNIFORM_REFRACTIONINDEX, RB_EvalExpression(&pStage->refractionIndexExp, 1.0));
-	SetUniformFloat(UNIFORM_FRESNELPOWER, RB_EvalExpression(&pStage->fresnelPowerExp, 2.0));
-	SetUniformFloat(UNIFORM_FRESNELSCALE, RB_EvalExpression(&pStage->fresnelScaleExp, 1.0));
-	SetUniformFloat(UNIFORM_FRESNELBIAS, RB_EvalExpression(&pStage->fresnelBiasExp, 0.05));
-	SetUniformFloat(UNIFORM_NORMALSCALE, RB_EvalExpression(&pStage->normalScaleExp, 0.05));
+	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin); // in world space
+	SetUniformFloat(UNIFORM_REFRACTIONINDEX, RB_EvalExpression(&pStage->refractionIndexExp, 1.0f));
+	SetUniformFloat(UNIFORM_FRESNELPOWER, RB_EvalExpression(&pStage->fresnelPowerExp, 2.0f));
+	SetUniformFloat(UNIFORM_FRESNELSCALE, RB_EvalExpression(&pStage->fresnelScaleExp, 1.0f));
+	SetUniformFloat(UNIFORM_FRESNELBIAS, RB_EvalExpression(&pStage->fresnelBiasExp, 0.05f));
+	SetUniformFloat(UNIFORM_NORMALSCALE, RB_EvalExpression(&pStage->normalScaleExp, 0.05f));
 	SetUniformFloat(UNIFORM_FOGDENSITY, fogDensity);
 	SetUniformVec3(UNIFORM_FOGCOLOR, tess.svars.color);
 	SetUniformMatrix16(UNIFORM_UNPROJECTMATRIX, backEnd.viewParms.unprojectionMatrix);
@@ -2317,17 +2240,48 @@ static void Render_liquid(int stage)
 	GL_CheckErrors();
 }
 
-static void Render_fog()
+/**
+ * @brief Render_fog_brushes - used to render fog brushes (not the fog)
+ *
+ * @note This is required for any 'global' fog (see RB_RenderGlobalFog)
+ *       If the brush limit (see comment below) is deactivated it will also render
+ *       the 'volumetric' part of r_wolffog
+ *	     In other words:
+ *	     - gl_fogQuake3Shader does the r_wolffog fog 'wall' and fog brushes
+ *	     - gl_fogGlobalShader does the global volumetric fog (with static density see st.t = 0.6; in glsl)
+ *
+ *	     Why this mix is done?
+ *	     Currently it's the best solution until we've figured out which old fog code (and cvar r_wolffog) to drop
+ *	     The old transition between volumetric fog and fog 'wall' was always looking bad
+ *	     gl_fogGlobalShader has got a more fluent transition which is looking much better and there is no real need
+ *	     for the fog 'wall'.
+ *	     It's recommended to disable r_wolffog - it just doing the ugly wall
+ *
+ *	     side note: gl_volumetricFogShader might do the job for gl_fogGlobalShader
+ *
+ * @fixme Sort out the trouble
+ */
+static void Render_fog_brushes()
 {
 	fog_t  *fog;
 	float  eyeT;
 	vec3_t local;
 	vec4_t fogDistanceVector, fogDepthVector;
 
-	Ren_LogComment("--- Render_fog ---\n");
+	Ren_LogComment("--- Render_fog_brushes ---\n");
+
+	if (!r_wolfFog->integer && r_noFog->integer)
+	{
+		return;
+	}
+
+	//if (tr.world->fogs + tess.fogNum < 1 || !tess.surfaceShader->fogPass)
+	//{
+	//	return;
+	//}
 
 	// no fog pass in snooper
-	if ((tr.refdef.rdflags & RDF_SNOOPERVIEW) || tess.surfaceShader->noFog || !r_wolfFog->integer)
+	if ((tr.refdef.rdflags & RDF_SNOOPERVIEW) || tess.surfaceShader->noFog)
 	{
 		return;
 	}
@@ -2340,14 +2294,13 @@ static void Render_fog()
 
 	fog = tr.world->fogs + tess.fogNum;
 
-#if 1
-	// use this only to render fog brushes
-
+	// use this only to render fog brushes (global fog has a brush number of -1)
+	// disable this to get r_wolffog 'volumetric' fog back but also
+	// disable RB_RenderGlobalFog which does 'volumetric' fog in r2 - we don't need fog twice
 	if (fog->originalBrushNumber < 0 && tess.surfaceShader->sort <= SS_OPAQUE)
 	{
 		return;
 	}
-#endif
 
 	Ren_LogComment("--- Render_fog( fogNum = %i, originalBrushNumber = %i ) ---\n", tess.fogNum, fog->originalBrushNumber);
 
@@ -2426,21 +2379,12 @@ static void Render_fog()
 
 	if (backEnd.viewParms.isPortal)
 	{
-		vec4_t plane;
-
-		// clipping plane in world space
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-
-		SetUniformVec4(UNIFORM_PORTALPLANE, plane);
+		clipPortalPlane();
 	}
 
 	// bind u_ColorMap
 	SelectTexture(TEX_COLOR);
 	GL_Bind(tr.fogImage);
-	//gl_fogQuake3Shader->SetUniform_ColorTextureMatrix(tess.svars.texMatrices[TB_COLORMAP]);
 
 	GLSL_SetRequiredVertexPointers(trProg.gl_fogQuake3Shader);
 
@@ -2449,20 +2393,17 @@ static void Render_fog()
 	GL_CheckErrors();
 }
 
-// see Fog Polygon Volumes documentation by Nvidia for further information
+/**
+ * @brief Render_volumetricFog
+ * @note see Fog Polygon Volumes documentation by Nvidia for further information
+ */
 static void Render_volumetricFog()
 {
-	vec3_t viewOrigin;
-	vec3_t fogColor;
-
 	Ren_LogComment("--- Render_volumetricFog---\n");
 
 	if (glConfig2.framebufferBlitAvailable)
 	{
-		float fogDensity;
-		FBO_t *previousFBO;
-
-		previousFBO = glState.currentFBO;
+		FBO_t *previousFBO = glState.currentFBO;
 
 		if (r_hdrRendering->integer && glConfig2.framebufferObjectAvailable && glConfig2.textureFloatAvailable)
 		{
@@ -2514,21 +2455,14 @@ static void Render_volumetricFog()
 		GL_State(GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA | GLS_DSTBLEND_SRC_ALPHA);
 		GL_Cull(CT_TWO_SIDED);
 
-		glVertexAttrib4fv(ATTR_INDEX_COLOR, colorWhite);
+		glVertexAttrib4fv(ATTR_INDEX_COLOR, tr.fogColor);
 
 		// set uniforms
-		VectorCopy(backEnd.viewParms.orientation.origin, viewOrigin);   // in world space
-
-		{
-			fogDensity = tess.surfaceShader->fogParms.density;
-			VectorCopy(tess.surfaceShader->fogParms.color, fogColor);
-		}
-
 		SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
 		SetUniformMatrix16(UNIFORM_UNPROJECTMATRIX, backEnd.viewParms.unprojectionMatrix);
-		SetUniformVec3(UNIFORM_VIEWORIGIN, viewOrigin);
-		SetUniformFloat(UNIFORM_FOGDENSITY, fogDensity);
-		SetUniformVec3(UNIFORM_FOGCOLOR, fogColor);
+		SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin); // in world space
+		SetUniformFloat(UNIFORM_FOGDENSITY, tess.surfaceShader->fogParms.density);
+		SetUniformVec3(UNIFORM_FOGCOLOR, tess.surfaceShader->fogParms.color);
 
 		// bind u_DepthMap
 		SelectTexture(TEX_DEPTH);
@@ -2556,6 +2490,10 @@ static void Render_volumetricFog()
 	GL_CheckErrors();
 }
 
+/**
+ * @brief Tess_ComputeColor
+ * @param[in] pStage
+ */
 void Tess_ComputeColor(shaderStage_t *pStage)
 {
 	float rgb;
@@ -2563,11 +2501,14 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 	float green;
 	float blue;
 	float alpha;
+	rgbaGen_t rgbaGen;
+
+	rgbaGen = getRgbaGen(pStage, tess.lightmapNum);
 
 	Ren_LogComment("--- Tess_ComputeColor ---\n");
 
 	// rgbGen
-	switch (pStage->rgbGen)
+	switch (rgbaGen.color)
 	{
 	case CGEN_IDENTITY:
 	{
@@ -2597,34 +2538,34 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 	}
 	case CGEN_CONST:
 	{
-		tess.svars.color[0] = pStage->constantColor[0] * (1.0 / 255.0);
-		tess.svars.color[1] = pStage->constantColor[1] * (1.0 / 255.0);
-		tess.svars.color[2] = pStage->constantColor[2] * (1.0 / 255.0);
-		tess.svars.color[3] = pStage->constantColor[3] * (1.0 / 255.0);
+		tess.svars.color[0] = pStage->constantColor[0] * (1.0f / 255.0f);
+		tess.svars.color[1] = pStage->constantColor[1] * (1.0f / 255.0f);
+		tess.svars.color[2] = pStage->constantColor[2] * (1.0f / 255.0f);
+		tess.svars.color[3] = pStage->constantColor[3] * (1.0f / 255.0f);
 		break;
 	}
 	case CGEN_ENTITY:
 	{
 		if (backEnd.currentLight)
 		{
-			tess.svars.color[0] = Q_bound(0.0, backEnd.currentLight->l.color[0], 1.0);
-			tess.svars.color[1] = Q_bound(0.0, backEnd.currentLight->l.color[1], 1.0);
-			tess.svars.color[2] = Q_bound(0.0, backEnd.currentLight->l.color[2], 1.0);
+			tess.svars.color[0] = Q_bound(0.0f, backEnd.currentLight->l.color[0], 1.0f);
+			tess.svars.color[1] = Q_bound(0.0f, backEnd.currentLight->l.color[1], 1.0f);
+			tess.svars.color[2] = Q_bound(0.0f, backEnd.currentLight->l.color[2], 1.0f);
 			tess.svars.color[3] = 1.0;
 		}
 		else if (backEnd.currentEntity)
 		{
-			tess.svars.color[0] = Q_bound(0.0, backEnd.currentEntity->e.shaderRGBA[0] * (1.0 / 255.0), 1.0);
-			tess.svars.color[1] = Q_bound(0.0, backEnd.currentEntity->e.shaderRGBA[1] * (1.0 / 255.0), 1.0);
-			tess.svars.color[2] = Q_bound(0.0, backEnd.currentEntity->e.shaderRGBA[2] * (1.0 / 255.0), 1.0);
-			tess.svars.color[3] = Q_bound(0.0, backEnd.currentEntity->e.shaderRGBA[3] * (1.0 / 255.0), 1.0);
+			tess.svars.color[0] = Q_bound(0.0f, backEnd.currentEntity->e.shaderRGBA[0] * (1.0f / 255.0f), 1.0f);
+			tess.svars.color[1] = Q_bound(0.0f, backEnd.currentEntity->e.shaderRGBA[1] * (1.0f / 255.0f), 1.0f);
+			tess.svars.color[2] = Q_bound(0.0f, backEnd.currentEntity->e.shaderRGBA[2] * (1.0f / 255.0f), 1.0f);
+			tess.svars.color[3] = Q_bound(0.0f, backEnd.currentEntity->e.shaderRGBA[3] * (1.0f / 255.0f), 1.0f);
 		}
 		else
 		{
-			tess.svars.color[0] = 1.0;
-			tess.svars.color[1] = 1.0;
-			tess.svars.color[2] = 1.0;
-			tess.svars.color[3] = 1.0;
+			tess.svars.color[0] = 1.0f;
+			tess.svars.color[1] = 1.0f;
+			tess.svars.color[2] = 1.0f;
+			tess.svars.color[3] = 1.0f;
 		}
 		break;
 	}
@@ -2632,24 +2573,24 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 	{
 		if (backEnd.currentLight)
 		{
-			tess.svars.color[0] = 1.0 - Q_bound(0.0, backEnd.currentLight->l.color[0], 1.0);
-			tess.svars.color[1] = 1.0 - Q_bound(0.0, backEnd.currentLight->l.color[1], 1.0);
-			tess.svars.color[2] = 1.0 - Q_bound(0.0, backEnd.currentLight->l.color[2], 1.0);
-			tess.svars.color[3] = 0.0;      // FIXME
+			tess.svars.color[0] = 1.0f - Q_bound(0.0f, backEnd.currentLight->l.color[0], 1.0f);
+			tess.svars.color[1] = 1.0f - Q_bound(0.0f, backEnd.currentLight->l.color[1], 1.0f);
+			tess.svars.color[2] = 1.0f - Q_bound(0.0f, backEnd.currentLight->l.color[2], 1.0f);
+			tess.svars.color[3] = 0.0f;      // FIXME
 		}
 		else if (backEnd.currentEntity)
 		{
-			tess.svars.color[0] = 1.0 - Q_bound(0.0, backEnd.currentEntity->e.shaderRGBA[0] * (1.0 / 255.0), 1.0);
-			tess.svars.color[1] = 1.0 - Q_bound(0.0, backEnd.currentEntity->e.shaderRGBA[1] * (1.0 / 255.0), 1.0);
-			tess.svars.color[2] = 1.0 - Q_bound(0.0, backEnd.currentEntity->e.shaderRGBA[2] * (1.0 / 255.0), 1.0);
-			tess.svars.color[3] = 1.0 - Q_bound(0.0, backEnd.currentEntity->e.shaderRGBA[3] * (1.0 / 255.0), 1.0);
+			tess.svars.color[0] = 1.0f - Q_bound(0.0f, backEnd.currentEntity->e.shaderRGBA[0] * (1.0f / 255.0f), 1.0f);
+			tess.svars.color[1] = 1.0f - Q_bound(0.0f, backEnd.currentEntity->e.shaderRGBA[1] * (1.0f / 255.0f), 1.0f);
+			tess.svars.color[2] = 1.0f - Q_bound(0.0f, backEnd.currentEntity->e.shaderRGBA[2] * (1.0f / 255.0f), 1.0f);
+			tess.svars.color[3] = 1.0f - Q_bound(0.0f, backEnd.currentEntity->e.shaderRGBA[3] * (1.0f / 255.0f), 1.0f);
 		}
 		else
 		{
-			tess.svars.color[0] = 0.0;
-			tess.svars.color[1] = 0.0;
-			tess.svars.color[2] = 0.0;
-			tess.svars.color[3] = 0.0;
+			tess.svars.color[0] = 0.0f;
+			tess.svars.color[1] = 0.0f;
+			tess.svars.color[2] = 0.0f;
+			tess.svars.color[3] = 0.0f;
 		}
 		break;
 	}
@@ -2681,12 +2622,12 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 		tess.svars.color[0] = glow;
 		tess.svars.color[1] = glow;
 		tess.svars.color[2] = glow;
-		tess.svars.color[3] = 1.0;
+		tess.svars.color[3] = 1.0f;
 		break;
 	}
 	case CGEN_CUSTOM_RGB:
 	{
-		rgb = Q_bound(0.0, RB_EvalExpression(&pStage->rgbExp, 1.0), 1.0);
+		rgb = Q_bound(0.0f, RB_EvalExpression(&pStage->rgbExp, 1.0f), 1.0f);
 
 		tess.svars.color[0] = rgb;
 		tess.svars.color[1] = rgb;
@@ -2697,26 +2638,26 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 	{
 		if (backEnd.currentLight)
 		{
-			red   = Q_bound(0.0, RB_EvalExpression(&pStage->redExp, backEnd.currentLight->l.color[0]), 1.0);
-			green = Q_bound(0.0, RB_EvalExpression(&pStage->greenExp, backEnd.currentLight->l.color[1]), 1.0);
-			blue  = Q_bound(0.0, RB_EvalExpression(&pStage->blueExp, backEnd.currentLight->l.color[2]), 1.0);
+			red   = Q_bound(0.0f, RB_EvalExpression(&pStage->redExp, backEnd.currentLight->l.color[0]), 1.0f);
+			green = Q_bound(0.0f, RB_EvalExpression(&pStage->greenExp, backEnd.currentLight->l.color[1]), 1.0f);
+			blue  = Q_bound(0.0f, RB_EvalExpression(&pStage->blueExp, backEnd.currentLight->l.color[2]), 1.0f);
 		}
 		else if (backEnd.currentEntity)
 		{
 			red =
-			    Q_bound(0.0, RB_EvalExpression(&pStage->redExp, backEnd.currentEntity->e.shaderRGBA[0] * (1.0 / 255.0)), 1.0);
+			    Q_bound(0.0f, RB_EvalExpression(&pStage->redExp, backEnd.currentEntity->e.shaderRGBA[0] * (1.0f / 255.0)), 1.0f);
 			green =
-			    Q_bound(0.0, RB_EvalExpression(&pStage->greenExp, backEnd.currentEntity->e.shaderRGBA[1] * (1.0 / 255.0)),
-			            1.0);
+			    Q_bound(0.0f, RB_EvalExpression(&pStage->greenExp, backEnd.currentEntity->e.shaderRGBA[1] * (1.0f / 255.0f)),
+			            1.0f);
 			blue =
-			    Q_bound(0.0, RB_EvalExpression(&pStage->blueExp, backEnd.currentEntity->e.shaderRGBA[2] * (1.0 / 255.0)),
-			            1.0);
+			    Q_bound(0.0f, RB_EvalExpression(&pStage->blueExp, backEnd.currentEntity->e.shaderRGBA[2] * (1.0f / 255.0f)),
+			            1.0f);
 		}
 		else
 		{
-			red   = Q_bound(0.0, RB_EvalExpression(&pStage->redExp, 1.0), 1.0);
-			green = Q_bound(0.0, RB_EvalExpression(&pStage->greenExp, 1.0), 1.0);
-			blue  = Q_bound(0.0, RB_EvalExpression(&pStage->blueExp, 1.0), 1.0);
+			red   = Q_bound(0.0f, RB_EvalExpression(&pStage->redExp, 1.0f), 1.0f);
+			green = Q_bound(0.0f, RB_EvalExpression(&pStage->greenExp, 1.0f), 1.0f);
+			blue  = Q_bound(0.0f, RB_EvalExpression(&pStage->blueExp, 1.0f), 1.0f);
 		}
 
 		tess.svars.color[0] = red;
@@ -2727,16 +2668,16 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 	}
 
 	// alphaGen
-	switch (pStage->alphaGen)
+	switch (rgbaGen.alpha)
 	{
 	default:
 	case AGEN_IDENTITY:
 	{
 		if (pStage->rgbGen != CGEN_IDENTITY)
 		{
-			if ((pStage->rgbGen == CGEN_VERTEX && tr.identityLight != 1) || pStage->rgbGen != CGEN_VERTEX)
+			if ((pStage->rgbGen == CGEN_VERTEX && tr.identityLight != 1.f) || pStage->rgbGen != CGEN_VERTEX)
 			{
-				tess.svars.color[3] = 1.0;
+				tess.svars.color[3] = 1.0f;
 			}
 		}
 		break;
@@ -2744,14 +2685,14 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 	case AGEN_VERTEX:
 	case AGEN_ONE_MINUS_VERTEX:
 	{
-		tess.svars.color[3] = 0.0;
+		tess.svars.color[3] = 0.0f;
 		break;
 	}
 	case AGEN_CONST:
 	{
 		if (pStage->rgbGen != CGEN_CONST)
 		{
-			tess.svars.color[3] = pStage->constantColor[3] * (1.0 / 255.0);
+			tess.svars.color[3] = pStage->constantColor[3] * (1.0f / 255.0f);
 		}
 		break;
 	}
@@ -2759,15 +2700,15 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 	{
 		if (backEnd.currentLight)
 		{
-			tess.svars.color[3] = 1.0;      // FIXME ?
+			tess.svars.color[3] = 1.0f;      // FIXME ?
 		}
 		else if (backEnd.currentEntity)
 		{
-			tess.svars.color[3] = Q_bound(0.0, backEnd.currentEntity->e.shaderRGBA[3] * (1.0 / 255.0), 1.0);
+			tess.svars.color[3] = Q_bound(0.0f, backEnd.currentEntity->e.shaderRGBA[3] * (1.0f / 255.0f), 1.0f);
 		}
 		else
 		{
-			tess.svars.color[3] = 1.0;
+			tess.svars.color[3] = 1.0f;
 		}
 		break;
 	}
@@ -2775,22 +2716,21 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 	{
 		if (backEnd.currentLight)
 		{
-			tess.svars.color[3] = 0.0;      // FIXME ?
+			tess.svars.color[3] = 0.0f;      // FIXME ?
 		}
 		else if (backEnd.currentEntity)
 		{
-			tess.svars.color[3] = 1.0 - Q_bound(0.0, backEnd.currentEntity->e.shaderRGBA[3] * (1.0 / 255.0), 1.0);
+			tess.svars.color[3] = 1.0f - Q_bound(0.0f, backEnd.currentEntity->e.shaderRGBA[3] * (1.0f / 255.0f), 1.0f);
 		}
 		else
 		{
-			tess.svars.color[3] = 0.0;
+			tess.svars.color[3] = 0.0f;
 		}
 		break;
 	}
 	case AGEN_NORMALZFADE:
 	{
-#if 0
-		// FIX ME
+		// FIXME: rework/move to GL
 		float    alpha, range, lowest, highest, dot;
 		vec3_t   worldUp;
 		qboolean zombieEffect = qfalse;
@@ -2831,15 +2771,15 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 			// special handling for Zombie fade effect
 			if (zombieEffect)
 			{
-				alpha  = (float)backEnd.currentEntity->e.shaderRGBA[3] * (dot + 1.0) / 2.0;
-				alpha += (2.0 * (float)backEnd.currentEntity->e.shaderRGBA[3]) * (1.0 - (dot + 1.0) / 2.0);
-				if (alpha > 255.0)
+				alpha  = (float)backEnd.currentEntity->e.shaderRGBA[3] * (dot + 1.0f) / 2.0f;
+				alpha += (2.0f * (float)backEnd.currentEntity->e.shaderRGBA[3]) * (1.0f - (dot + 1.0f) / 2.0f);
+				if (alpha > 255.0f)
 				{
 					alpha = 255.0;
 				}
-				else if (alpha < 0.0)
+				else if (alpha < 0.0f)
 				{
-					alpha = 0.0;
+					alpha = 0.0f;
 				}
 				tess.svars.color[3] = (byte) (alpha);
 				continue;
@@ -2855,21 +2795,21 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 					}
 					else
 					{
-						alpha = ((float)pStage->constantColor[3] * (1.0 - ((dot - lowest - range / 2) / (range / 2))));
+						alpha = ((float)pStage->constantColor[3] * (1.0f - ((dot - lowest - range / 2) / (range / 2))));
 					}
-					if (alpha > 255.0)
+					if (alpha > 255.0f)
 					{
-						alpha = 255.0;
+						alpha = 255.0f;
 					}
-					else if (alpha < 0.0)
+					else if (alpha < 0.0f)
 					{
-						alpha = 0.0;
+						alpha = 0.0f;
 					}
 
 					// finally, scale according to the entity's alpha
 					if (backEnd.currentEntity->e.hModel)
 					{
-						alpha *= (float)backEnd.currentEntity->e.shaderRGBA[3] / 255.0;
+						alpha *= (float)backEnd.currentEntity->e.shaderRGBA[3] / 255.0f;
 					}
 
 					tess.svars.color[3] = (byte) (alpha);
@@ -2884,7 +2824,6 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 				tess.svars.color[3] = 0;
 			}
 		}
-#endif
 	}
 	break;
 	case AGEN_WAVEFORM:
@@ -2901,7 +2840,7 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 	}
 	case AGEN_CUSTOM:
 	{
-		alpha = Q_bound(0.0, RB_EvalExpression(&pStage->alphaExp, 1.0), 1.0);
+		alpha = Q_bound(0.0f, RB_EvalExpression(&pStage->alphaExp, 1.0f), 1.0f);
 
 		tess.svars.color[3] = alpha;
 		break;
@@ -2909,12 +2848,10 @@ void Tess_ComputeColor(shaderStage_t *pStage)
 	}
 }
 
-
-/*
-===============
-Tess_ComputeTexMatrices
-===============
-*/
+/**
+ * @brief Tess_ComputeTexMatrices
+ * @param[in] pStage
+ */
 static void Tess_ComputeTexMatrices(shaderStage_t *pStage)
 {
 	int   i;
@@ -2937,12 +2874,9 @@ static void Tess_ComputeTexMatrices(shaderStage_t *pStage)
 	}
 }
 
-/*
-==============
-SetIteratorFog
-    set the fog parameters for this pass
-==============
-*/
+/**
+ * @brief Set the fog parameters for this pass
+ */
 static void SetIteratorFog()
 {
 	Ren_LogComment("--- SetIteratorFog() ---\n");
@@ -2993,6 +2927,9 @@ static void SetIteratorFog()
 	}
 }
 
+/**
+ * @brief Tess_StageIteratorDebug
+ */
 void Tess_StageIteratorDebug()
 {
 	Ren_LogComment("--- Tess_StageIteratorDebug( %i vertices, %i triangles ) ---\n", tess.numVertexes, tess.numIndexes / 3);
@@ -3001,13 +2938,17 @@ void Tess_StageIteratorDebug()
 
 	if (!glState.currentVBO || !glState.currentIBO || glState.currentVBO == tess.vbo || glState.currentIBO == tess.ibo)
 	{
-		// FIXME analyze required vertex attribs by the current material
-		Tess_UpdateVBOs(0);
+		Tess_UpdateVBOs(tess.attribsSet);
 	}
 
 	Tess_DrawElements();
 }
 
+/**
+ * @brief RB_StencilOp
+ * @param[in] op
+ * @return
+ */
 static ID_INLINE GLenum RB_StencilOp(int op)
 {
 	switch (op & STO_MASK)
@@ -3029,6 +2970,11 @@ static ID_INLINE GLenum RB_StencilOp(int op)
 	}
 }
 
+/**
+ * @brief RB_SetStencil
+ * @param[in] side
+ * @param[in] stencil
+ */
 static void RB_SetStencil(GLenum side, stencil_t *stencil)
 {
 	GLenum sfailOp, zfailOp, zpassOp;
@@ -3080,6 +3026,9 @@ static void RB_SetStencil(GLenum side, stencil_t *stencil)
 	glStencilMaskSeparate(side, (GLuint) stencil->writeMask);
 }
 
+/**
+ * @brief Tess_StageIteratorGeneric
+ */
 void Tess_StageIteratorGeneric()
 {
 	int stage;
@@ -3093,8 +3042,7 @@ void Tess_StageIteratorGeneric()
 
 	if (!glState.currentVBO || !glState.currentIBO || glState.currentVBO == tess.vbo || glState.currentIBO == tess.ibo)
 	{
-		// FIXME analyze required vertex attribs by the current material
-		Tess_UpdateVBOs(0);
+		Tess_UpdateVBOs(tess.attribsSet);
 	}
 
 	if (tess.surfaceShader->fogVolume)
@@ -3126,7 +3074,7 @@ void Tess_StageIteratorGeneric()
 			break;
 		}
 
-		if (!RB_EvalExpression(&pStage->ifExp, 1.0))
+		if (RB_EvalExpression(&pStage->ifExp, 1.0f) == 0.f)
 		{
 			continue;
 		}
@@ -3187,7 +3135,7 @@ void Tess_StageIteratorGeneric()
 				{
 					if (!r_vertexLighting->integer && tess.lightmapNum >= 0 && tess.lightmapNum < tr.lightmaps.currentElements)
 					{
-						if (tr.worldDeluxeMapping && r_normalMapping->integer)
+						if (tr.worldDeluxeMapping || r_normalMapping->integer)
 						{
 							Render_lightMapping(stage, qfalse, qtrue);
 						}
@@ -3271,9 +3219,9 @@ void Tess_StageIteratorGeneric()
 		}
 	}
 
-	if (!r_noFog->integer && tess.fogNum >= 1 && tess.surfaceShader->fogPass)
+	if (tess.fogNum >= 1 && tess.surfaceShader->fogPass)
 	{
-		Render_fog();
+		Render_fog_brushes();
 	}
 
 	// reset polygon offset
@@ -3283,6 +3231,9 @@ void Tess_StageIteratorGeneric()
 	}
 }
 
+/**
+ * @brief Tess_StageIteratorDepthFill
+ * @note Unused
 void Tess_StageIteratorDepthFill()
 {
 	int stage;
@@ -3296,7 +3247,7 @@ void Tess_StageIteratorDepthFill()
 
 	if (!glState.currentVBO || !glState.currentIBO || glState.currentVBO == tess.vbo || glState.currentIBO == tess.ibo)
 	{
-		Tess_UpdateVBOs(ATTR_POSITION | ATTR_TEXCOORD);
+		Tess_UpdateVBOs(tess.attribsSet);
 	}
 
 	// set face culling appropriately
@@ -3319,7 +3270,7 @@ void Tess_StageIteratorDepthFill()
 			break;
 		}
 
-		if (!RB_EvalExpression(&pStage->ifExp, 1.0))
+		if (RB_EvalExpression(&pStage->ifExp, 1.0f) == 0.f)
 		{
 			continue;
 		}
@@ -3356,7 +3307,11 @@ void Tess_StageIteratorDepthFill()
 	// reset polygon offset
 	glDisable(GL_POLYGON_OFFSET_FILL);
 }
+*/
 
+/**
+ * @brief Tess_StageIteratorShadowFill
+ */
 void Tess_StageIteratorShadowFill()
 {
 	int stage;
@@ -3370,7 +3325,7 @@ void Tess_StageIteratorShadowFill()
 
 	if (!glState.currentVBO || !glState.currentIBO || glState.currentVBO == tess.vbo || glState.currentIBO == tess.ibo)
 	{
-		Tess_UpdateVBOs(ATTR_POSITION | ATTR_TEXCOORD);
+		Tess_UpdateVBOs(tess.attribsSet);
 	}
 
 	// set face culling appropriately
@@ -3393,7 +3348,7 @@ void Tess_StageIteratorShadowFill()
 			break;
 		}
 
-		if (!RB_EvalExpression(&pStage->ifExp, 1.0))
+		if (RB_EvalExpression(&pStage->ifExp, 1.0f) == 0.f)
 		{
 			continue;
 		}
@@ -3429,10 +3384,13 @@ void Tess_StageIteratorShadowFill()
 	glDisable(GL_POLYGON_OFFSET_FILL);
 }
 
+/**
+ * @brief Tess_StageIteratorLighting
+ */
 void Tess_StageIteratorLighting()
 {
 	int           i, j;
-	trRefLight_t  *light;
+	trRefLight_t  *light = backEnd.currentLight;
 	shaderStage_t *attenuationXYStage;
 	shaderStage_t *attenuationZStage;
 
@@ -3441,14 +3399,11 @@ void Tess_StageIteratorLighting()
 
 	GL_CheckErrors();
 
-	light = backEnd.currentLight;
-
 	Tess_DeformGeometry();
 
 	if (!glState.currentVBO || !glState.currentIBO || glState.currentVBO == tess.vbo || glState.currentIBO == tess.ibo)
 	{
-		// FIXME analyze required vertex attribs by the current material
-		Tess_UpdateVBOs(0);
+		Tess_UpdateVBOs(tess.attribsSet);
 	}
 
 	// set OpenGL state for lighting
@@ -3490,7 +3445,7 @@ void Tess_StageIteratorLighting()
 			break;
 		}
 
-		if (!RB_EvalExpression(&diffuseStage->ifExp, 1.0))
+		if (RB_EvalExpression(&diffuseStage->ifExp, 1.0f) == 0.f)
 		{
 			continue;
 		}
@@ -3511,7 +3466,7 @@ void Tess_StageIteratorLighting()
 				continue;
 			}
 
-			if (!RB_EvalExpression(&attenuationXYStage->ifExp, 1.0))
+			if (RB_EvalExpression(&attenuationXYStage->ifExp, 1.0f) == 0.f)
 			{
 				continue;
 			}
@@ -3557,13 +3512,9 @@ void Tess_StageIteratorLighting()
 	}
 }
 
-/*
-=================
-Tess_End
-
-Render tesselated data
-=================
-*/
+/**
+ * @brief Render tesselated data
+ */
 void Tess_End()
 {
 	if ((tess.numIndexes == 0 || tess.numVertexes == 0) && tess.multiDrawPrimitives == 0)
@@ -3575,7 +3526,7 @@ void Tess_End()
 	{
 		Ren_Drop("Tess_End() - SHADER_MAX_INDEXES hit");
 	}
-	if (tess.xyz[SHADER_MAX_VERTEXES - 1][0] != 0)
+	if (tess.xyz[SHADER_MAX_VERTEXES - 1][0] != 0.f)
 	{
 		Ren_Drop("Tess_End() - SHADER_MAX_VERTEXES hit");
 	}
@@ -3607,9 +3558,10 @@ void Tess_End()
 	tess.vboVertexSkinning = qfalse;
 
 	// clear shader so we can tell we don't have any unclosed surfaces
-	tess.multiDrawPrimitives = 0;
 	tess.numIndexes          = 0;
 	tess.numVertexes         = 0;
+	tess.attribsSet          = 0;
+	tess.multiDrawPrimitives = 0;
 
 	Ren_LogComment("--- Tess_End ---\n");
 

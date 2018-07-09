@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -49,20 +49,21 @@
 #include "g_mdx.h"
 #endif
 
-qboolean CompareIPNoPort(char const *ip1, char const *ip2);
-
 // new bounding box
 vec3_t playerMins = { -18, -18, -24 };
 vec3_t playerMaxs = { 18, 18, 48 };
 
-/*
-QUAKED info_player_deathmatch (1 0 1) (-18 -18 -24) (18 18 48)
-potential spawning position for deathmatch games.
-Targets will be fired when someone spawns in on them.
-"nobots" will prevent bots from using this spot.
-"nohumans" will prevent non-bots from using this spot.
-If the start position is targeting an entity, the players camera will start out facing that ent (like an info_notnull)
-*/
+/**
+ * @brief QUAKED info_player_deathmatch (1 0 1) (-18 -18 -24) (18 18 48)
+ * potential spawning position for deathmatch games.
+ * Targets will be fired when someone spawns in on them.
+ * "nobots" will prevent bots from using this spot.
+ * "nohumans" will prevent non-bots from using this spot.
+ *
+ * If the start position is targeting an entity, the players camera will start out facing that ent (like an info_notnull)
+ *
+ * @param[in,out] ent
+ */
 void SP_info_player_deathmatch(gentity_t *ent)
 {
 	int i;
@@ -88,31 +89,36 @@ void SP_info_player_deathmatch(gentity_t *ent)
 	}
 }
 
-/*
-QUAKED info_player_checkpoint (1 0 0) (-16 -16 -24) (16 16 32) a b c d
-these are start points /after/ the level start
-the letter (a b c d) designates the checkpoint that needs to be complete in order to use this start position
-*/
+/**
+ * @brief QUAKED info_player_checkpoint (1 0 0) (-16 -16 -24) (16 16 32) a b c d
+ * these are start points /after/ the level start
+ * the letter (a b c d) designates the checkpoint that needs to be complete in order to use this start position
+ *
+ * @param[in] ent
+ */
 void SP_info_player_checkpoint(gentity_t *ent)
 {
 	ent->classname = "info_player_checkpoint";
 	SP_info_player_deathmatch(ent);
 }
 
-/*
-QUAKED info_player_start (1 0 0) (-18 -18 -24) (18 18 48)
-equivelant to info_player_deathmatch
-*/
+/**
+ * @brief QUAKED info_player_start (1 0 0) (-18 -18 -24) (18 18 48)
+ * equivelant to info_player_deathmatch
+ * @param ent
+ */
 void SP_info_player_start(gentity_t *ent)
 {
 	ent->classname = "info_player_deathmatch";
 	SP_info_player_deathmatch(ent);
 }
 
-/*
-QUAKED info_player_intermission (1 0 1) (-16 -16 -24) (16 16 32) AXIS ALLIED
-The intermission will be viewed from this point.  Target an info_notnull for the view direction.
-*/
+/**
+ * @brief QUAKED info_player_intermission (1 0 1) (-16 -16 -24) (16 16 32) AXIS ALLIED
+ * The intermission will be viewed from this point.  Target an info_notnull for the view direction.
+ *
+ * @param ent - unused
+ */
 void SP_info_player_intermission(gentity_t *ent)
 {
 }
@@ -123,11 +129,11 @@ void SP_info_player_intermission(gentity_t *ent)
 =======================================================================
 */
 
-/*
-================
-SpotWouldTelefrag
-================
-*/
+/**
+ * @brief SpotWouldTelefrag
+ * @param[in] spot
+ * @return
+ */
 qboolean SpotWouldTelefrag(gentity_t *spot)
 {
 	int       i, num;
@@ -151,24 +157,20 @@ qboolean SpotWouldTelefrag(gentity_t *spot)
 	return qfalse;
 }
 
-/*
-================
-SelectNearestDeathmatchSpawnPoint
-
-Find the spot that we DON'T want to use
-================
-*/
+/**
+ * @brief Find the spot that we DON'T want to use
+ * @param[in] from
+ * @return
+ */
 gentity_t *SelectNearestDeathmatchSpawnPoint(vec3_t from)
 {
 	gentity_t *spot = NULL;
-	vec3_t    delta;
 	float     dist, nearestDist = 999999;
 	gentity_t *nearestSpot = NULL;
 
 	while ((spot = G_Find(spot, FOFS(classname), "info_player_deathmatch")) != NULL)
 	{
-		VectorSubtract(spot->r.currentOrigin, from, delta);
-		dist = VectorLength(delta);
+		dist = VectorDistance(spot->r.currentOrigin, from);
 		if (dist < nearestDist)
 		{
 			nearestDist = dist;
@@ -179,14 +181,12 @@ gentity_t *SelectNearestDeathmatchSpawnPoint(vec3_t from)
 	return nearestSpot;
 }
 
-/*
-================
-SelectRandomDeathmatchSpawnPoint
-
-go to a random point that doesn't telefrag
-================
-*/
 #define MAX_SPAWN_POINTS    128
+
+/**
+ * @brief Go to a random point that doesn't telefrag
+ * @return
+ */
 gentity_t *SelectRandomDeathmatchSpawnPoint(void)
 {
 	gentity_t *spot = NULL;
@@ -213,13 +213,14 @@ gentity_t *SelectRandomDeathmatchSpawnPoint(void)
 	return spots[selection];
 }
 
-/*
-===========
-SelectSpawnPoint
-
-Chooses a player start, deathmatch start, etc
-============
-*/
+/**
+ * @brief Chooses a player start, deathmatch start, etc
+ *
+ * @param[in] avoidPoint
+ * @param[in] origin
+ * @param[in] angles
+ * @return
+ */
 gentity_t *SelectSpawnPoint(vec3_t avoidPoint, vec3_t origin, vec3_t angles)
 {
 	gentity_t *nearestSpot;
@@ -252,11 +253,12 @@ gentity_t *SelectSpawnPoint(vec3_t avoidPoint, vec3_t origin, vec3_t angles)
 	return spot;
 }
 
-/*
-===========
-SelectSpectatorSpawnPoint
-============
-*/
+/**
+ * @brief SelectSpectatorSpawnPoint
+ * @param[out] origin
+ * @param[out] angles
+ * @return
+ */
 gentity_t *SelectSpectatorSpawnPoint(vec3_t origin, vec3_t angles)
 {
 	FindIntermissionPoint();
@@ -273,11 +275,9 @@ BODYQUE
 =======================================================================
 */
 
-/*
-===============
-InitBodyQue
-===============
-*/
+/**
+ * @brief InitBodyQue
+ */
 void InitBodyQue(void)
 {
 	int       i;
@@ -299,18 +299,15 @@ void InitBodyQue(void)
 	}
 }
 
-/*
-=============
-BodyUnlink
-
-Called by BodySink
-=============
-*/
+/**
+ * @brief Called by BodySink
+ * @param[in,out] ent
+ */
 void BodyUnlink(gentity_t *ent)
 {
 	gentity_t *tent;
 
-	tent = G_TempEntity(ent->r.currentOrigin, EV_BODY_DP);     // so clients will memset them off
+	tent = G_TempEntity(ent->r.currentOrigin, EV_BODY_DP);     // so clients will Com_Memset them off
 
 	tent->s.otherEntityNum2 = ent->s.number;
 	tent->r.svFlags         = SVF_BROADCAST; // send to everyone
@@ -319,11 +316,15 @@ void BodyUnlink(gentity_t *ent)
 	ent->physicsObject = qfalse;
 }
 
+/**
+ * @brief G_BodyDP
+ * @param[in,out] ent
+ */
 void G_BodyDP(gentity_t *ent)
 {
 	gentity_t *tent;
 
-	tent = G_TempEntity(ent->r.currentOrigin, EV_BODY_DP);     // so clients will memset them off
+	tent = G_TempEntity(ent->r.currentOrigin, EV_BODY_DP);     // so clients will Com_Memset them off
 
 	tent->s.otherEntityNum2 = ent->s.number;
 	tent->r.svFlags         = SVF_BROADCAST; // send to everyone
@@ -331,17 +332,14 @@ void G_BodyDP(gentity_t *ent)
 	G_FreeEntity(ent);
 }
 
-/*
-=============
-BodySink
-
-After sitting around for five seconds, fall into the ground and dissapear
-=============
-*/
+/**
+ * @brief After sitting around for five seconds, fall into the ground and dissapear
+ * @param[in,out] ent
+ */
 void BodySink2(gentity_t *ent)
 {
 	ent->physicsObject = qfalse;
-	ent->nextthink     = level.time + 1800; // BODY_TIME(BODY_TEAM(ent)) + 1500; // FIXME: remove
+	ent->nextthink     = level.time + 1800;
 	ent->think         = BodyUnlink;
 
 	if (g_corpses.integer == 0)
@@ -360,13 +358,10 @@ void BodySink2(gentity_t *ent)
 	VectorSet(ent->s.pos.trDelta, 0, 0, -8);
 }
 
-/*
-=============
-BodySink
-
-After sitting around for five seconds, fall into the ground and dissapear
-=============
-*/
+/**
+ * @brief After sitting around for five seconds, fall into the ground and dissapear
+ * @param[in,out] ent
+ */
 void BodySink(gentity_t *ent)
 {
 	if (ent->activator)
@@ -374,7 +369,7 @@ void BodySink(gentity_t *ent)
 		// see if parent is still disguised
 		if (ent->activator->client->ps.powerups[PW_OPS_DISGUISED])
 		{
-			ent->nextthink = level.time + 100;
+			ent->nextthink = level.time + FRAMETIME;
 			return;
 		}
 		else
@@ -388,13 +383,19 @@ void BodySink(gentity_t *ent)
 
 #ifdef FEATURE_SERVERMDX
 
+/**
+ * @brief G_IsPositionOK
+ * @param[in,out] ent
+ * @param[in] newOrigin
+ * @return
+ */
 static qboolean G_IsPositionOK(gentity_t *ent, vec3_t newOrigin)
 {
 	trace_t trace;
 
 	trap_TraceCapsule(&trace, ent->s.pos.trBase, ent->r.mins, ent->r.maxs, newOrigin, ent->s.number, MASK_PLAYERSOLID);
 
-	if (trace.fraction == 1)
+	if (trace.fraction == 1.f)
 	{
 		VectorCopy(trace.endpos, ent->s.pos.trBase);
 		return qtrue;
@@ -405,7 +406,14 @@ static qboolean G_IsPositionOK(gentity_t *ent, vec3_t newOrigin)
 	}
 }
 
-// note that this is only with first stage, corpse can just use slidemove
+/**
+ * @brief G_StepSlideCorpse
+ *
+ * @param[in,out] ent
+ * @param[in] newOrigin
+ *
+ * @note note that this is only with first stage, corpse can just use slidemove
+ */
 static void G_StepSlideCorpse(gentity_t *ent, vec3_t newOrigin)
 {
 	vec3_t  start, down, up;
@@ -420,7 +428,7 @@ static void G_StepSlideCorpse(gentity_t *ent, vec3_t newOrigin)
 		down[2] -= 16;
 		// item code is using these
 		trap_Trace(&trace, ent->s.pos.trBase, ent->r.mins, ent->r.maxs, down, ent->s.number, MASK_PLAYERSOLID);
-		if (trace.fraction == 1)
+		if (trace.fraction == 1.f)
 		{
 			// begin with falling again
 			ent->s.pos.trType = TR_GRAVITY;
@@ -442,7 +450,7 @@ static void G_StepSlideCorpse(gentity_t *ent, vec3_t newOrigin)
 
 	VectorSet(up, 0, 0, 1);
 	// never step up when you still have up velocity
-	if (ent->s.pos.trDelta[2] > 0 && (trace.fraction == 1.0 || DotProduct(trace.plane.normal, up) < 0.7))
+	if (ent->s.pos.trDelta[2] > 0 && (trace.fraction == 1.0f || DotProduct(trace.plane.normal, up) < 0.7f))
 	{
 		return;
 	}
@@ -469,7 +477,7 @@ static void G_StepSlideCorpse(gentity_t *ent, vec3_t newOrigin)
 	VectorCopy(ent->s.pos.trBase, down);
 	down[2] -= 18;
 
-	memset(&trace, 0, sizeof(trace));
+	Com_Memset(&trace, 0, sizeof(trace));
 
 	trap_TraceCapsule(&trace, ent->s.pos.trBase, ent->r.mins, ent->r.maxs, down, ent->s.number, MASK_PLAYERSOLID);
 
@@ -484,7 +492,7 @@ static void G_StepSlideCorpse(gentity_t *ent, vec3_t newOrigin)
 		down[2] -= 16;
 		// item code is using these
 		trap_Trace(&trace, ent->s.pos.trBase, ent->r.mins, ent->r.maxs, down, ent->s.number, MASK_PLAYERSOLID);
-		if (trace.fraction == 1)
+		if (trace.fraction == 1.f)
 		{
 			// begin with falling again
 			ent->s.pos.trType = TR_GRAVITY;
@@ -498,14 +506,11 @@ static void G_StepSlideCorpse(gentity_t *ent, vec3_t newOrigin)
 }
 #endif
 
-/*
-=============
-CopyToBodyQue
-
-A player is respawning, so make an entity that looks
-just like the existing corpse to leave behind.
-=============
-*/
+/**
+ * @brief A player is respawning, so make an entity that looks
+ * just like the existing corpse to leave behind.
+ * @param[in] ent
+ */
 void CopyToBodyQue(gentity_t *ent)
 {
 	gentity_t *body;
@@ -666,11 +671,11 @@ void CopyToBodyQue(gentity_t *ent)
 
 //======================================================================
 
-/*
-==================
-SetClientViewAngle
-==================
-*/
+/**
+ * @brief SetClientViewAngle
+ * @param[in,out] ent
+ * @param[in] angle
+ */
 void SetClientViewAngle(gentity_t *ent, vec3_t angle)
 {
 	int i;
@@ -686,6 +691,10 @@ void SetClientViewAngle(gentity_t *ent, vec3_t angle)
 	VectorCopy(ent->s.angles, ent->client->ps.viewangles);
 }
 
+/**
+ * @brief G_DropLimboHealth
+ * @param[in,out] ent
+ */
 void G_DropLimboHealth(gentity_t *ent)
 {
 	if (g_dropHealth.integer == 0 || !ent->client || ent->client->sess.playerType != PC_MEDIC || g_gamestate.integer != GS_PLAYING)
@@ -723,6 +732,10 @@ void G_DropLimboHealth(gentity_t *ent)
 	}
 }
 
+/**
+ * @brief G_DropLimboAmmo
+ * @param[in,out] ent
+ */
 void G_DropLimboAmmo(gentity_t *ent)
 {
 	if (g_dropAmmo.integer == 0 || !ent->client || ent->client->sess.playerType != PC_FIELDOPS)
@@ -766,11 +779,11 @@ void G_DropLimboAmmo(gentity_t *ent)
 	}
 }
 
-/*
-================
-limbo
-================
-*/
+/**
+ * @brief limbo
+ * @param[in,out] ent
+ * @param[in] makeCorpse
+ */
 void limbo(gentity_t *ent, qboolean makeCorpse)
 {
 	if (!(ent->client->ps.pm_flags & PMF_LIMBO))
@@ -859,12 +872,10 @@ void limbo(gentity_t *ent, qboolean makeCorpse)
 	}
 }
 
-/*
-================
-reinforce
-    called when time expires for a team deployment cycle and there is at least one guy ready to go
-================
-*/
+/**
+ * @brief Called when time expires for a team deployment cycle and there is at least one guy ready to go
+ * @param[in,out] ent
+ */
 void reinforce(gentity_t *ent)
 {
 	int p;
@@ -891,11 +902,10 @@ void reinforce(gentity_t *ent)
 	respawn(ent);
 }
 
-/*
-================
-respawn
-================
-*/
+/**
+ * @brief respawn
+ * @param[in,out] ent
+ */
 void respawn(gentity_t *ent)
 {
 	ent->client->ps.pm_flags &= ~PMF_LIMBO; // turns off limbo
@@ -928,13 +938,14 @@ void respawn(gentity_t *ent)
 	ClientSpawn(ent, qfalse, qfalse, qtrue);
 }
 
-/*
-================
-TeamCount
-
-    Returns number of players on a team
-================
-*/
+/**
+ * @brief Count the number of players on a team
+ *
+ * @param[in] ignoreClientNum
+ * @param[in] team
+ *
+ * @return Number of players on a team
+ */
 int TeamCount(int ignoreClientNum, team_t team)
 {
 	int i, ref, count = 0;
@@ -954,11 +965,11 @@ int TeamCount(int ignoreClientNum, team_t team)
 	return count;
 }
 
-/*
-================
-PickTeam
-================
-*/
+/**
+ * @brief PickTeam
+ * @param[in] ignoreClientNum
+ * @return
+ */
 team_t PickTeam(int ignoreClientNum)
 {
 	int counts[TEAM_NUM_TEAMS] = { 0, 0, 0 };
@@ -979,92 +990,114 @@ team_t PickTeam(int ignoreClientNum)
 	return(((level.teamScores[TEAM_ALLIES] > level.teamScores[TEAM_AXIS]) ? TEAM_AXIS : TEAM_ALLIES));
 }
 
-/*
-===========
-AddExtraSpawnAmmo
-===========
-*/
+/**
+ * @brief AddExtraSpawnAmmo
+ * @param[in,out] client
+ * @param[in] weaponNum
+ */
 static void AddExtraSpawnAmmo(gclient_t *client, weapon_t weaponNum)
 {
-	switch (weaponNum)
+	// no extra ammo if it don't use ammo
+	if (!GetWeaponTableData(weaponNum)->useAmmo)
 	{
-	//case WP_KNIFE:
-	case WP_LUGER:
-	case WP_COLT:
-	case WP_STEN:
-	case WP_SILENCER:
-	case WP_CARBINE:
-	case WP_KAR98:
-	case WP_SILENCED_COLT:
+		return;
+	}
+
+	if (GetWeaponTableData(weaponNum)->isPistol || GetWeaponTableData(weaponNum)->isSilencedPistol || GetWeaponTableData(weaponNum)->isRifle || weaponNum == WP_STEN)
+	{
+		if (client->sess.playerType == PC_COVERTOPS && weaponNum == WP_STEN)
+		{
+			client->ps.ammo[GetWeaponTableData(weaponNum)->ammoIndex] *= 2;
+		}
+
 		if (client->sess.skill[SK_LIGHT_WEAPONS] >= 1)
 		{
-			client->ps.ammo[BG_FindAmmoForWeapon(weaponNum)] += GetAmmoTableData(weaponNum)->maxclip;
+			client->ps.ammo[GetWeaponTableData(weaponNum)->ammoIndex] += GetWeaponTableData(weaponNum)->maxClip;
 		}
-		break;
-	case WP_MP40:
-	case WP_THOMPSON:
+	}
+	else if (GetWeaponTableData(weaponNum)->isSMG)
+	{
+		if (client->sess.playerType == PC_SOLDIER)
+		{
+			client->ps.ammo[GetWeaponTableData(weaponNum)->ammoIndex] *= 2;
+		}
+
 		if ((client->sess.skill[SK_FIRST_AID] >= 1 && client->sess.playerType == PC_MEDIC) || client->sess.skill[SK_LIGHT_WEAPONS] >= 1)
 		{
-			client->ps.ammo[BG_FindAmmoForWeapon(weaponNum)] += GetAmmoTableData(weaponNum)->maxclip;
+			client->ps.ammo[GetWeaponTableData(weaponNum)->ammoIndex] += GetWeaponTableData(weaponNum)->maxClip;
 		}
-		break;
-	case WP_M7:
-	case WP_GPG40:
+	}
+	else if (GetWeaponTableData(weaponNum)->isRiflenade)
+	{
 		if (client->sess.skill[SK_EXPLOSIVES_AND_CONSTRUCTION] >= 1)
 		{
-			client->ps.ammo[BG_FindAmmoForWeapon(weaponNum)] += 4;
+			client->ps.ammo[GetWeaponTableData(weaponNum)->ammoIndex] += 4;
 		}
-		break;
-	case WP_GRENADE_PINEAPPLE:
-	case WP_GRENADE_LAUNCHER:
+	}
+	else if (GetWeaponTableData(weaponNum)->isGrenade)
+	{
 		if (client->sess.playerType == PC_ENGINEER)
 		{
 			if (client->sess.skill[SK_EXPLOSIVES_AND_CONSTRUCTION] >= 1)
 			{
-				client->ps.ammoclip[BG_FindAmmoForWeapon(weaponNum)] += 4;
+				client->ps.ammoclip[GetWeaponTableData(weaponNum)->ammoIndex] += 4;
 			}
 		}
 		if (client->sess.playerType == PC_MEDIC)
 		{
 			if (client->sess.skill[SK_FIRST_AID] >= 1)
 			{
-				client->ps.ammoclip[BG_FindAmmoForWeapon(weaponNum)] += 1;
+				client->ps.ammoclip[GetWeaponTableData(weaponNum)->ammoIndex] += 1;
 			}
 		}
-		break;
-	case WP_MEDIC_SYRINGE:
-	case WP_MEDIC_ADRENALINE:
+	}
+	else if (GetWeaponTableData(weaponNum)->isSyringe)
+	{
 		if (client->sess.skill[SK_FIRST_AID] >= 2)
 		{
-			client->ps.ammoclip[BG_FindAmmoForWeapon(weaponNum)] += 2;
+			client->ps.ammoclip[GetWeaponTableData(weaponNum)->ammoIndex] += 2;
 		}
-		break;
-	case WP_GARAND:
-	case WP_K43:
-	case WP_FG42:
+	}
+	else if (GetWeaponTableData(GetWeaponTableData(weaponNum)->weapAlts)->isScoped)
+	{
 		if (client->sess.skill[SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS] >= 1 || client->sess.skill[SK_LIGHT_WEAPONS] >= 1)
 		{
-			client->ps.ammo[BG_FindAmmoForWeapon(weaponNum)] += GetAmmoTableData(weaponNum)->maxclip;
+			client->ps.ammo[GetWeaponTableData(weaponNum)->ammoIndex] += GetWeaponTableData(weaponNum)->maxClip;
 		}
-		break;
-	case WP_GARAND_SCOPE:
-	case WP_K43_SCOPE:
-	case WP_FG42SCOPE:
+	}
+	else if (GetWeaponTableData(weaponNum)->isScoped)
+	{
 		if (client->sess.skill[SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS] >= 1)
 		{
-			client->ps.ammo[BG_FindAmmoForWeapon(weaponNum)] += GetAmmoTableData(weaponNum)->maxclip;
+			client->ps.ammo[GetWeaponTableData(weaponNum)->ammoIndex] += GetWeaponTableData(weaponNum)->maxClip;
 		}
-		break;
-	default:
-		break;
 	}
 }
 
-qboolean AddWeaponToPlayer(gclient_t *client, weapon_t weapon, int ammo, int ammoclip, qboolean setcurrent)
+/**
+ * @brief AddWeaponToPlayer
+ * @param[in,out] client
+ * @param[in] weapon
+ * @param[in] ammo
+ * @param[in] ammoclip
+ * @param[in] setcurrent
+ */
+void AddWeaponToPlayer(gclient_t *client, weapon_t weapon, int ammo, int ammoclip, qboolean setcurrent)
 {
 	COM_BitSet(client->ps.weapons, weapon);
-	client->ps.ammoclip[BG_FindClipForWeapon(weapon)] = ammoclip;
-	client->ps.ammo[BG_FindAmmoForWeapon(weapon)]     = ammo;
+	client->ps.ammoclip[GetWeaponTableData(weapon)->clipIndex] = ammoclip;
+	client->ps.ammo[GetWeaponTableData(weapon)->ammoIndex]     = ammo;
+
+	if (GetWeaponTableData(weapon)->isAkimbo)
+	{
+		client->ps.ammoclip[GetWeaponTableData(GetWeaponTableData(weapon)->akimboSideArm)->clipIndex] = GetWeaponTableData(weapon)->defaultStartingClip;
+	}
+
+	if (weapon == WP_BINOCULARS)
+	{
+		client->ps.stats[STAT_KEYS] |= (1 << INV_BINOCS);
+	}
+
 	if (setcurrent)
 	{
 		client->ps.weapon = weapon;
@@ -1076,18 +1109,19 @@ qboolean AddWeaponToPlayer(gclient_t *client, weapon_t weapon, int ammo, int amm
 #ifdef FEATURE_OMNIBOT
 	Bot_Event_AddWeapon(client->ps.clientNum, Bot_WeaponGameToBot(weapon));
 #endif
-
-	return qtrue;
 }
 
-/*
-===========
-SetWolfSpawnWeapons
-===========
-*/
+/**
+ * @brief SetWolfSpawnWeapons
+ * @param[in,out] client
+ */
 void SetWolfSpawnWeapons(gclient_t *client)
 {
-	int pc = client->sess.playerType;
+	int              pc   = client->sess.playerType;
+	int              team = client->sess.sessionTeam;
+	int              i;
+	weapon_t         weapon;
+	bg_playerclass_t *classInfo;
 
 	if (client->sess.sessionTeam == TEAM_SPECTATOR)
 	{
@@ -1097,6 +1131,8 @@ void SetWolfSpawnWeapons(gclient_t *client)
 #ifdef FEATURE_OMNIBOT
 	Bot_Event_ResetWeapons(client->ps.clientNum);
 #endif
+
+	classInfo = BG_GetPlayerClassInfo(team, pc);
 
 	// Reset special weapon time
 	client->ps.classWeaponTime = -999999;
@@ -1108,388 +1144,124 @@ void SetWolfSpawnWeapons(gclient_t *client)
 	client->ps.teamNum = pc;
 
 	// zero out all ammo counts
-	memset(client->ps.ammo, 0, MAX_WEAPONS * sizeof(int));
+	Com_Memset(client->ps.ammo, 0, MAX_WEAPONS * sizeof(int));
 
 	// All players start with a knife (not OR-ing so that it clears previous weapons)
 	client->ps.weapons[0] = 0;
 	client->ps.weapons[1] = 0;
 
-	if (client->sess.sessionTeam == TEAM_AXIS)
-	{
-		AddWeaponToPlayer(client, WP_KNIFE, 1, 0, qtrue);
-	}
-	else
-	{
-		AddWeaponToPlayer(client, WP_KNIFE_KABAR, 1, 0, qtrue);
-	}
-
 	client->ps.weaponstate = WEAPON_READY;
 
-	// Engineer gets dynamite
-	if (pc == PC_ENGINEER)
+	//
+	// knife
+	//
+	weapon = classInfo->classKnifeWeapon;
+	AddWeaponToPlayer(client, weapon, GetWeaponTableData(weapon)->defaultStartingAmmo, GetWeaponTableData(weapon)->defaultStartingClip, qtrue);
+
+	//
+	// special weapons and items
+	//
+	for (i = 0; i < MAX_WEAPS_PER_CLASS && classInfo->classMiscWeapons[i].weapon; i++)
 	{
-		AddWeaponToPlayer(client, WP_DYNAMITE, 0, 1, qfalse);
-		AddWeaponToPlayer(client, WP_PLIERS, 0, 1, qfalse);
+		weapon = classInfo->classMiscWeapons[i].weapon;
 
-		if (g_knifeonly.integer != 1)
+		if (client->sess.skill[classInfo->classMiscWeapons[i].skill] >= classInfo->classMiscWeapons[i].minSkillLevel)
 		{
-			if (client->sess.skill[SK_BATTLE_SENSE] >= 1)
+			// add each
+			AddWeaponToPlayer(client, weapon, GetWeaponTableData(weapon)->defaultStartingAmmo, GetWeaponTableData(weapon)->defaultStartingClip, qfalse);
+		}
+	}
+
+	//
+	// grenade
+	//
+	AddWeaponToPlayer(client, classInfo->classGrenadeWeapon, 0, classInfo->defaultGrenadeCount, qfalse);
+
+	//
+	// primary weapon
+	//
+	weapon = classInfo->classPrimaryWeapons[0].weapon; // default primary weapon
+
+	// parse available primary weapons and check is valid for current class
+	for (i = 0; i < MAX_WEAPS_PER_CLASS && classInfo->classPrimaryWeapons[i].weapon; i++)
+	{
+		if (client->sess.skill[classInfo->classPrimaryWeapons[i].skill] >= classInfo->classPrimaryWeapons[i].minSkillLevel)
+		{
+			if (classInfo->classPrimaryWeapons[i].weapon == client->sess.playerWeapon)
 			{
-				if (AddWeaponToPlayer(client, WP_BINOCULARS, 1, 0, qfalse))
-				{
-					client->ps.stats[STAT_KEYS] |= (1 << INV_BINOCS);
-				}
+				weapon = client->sess.playerWeapon;
+				break;
 			}
 
-			if (client->sess.sessionTeam == TEAM_AXIS)
+			// check for an equivalent if the team are not correct following the weapon
+			if (classInfo->classPrimaryWeapons[i].weapon == GetWeaponTableData(client->sess.playerWeapon)->weapEquiv)
 			{
-				switch (client->sess.playerWeapon)
-				{
-				case WP_KAR98:
-					if (AddWeaponToPlayer(client, WP_KAR98, GetAmmoTableData(WP_KAR98)->defaultStartingAmmo, GetAmmoTableData(WP_KAR98)->defaultStartingClip, qtrue))
-					{
-						AddWeaponToPlayer(client, WP_GPG40, GetAmmoTableData(WP_GPG40)->defaultStartingAmmo, GetAmmoTableData(WP_GPG40)->defaultStartingClip, qfalse);
-					}
-					break;
-				default:
-					AddWeaponToPlayer(client, WP_MP40, GetAmmoTableData(WP_MP40)->defaultStartingAmmo, GetAmmoTableData(WP_MP40)->defaultStartingClip, qtrue);
-					break;
-				}
-				AddWeaponToPlayer(client, WP_LANDMINE, GetAmmoTableData(WP_LANDMINE)->defaultStartingAmmo, GetAmmoTableData(WP_LANDMINE)->defaultStartingClip, qfalse);
-				AddWeaponToPlayer(client, WP_GRENADE_LAUNCHER, 0, 4, qfalse);
-			}
-			else
-			{
-				switch (client->sess.playerWeapon)
-				{
-				case WP_CARBINE:
-					if (AddWeaponToPlayer(client, WP_CARBINE, GetAmmoTableData(WP_CARBINE)->defaultStartingAmmo, GetAmmoTableData(WP_CARBINE)->defaultStartingClip, qtrue))
-					{
-						AddWeaponToPlayer(client, WP_M7, GetAmmoTableData(WP_M7)->defaultStartingAmmo, GetAmmoTableData(WP_M7)->defaultStartingClip, qfalse);
-					}
-					break;
-				default:
-					AddWeaponToPlayer(client, WP_THOMPSON, GetAmmoTableData(WP_THOMPSON)->defaultStartingAmmo, GetAmmoTableData(WP_THOMPSON)->defaultStartingClip, qtrue);
-					break;
-				}
-				AddWeaponToPlayer(client, WP_LANDMINE, GetAmmoTableData(WP_LANDMINE)->defaultStartingAmmo, GetAmmoTableData(WP_LANDMINE)->defaultStartingClip, qfalse);
-				AddWeaponToPlayer(client, WP_GRENADE_PINEAPPLE, 0, 4, qfalse);
+				weapon = GetWeaponTableData(client->sess.playerWeapon)->weapEquiv;
+				break;
 			}
 		}
 	}
 
-	if (g_knifeonly.integer != 1)
+	// add primary weapon (set to current weapon)
+	AddWeaponToPlayer(client, weapon, GetWeaponTableData(weapon)->defaultStartingAmmo, GetWeaponTableData(weapon)->defaultStartingClip, qtrue);
+
+	// add alternative weapon if exist for primary weapon
+	if (GetWeaponTableData(client->sess.playerWeapon)->weapAlts)
 	{
-		// Field ops gets binoculars, ammo pack, artillery, and a grenade
-		if (pc == PC_FIELDOPS)
+		AddWeaponToPlayer(client, GetWeaponTableData(weapon)->weapAlts,
+		                  GetWeaponTableData(GetWeaponTableData(weapon)->weapAlts)->defaultStartingAmmo,
+		                  GetWeaponTableData(GetWeaponTableData(weapon)->weapAlts)->defaultStartingClip, qfalse);
+	}
+
+	//
+	// secondary weapon
+	//
+	weapon = classInfo->classSecondaryWeapons[0].weapon;   // default secondary weapon
+
+	// parse available secondary weapons and check is valid for current class
+	for (i = 0; i < MAX_WEAPS_PER_CLASS && classInfo->classSecondaryWeapons[i].weapon; i++)
+	{
+		if (client->sess.skill[classInfo->classSecondaryWeapons[i].skill] >= classInfo->classSecondaryWeapons[i].minSkillLevel)
 		{
-			AddWeaponToPlayer(client, WP_AMMO, 0, 1, qfalse);
-
-			if (AddWeaponToPlayer(client, WP_BINOCULARS, 1, 0, qfalse))
+			if (classInfo->classSecondaryWeapons[i].weapon == client->sess.playerWeapon2)
 			{
-				client->ps.stats[STAT_KEYS] |= (1 << INV_BINOCS);
-			}
-
-			AddWeaponToPlayer(client, WP_SMOKE_MARKER, GetAmmoTableData(WP_SMOKE_MARKER)->defaultStartingAmmo, GetAmmoTableData(WP_SMOKE_MARKER)->defaultStartingClip, qfalse);
-
-			if (client->sess.sessionTeam == TEAM_AXIS)
-			{
-				AddWeaponToPlayer(client, WP_MP40, GetAmmoTableData(WP_MP40)->defaultStartingAmmo, GetAmmoTableData(WP_MP40)->defaultStartingClip, qtrue);
-				AddWeaponToPlayer(client, WP_GRENADE_LAUNCHER, 0, 1, qfalse);
-			}
-			else
-			{
-				AddWeaponToPlayer(client, WP_THOMPSON, GetAmmoTableData(WP_THOMPSON)->defaultStartingAmmo, GetAmmoTableData(WP_THOMPSON)->defaultStartingClip, qtrue);
-				AddWeaponToPlayer(client, WP_GRENADE_PINEAPPLE, 0, 1, qfalse);
-			}
-		}
-		else if (pc == PC_MEDIC)
-		{
-			if (client->sess.skill[SK_BATTLE_SENSE] >= 1)
-			{
-				if (AddWeaponToPlayer(client, WP_BINOCULARS, 1, 0, qfalse))
-				{
-					client->ps.stats[STAT_KEYS] |= (1 << INV_BINOCS);
-				}
-			}
-
-			AddWeaponToPlayer(client, WP_MEDIC_SYRINGE, GetAmmoTableData(WP_MEDIC_SYRINGE)->defaultStartingAmmo, GetAmmoTableData(WP_MEDIC_SYRINGE)->defaultStartingClip, qfalse);
-			if (client->sess.skill[SK_FIRST_AID] >= 4)
-			{
-				AddWeaponToPlayer(client, WP_MEDIC_ADRENALINE, GetAmmoTableData(WP_MEDIC_ADRENALINE)->defaultStartingAmmo, GetAmmoTableData(WP_MEDIC_ADRENALINE)->defaultStartingClip, qfalse);
-			}
-
-			AddWeaponToPlayer(client, WP_MEDKIT, GetAmmoTableData(WP_MEDKIT)->defaultStartingAmmo, GetAmmoTableData(WP_MEDKIT)->defaultStartingClip, qfalse);
-
-			if (client->sess.sessionTeam == TEAM_AXIS)
-			{
-				AddWeaponToPlayer(client, WP_MP40, 0, GetAmmoTableData(WP_MP40)->defaultStartingClip, qtrue);
-				AddWeaponToPlayer(client, WP_GRENADE_LAUNCHER, 0, 1, qfalse);
-			}
-			else
-			{
-				AddWeaponToPlayer(client, WP_THOMPSON, 0, GetAmmoTableData(WP_THOMPSON)->defaultStartingClip, qtrue);
-				AddWeaponToPlayer(client, WP_GRENADE_PINEAPPLE, 0, 1, qfalse);
-			}
-		}
-		else if (pc == PC_SOLDIER)
-		{
-			if (client->sess.skill[SK_BATTLE_SENSE] >= 1)
-			{
-				if (AddWeaponToPlayer(client, WP_BINOCULARS, 1, 0, qfalse))
-				{
-					client->ps.stats[STAT_KEYS] |= (1 << INV_BINOCS);
-				}
-			}
-
-			switch (client->sess.sessionTeam)
-			{
-			case TEAM_AXIS:
-				switch (client->sess.playerWeapon)
-				{
-				default:
-				case WP_MP40:
-					AddWeaponToPlayer(client, WP_MP40, 2 * (GetAmmoTableData(WP_MP40)->defaultStartingAmmo), GetAmmoTableData(WP_MP40)->defaultStartingClip, qtrue);
-					break;
-				case WP_PANZERFAUST:
-					AddWeaponToPlayer(client, WP_PANZERFAUST, GetAmmoTableData(WP_PANZERFAUST)->defaultStartingAmmo, GetAmmoTableData(WP_PANZERFAUST)->defaultStartingClip, qtrue);
-					break;
-				case WP_FLAMETHROWER:
-					AddWeaponToPlayer(client, WP_FLAMETHROWER, GetAmmoTableData(WP_FLAMETHROWER)->defaultStartingAmmo, GetAmmoTableData(WP_FLAMETHROWER)->defaultStartingClip, qtrue);
-					break;
-				case WP_MOBILE_MG42:
-					if (AddWeaponToPlayer(client, WP_MOBILE_MG42, GetAmmoTableData(WP_MOBILE_MG42)->defaultStartingAmmo, GetAmmoTableData(WP_MOBILE_MG42)->defaultStartingClip, qtrue))
-					{
-						AddWeaponToPlayer(client, WP_MOBILE_MG42_SET, GetAmmoTableData(WP_MOBILE_MG42_SET)->defaultStartingAmmo, GetAmmoTableData(WP_MOBILE_MG42_SET)->defaultStartingClip, qfalse);
-					}
-					break;
-				case WP_MORTAR2:
-					if (AddWeaponToPlayer(client, WP_MORTAR2, GetAmmoTableData(WP_MORTAR2)->defaultStartingAmmo, GetAmmoTableData(WP_MORTAR2)->defaultStartingClip, qtrue))
-					{
-						AddWeaponToPlayer(client, WP_MORTAR2_SET, GetAmmoTableData(WP_MORTAR2_SET)->defaultStartingAmmo, GetAmmoTableData(WP_MORTAR2_SET)->defaultStartingClip, qfalse);
-					}
-					break;
-				}
-				break;
-			case TEAM_ALLIES:
-				switch (client->sess.playerWeapon)
-				{
-				default:
-				case WP_THOMPSON:
-					AddWeaponToPlayer(client, WP_THOMPSON, 2 * (GetAmmoTableData(WP_THOMPSON)->defaultStartingAmmo), GetAmmoTableData(WP_THOMPSON)->defaultStartingClip, qtrue);
-					break;
-				case WP_BAZOOKA:
-					AddWeaponToPlayer(client, WP_BAZOOKA, GetAmmoTableData(WP_BAZOOKA)->defaultStartingAmmo, GetAmmoTableData(WP_BAZOOKA)->defaultStartingClip, qtrue);
-					break;
-				case WP_FLAMETHROWER:
-					AddWeaponToPlayer(client, WP_FLAMETHROWER, GetAmmoTableData(WP_FLAMETHROWER)->defaultStartingAmmo, GetAmmoTableData(WP_FLAMETHROWER)->defaultStartingClip, qtrue);
-					break;
-				case WP_MOBILE_BROWNING:
-					if (AddWeaponToPlayer(client, WP_MOBILE_BROWNING, GetAmmoTableData(WP_MOBILE_BROWNING)->defaultStartingAmmo, GetAmmoTableData(WP_MOBILE_BROWNING)->defaultStartingClip, qtrue))
-					{
-						AddWeaponToPlayer(client, WP_MOBILE_BROWNING_SET, GetAmmoTableData(WP_MOBILE_BROWNING_SET)->defaultStartingAmmo, GetAmmoTableData(WP_MOBILE_BROWNING_SET)->defaultStartingClip, qfalse);
-					}
-					break;
-				case WP_MORTAR:
-					if (AddWeaponToPlayer(client, WP_MORTAR, GetAmmoTableData(WP_MORTAR)->defaultStartingAmmo, GetAmmoTableData(WP_MORTAR)->defaultStartingClip, qtrue))
-					{
-						AddWeaponToPlayer(client, WP_MORTAR_SET, GetAmmoTableData(WP_MORTAR_SET)->defaultStartingAmmo, GetAmmoTableData(WP_MORTAR_SET)->defaultStartingClip, qfalse);
-					}
-					break;
-				}
-				break;
-			default:
-				break;
-			}
-		}
-		else if (pc == PC_COVERTOPS)
-		{
-			switch (client->sess.playerWeapon)
-			{
-			case WP_K43:
-			case WP_GARAND:
-				if (client->sess.sessionTeam == TEAM_AXIS)
-				{
-					if (AddWeaponToPlayer(client, WP_K43, GetAmmoTableData(WP_K43)->defaultStartingAmmo, GetAmmoTableData(WP_K43)->defaultStartingClip, qtrue))
-					{
-						AddWeaponToPlayer(client, WP_K43_SCOPE, GetAmmoTableData(WP_K43_SCOPE)->defaultStartingAmmo, GetAmmoTableData(WP_K43_SCOPE)->defaultStartingClip, qfalse);
-					}
-					break;
-				}
-				else
-				{
-					if (AddWeaponToPlayer(client, WP_GARAND, GetAmmoTableData(WP_GARAND)->defaultStartingAmmo, GetAmmoTableData(WP_GARAND)->defaultStartingClip, qtrue))
-					{
-						AddWeaponToPlayer(client, WP_GARAND_SCOPE, GetAmmoTableData(WP_GARAND_SCOPE)->defaultStartingAmmo, GetAmmoTableData(WP_GARAND_SCOPE)->defaultStartingClip, qfalse);
-					}
-					break;
-				}
-			case WP_FG42:
-				if (AddWeaponToPlayer(client, WP_FG42, GetAmmoTableData(WP_FG42)->defaultStartingAmmo, GetAmmoTableData(WP_FG42)->defaultStartingClip, qtrue))
-				{
-					AddWeaponToPlayer(client, WP_FG42SCOPE, GetAmmoTableData(WP_FG42SCOPE)->defaultStartingAmmo, GetAmmoTableData(WP_FG42SCOPE)->defaultStartingClip, qfalse);
-				}
-				break;
-			default:
-				AddWeaponToPlayer(client, WP_STEN, 2 * (GetAmmoTableData(WP_STEN)->defaultStartingAmmo), GetAmmoTableData(WP_STEN)->defaultStartingClip, qtrue);
+				weapon = client->sess.playerWeapon2;
 				break;
 			}
 
-			if (AddWeaponToPlayer(client, WP_BINOCULARS, 1, 0, qfalse))
+			// check for an equivalent if the team are not correct following the weapon
+			if (classInfo->classSecondaryWeapons[i].weapon == GetWeaponTableData(client->sess.playerWeapon2)->weapEquiv)
 			{
-				client->ps.stats[STAT_KEYS] |= (1 << INV_BINOCS);
-			}
-
-			AddWeaponToPlayer(client, WP_SMOKE_BOMB, GetAmmoTableData(WP_SMOKE_BOMB)->defaultStartingAmmo, GetAmmoTableData(WP_SMOKE_BOMB)->defaultStartingClip, qfalse);
-
-			// See if we already have a satchel charge placed - NOTE: maybe we want to change this so the thing voids on death
-			if (G_FindSatchel(&g_entities[client->ps.clientNum]))
-			{
-				AddWeaponToPlayer(client, WP_SATCHEL, 0, 0, qfalse);        // Big Bang \o/
-				AddWeaponToPlayer(client, WP_SATCHEL_DET, 0, 1, qfalse);    // Big Red Button for tha Big Bang
-			}
-			else
-			{
-				AddWeaponToPlayer(client, WP_SATCHEL, 0, 1, qfalse);        // Big Bang \o/
-				AddWeaponToPlayer(client, WP_SATCHEL_DET, 0, 0, qfalse);    // Big Red Button for tha Big Bang
-			}
-		}
-
-		switch (client->sess.sessionTeam)
-		{
-		case TEAM_AXIS:
-			switch (pc)
-			{
-			case PC_SOLDIER:
-				if (client->sess.skill[SK_HEAVY_WEAPONS] >= 4 && client->sess.playerWeapon2 == WP_MP40)
-				{
-					AddWeaponToPlayer(client, WP_MP40, 2 * (GetAmmoTableData(WP_MP40)->defaultStartingAmmo), GetAmmoTableData(WP_MP40)->defaultStartingClip, qtrue);
-				}
-				else if (client->sess.skill[SK_LIGHT_WEAPONS] >= 4 && client->sess.playerWeapon2 == WP_AKIMBO_LUGER)
-				{
-					client->ps.ammoclip[BG_FindClipForWeapon(weaponTable[WP_AKIMBO_LUGER].akimboSideram)] = GetAmmoTableData(WP_AKIMBO_LUGER)->defaultStartingClip;
-					AddWeaponToPlayer(client, WP_AKIMBO_LUGER, GetAmmoTableData(WP_AKIMBO_LUGER)->defaultStartingAmmo, GetAmmoTableData(WP_AKIMBO_LUGER)->defaultStartingClip, qfalse);
-				}
-				else
-				{
-					AddWeaponToPlayer(client, WP_LUGER, GetAmmoTableData(WP_LUGER)->defaultStartingAmmo, GetAmmoTableData(WP_LUGER)->defaultStartingClip, qfalse);
-				}
+				weapon = GetWeaponTableData(client->sess.playerWeapon2)->weapEquiv;
 				break;
-
-			case PC_COVERTOPS:
-				if (client->sess.skill[SK_LIGHT_WEAPONS] >= 4 && (client->sess.playerWeapon2 == WP_AKIMBO_SILENCEDLUGER || client->sess.playerWeapon2 == WP_AKIMBO_LUGER))
-				{
-					client->ps.ammoclip[BG_FindClipForWeapon(weaponTable[WP_AKIMBO_SILENCEDLUGER].akimboSideram)] = GetAmmoTableData(WP_AKIMBO_SILENCEDLUGER)->defaultStartingClip;
-					AddWeaponToPlayer(client, WP_AKIMBO_SILENCEDLUGER, GetAmmoTableData(WP_AKIMBO_SILENCEDLUGER)->defaultStartingAmmo, GetAmmoTableData(WP_AKIMBO_SILENCEDLUGER)->defaultStartingClip, qfalse);
-				}
-				else
-				{
-					AddWeaponToPlayer(client, WP_LUGER, GetAmmoTableData(WP_LUGER)->defaultStartingAmmo, GetAmmoTableData(WP_LUGER)->defaultStartingClip, qfalse);
-					AddWeaponToPlayer(client, WP_SILENCER, GetAmmoTableData(WP_SILENCER)->defaultStartingAmmo, GetAmmoTableData(WP_SILENCER)->defaultStartingClip, qfalse);
-					client->pmext.silencedSideArm = 1;
-				}
-				break;
-
-			default:
-				if (client->sess.skill[SK_LIGHT_WEAPONS] >= 4 && client->sess.playerWeapon2 == WP_AKIMBO_LUGER)
-				{
-					client->ps.ammoclip[BG_FindClipForWeapon(weaponTable[WP_AKIMBO_LUGER].akimboSideram)] = GetAmmoTableData(WP_AKIMBO_LUGER)->defaultStartingClip;
-					AddWeaponToPlayer(client, WP_AKIMBO_LUGER, GetAmmoTableData(WP_AKIMBO_LUGER)->defaultStartingAmmo, GetAmmoTableData(WP_AKIMBO_LUGER)->defaultStartingClip, qfalse);
-				}
-				else
-				{
-					AddWeaponToPlayer(client, WP_LUGER, GetAmmoTableData(WP_LUGER)->defaultStartingAmmo, GetAmmoTableData(WP_LUGER)->defaultStartingClip, qfalse);
-				}
-				break;
-			}
-			break;
-		default:
-			switch (pc)
-			{
-			case PC_SOLDIER:
-				if (client->sess.skill[SK_HEAVY_WEAPONS] >= 4 && client->sess.playerWeapon2 == WP_THOMPSON)
-				{
-					AddWeaponToPlayer(client, WP_THOMPSON, 2 * (GetAmmoTableData(WP_THOMPSON)->defaultStartingAmmo), GetAmmoTableData(WP_THOMPSON)->defaultStartingClip, qtrue);
-				}
-				else if (client->sess.skill[SK_LIGHT_WEAPONS] >= 4 && client->sess.playerWeapon2 == WP_AKIMBO_COLT)
-				{
-					client->ps.ammoclip[BG_FindClipForWeapon(weaponTable[WP_AKIMBO_COLT].akimboSideram)] = GetAmmoTableData(WP_AKIMBO_COLT)->defaultStartingClip;
-					AddWeaponToPlayer(client, WP_AKIMBO_COLT, GetAmmoTableData(WP_AKIMBO_COLT)->defaultStartingAmmo, GetAmmoTableData(WP_AKIMBO_COLT)->defaultStartingClip, qfalse);
-				}
-				else
-				{
-					AddWeaponToPlayer(client, WP_COLT, GetAmmoTableData(WP_COLT)->defaultStartingAmmo, GetAmmoTableData(WP_COLT)->defaultStartingClip, qfalse);
-				}
-				break;
-
-			case PC_COVERTOPS:
-				if (client->sess.skill[SK_LIGHT_WEAPONS] >= 4 && (client->sess.playerWeapon2 == WP_AKIMBO_SILENCEDCOLT || client->sess.playerWeapon2 == WP_AKIMBO_COLT))
-				{
-					client->ps.ammoclip[BG_FindClipForWeapon(weaponTable[WP_AKIMBO_SILENCEDCOLT].akimboSideram)] = GetAmmoTableData(WP_AKIMBO_SILENCEDCOLT)->defaultStartingClip;
-					AddWeaponToPlayer(client, WP_AKIMBO_SILENCEDCOLT, GetAmmoTableData(WP_AKIMBO_SILENCEDCOLT)->defaultStartingAmmo, GetAmmoTableData(WP_AKIMBO_SILENCEDCOLT)->defaultStartingClip, qfalse);
-				}
-				else
-				{
-					AddWeaponToPlayer(client, WP_COLT, GetAmmoTableData(WP_COLT)->defaultStartingAmmo, GetAmmoTableData(WP_COLT)->defaultStartingClip, qfalse);
-					AddWeaponToPlayer(client, WP_SILENCED_COLT, GetAmmoTableData(WP_SILENCED_COLT)->defaultStartingAmmo, GetAmmoTableData(WP_SILENCED_COLT)->defaultStartingClip, qfalse);
-					client->pmext.silencedSideArm = 1;
-				}
-				break;
-
-			default:
-				if (client->sess.skill[SK_LIGHT_WEAPONS] >= 4 && client->sess.playerWeapon2 == WP_AKIMBO_COLT)
-				{
-					client->ps.ammoclip[BG_FindClipForWeapon(weaponTable[WP_AKIMBO_COLT].akimboSideram)] = GetAmmoTableData(WP_AKIMBO_COLT)->defaultStartingClip;
-					AddWeaponToPlayer(client, WP_AKIMBO_COLT, GetAmmoTableData(WP_AKIMBO_COLT)->defaultStartingAmmo, GetAmmoTableData(WP_AKIMBO_COLT)->defaultStartingClip, qfalse);
-				}
-				else
-				{
-					AddWeaponToPlayer(client, WP_COLT, GetAmmoTableData(WP_COLT)->defaultStartingAmmo, GetAmmoTableData(WP_COLT)->defaultStartingClip, qfalse);
-				}
-				break;
-			}
-			break;
-		}
-
-		if (pc == PC_SOLDIER)
-		{
-			if (client->sess.sessionTeam == TEAM_AXIS)
-			{
-				AddWeaponToPlayer(client, WP_GRENADE_LAUNCHER, 0, 4, qfalse);
-			}
-			else
-			{
-				AddWeaponToPlayer(client, WP_GRENADE_PINEAPPLE, 0, 4, qfalse);
-			}
-		}
-		if (pc == PC_COVERTOPS)
-		{
-			if (client->sess.sessionTeam == TEAM_AXIS)
-			{
-				AddWeaponToPlayer(client, WP_GRENADE_LAUNCHER, 0, 2, qfalse);
-			}
-			else
-			{
-				AddWeaponToPlayer(client, WP_GRENADE_PINEAPPLE, 0, 2, qfalse);
 			}
 		}
 	}
-	else
-	{
-		// Knifeonly block
-		if (pc == PC_MEDIC)
-		{
-			AddWeaponToPlayer(client, WP_MEDIC_SYRINGE, 0, 20, qfalse);
-			if (client->sess.skill[SK_FIRST_AID] >= 4)
-			{
-				AddWeaponToPlayer(client, WP_MEDIC_ADRENALINE, 0, 10, qfalse);
-			}
 
+	// add secondary weapon
+	AddWeaponToPlayer(client, weapon, GetWeaponTableData(weapon)->defaultStartingAmmo, GetWeaponTableData(weapon)->defaultStartingClip, qfalse);
+
+	// Covertops got silenced secondary weapon
+	if (pc == PC_COVERTOPS)
+	{
+		client->pmext.silencedSideArm = 1;
+
+		// get pistol without silencer
+		if (GetWeaponTableData(client->sess.playerWeapon2)->weapAlts)
+		{
+			AddWeaponToPlayer(client, GetWeaponTableData(weapon)->weapAlts,
+			                  GetWeaponTableData(GetWeaponTableData(weapon)->weapAlts)->defaultStartingAmmo,
+			                  GetWeaponTableData(GetWeaponTableData(weapon)->weapAlts)->defaultStartingClip, qfalse);
 		}
-		// End Knifeonly stuff -- Ensure that medics get their basic stuff
 	}
 }
 
+/**
+ * @brief G_CountTeamMedics
+ * @param[in] team
+ * @param[in] alivecheck
+ * @return
+ */
 int G_CountTeamMedics(team_t team, qboolean alivecheck)
 {
 	int numMedics = 0;
@@ -1528,7 +1300,10 @@ int G_CountTeamMedics(team_t team, qboolean alivecheck)
 	return numMedics;
 }
 
-// AddMedicTeamBonus
+/**
+ * @brief AddMedicTeamBonus
+ * @param[in,out] client
+ */
 void AddMedicTeamBonus(gclient_t *client)
 {
 	// compute health mod
@@ -1547,17 +1322,19 @@ void AddMedicTeamBonus(gclient_t *client)
 	client->ps.stats[STAT_MAX_HEALTH] = client->pers.maxHealth;
 }
 
-/*
-===========
-ClientCheckName
-============
-*/
-static void ClientCleanName(const char *in, char *out, int outSize)
+/**
+ * @brief ClientCleanName
+ * @param[in] in
+ * @param[out] out
+ * @param[in] outSize
+ */
+static void ClientCleanName(const char *in, char *out, size_t outSize)
 {
-	int  len = 0, colorlessLen = 0;
-	char ch;
-	char *p;
-	int  spaces = 0;
+	size_t len          = 0;
+	int    colorlessLen = 0;
+	char   ch;
+	char   *p;
+	int    spaces = 0;
 
 	// save room for trailing null byte
 	outSize--;
@@ -1631,8 +1408,15 @@ static void ClientCleanName(const char *in, char *out, int outSize)
 	}
 }
 
-// courtesy of Dens
-// FIXME: IP6
+/**
+ * @brief GetParsedIP
+ * @param[in] ipadd
+ * @return
+ *
+ * @todo FIXME: IP6
+ *
+ * @note Courtesy of Dens
+ */
 const char *GetParsedIP(const char *ipadd)
 {
 	// code by Dan Pop, http://bytes.com/forum/thread212174.html
@@ -1664,13 +1448,19 @@ const char *GetParsedIP(const char *ipadd)
 	return ipge;
 }
 
-// based on userinfocheck.lua and combinedfixes.lua
-// FIXME: IP6
+/**
+ * @brief Based on userinfocheck.lua and combinedfixes.lua
+ * @param clientNum - unused
+ * @param[in] userinfo
+ * @return
+ *
+ * @note FIXME: IP6
+ */
 char *CheckUserinfo(int clientNum, char *userinfo)
 {
-	char *value;
-	int  length = strlen(userinfo);
-	int  i, slashCount = 0, count = 0;
+	char         *value;
+	unsigned int length = strlen(userinfo);
+	int          i, slashCount = 0, count = 0;
 
 	if (length < 1)
 	{
@@ -1814,17 +1604,15 @@ char *CheckUserinfo(int clientNum, char *userinfo)
 	return 0;
 }
 
-/*
-===========
-ClientUserInfoChanged
-
-Called from ClientConnect when the player first connects and
-directly by the server system when the player updates a userinfo variable.
-
-The game can override any of the settings and call trap_SetUserinfo
-if desired.
-============
-*/
+/**
+ * @brief Called from ClientConnect when the player first connects and
+ * directly by the server system when the player updates a userinfo variable.
+ *
+ * The game can override any of the settings and call trap_SetUserinfo
+ * if desired.
+ *
+ * @param[in] clientNum
+ */
 void ClientUserinfoChanged(int clientNum)
 {
 	gentity_t  *ent    = g_entities + clientNum;
@@ -2032,12 +1820,13 @@ void ClientUserinfoChanged(int clientNum)
 		client->pmext.bAutoReload      = qtrue;
 		client->pers.predictItemPickup = qfalse;
 		client->pers.pmoveFixed        = qfalse;
+		client->pers.pmoveMsec         = 8;
 	}
 	else
 	{
 		if (cs_cg_uinfo[0])
 		{
-			sscanf(cs_cg_uinfo, "%i %i %i",
+			sscanf(cs_cg_uinfo, "%u %u %u",
 			       &client->pers.clientFlags,
 			       &client->pers.clientTimeNudge,
 			       &client->pers.clientMaxPackets);
@@ -2085,7 +1874,7 @@ void ClientUserinfoChanged(int clientNum)
 	{
 		if (strcmp(oldname, client->pers.netname))
 		{
-			trap_SendServerCommand(-1, va("print \"[lof]%s" S_COLOR_WHITE " [lon]renamed to[lof] %s\n\"", oldname,
+			trap_SendServerCommand(-1, va("print \"[lof]" S_COLOR_WHITE "%s" S_COLOR_WHITE " [lon]renamed to[lof] %s\n\"", oldname,
 			                              client->pers.netname));
 		}
 	}
@@ -2107,11 +1896,7 @@ void ClientUserinfoChanged(int clientNum)
 
 	// send over a subset of the userinfo keys so other clients can
 	// print scoreboards, display models, and play custom sounds
-#ifdef FEATURE_RATING
-	s = va("n\\%s\\t\\%i\\c\\%i\\lc\\%i\\r\\%i\\m\\%s\\s\\%s\\dn\\%i\\w\\%i\\lw\\%i\\sw\\%i\\mu\\%i\\ref\\%i\\sr\\%f\\dr\\%f\\u\\%u",
-#else
 	s = va("n\\%s\\t\\%i\\c\\%i\\lc\\%i\\r\\%i\\m\\%s\\s\\%s\\dn\\%i\\w\\%i\\lw\\%i\\sw\\%i\\mu\\%i\\ref\\%i\\u\\%u",
-#endif
 	       client->pers.netname,
 	       client->sess.sessionTeam,
 	       client->sess.playerType,
@@ -2125,10 +1910,6 @@ void ClientUserinfoChanged(int clientNum)
 	       client->sess.latchPlayerWeapon2,
 	       client->sess.muted ? 1 : 0,
 	       client->sess.referee,
-#ifdef FEATURE_RATING
-	       client->sess.mu - 3 * client->sess.sigma,
-	       client->sess.mu - 3 * client->sess.sigma - (client->sess.oldmu - 3 * client->sess.oldsigma),
-#endif
 	       client->sess.uci
 	       );
 
@@ -2150,160 +1931,32 @@ void ClientUserinfoChanged(int clientNum)
 	G_DPrintf("ClientUserinfoChanged: %i :: %s\n", clientNum, s);
 }
 
-/*
-IsFakepConnection
-
-    Ported from the etpro lua module
-
-    FIXME: nice to have in engine too - implement this server side !!!
-*/
-
-// This defines the default value and also the minimum value we will allow the client to set...
-#define DEF_IP_MAX_CLIENTS  3
-
-// Return the length of the IP address if it has a port, or INT_MAX otherwise
-// FIXME: IPv6
-int GetIPLength(char const *ip)
-{
-	char *start = strchr(ip, ':');
-
-	return (start == NULL ? INT_MAX : start - ip);
-}
-
-qboolean CompareIPNoPort(char const *ip1, char const *ip2)
-{
-	int checkLength = MIN(GetIPLength(ip1), GetIPLength(ip2));
-
-	// Don't compare the port - just the IP
-	if (checkLength < INT_MAX && !Q_strncmp(ip1, ip2, checkLength))
-	{
-		return qtrue;
-	}
-	else if (checkLength == INT_MAX && !strcmp(ip1, ip2))
-	{
-		return qtrue;
-	}
-	else
-	{
-		return qfalse;
-	}
-}
-
-char *IsFakepConnection(int clientNum, char const *ip, char const *rate)
-{
-	gentity_t *ent;
-	int       theirIPLength;
-	int       checkLength;
-	int       count      = 1; // we count as the first one
-	int       max        = g_ip_max_clients.integer;
-	int       myIPLength = GetIPLength(ip);
-	int       i;
-	char      *theirIP;
-
-	// Default it to DEF_IP_MAX_CLIENTS as the minimum
-	if (!max || max <= 0)
-	{
-		max = DEF_IP_MAX_CLIENTS;
-	}
-
-	// validate userinfo to filter out the people blindly using hack code
-	if (rate[0] == 0)
-	{
-		return "Invalid connection!";
-	}
-
-	// let localhost ( mostly bots and host player ) be
-	// FIXME: move to loop and check for bots ... default of 3 connections should be enough
-	// for localhost
-	if (!strcmp(ip, "localhost"))
-	{
-		return NULL;
-	}
-
-	// Iterate over each connected client and check the IP, keeping a count of connections
-	// from the same IP as this connecting client
-	// FIXME: use connected clients
-	for (i = 0; i < level.maxclients; ++i)
-	{
-		// Skip our own slot
-		if (i == clientNum)
-		{
-			continue;
-		}
-
-		ent = &g_entities[i];
-		if (ent->client == NULL)
-		{
-			continue;
-		}
-
-		theirIP       = ent->client->pers.client_ip;
-		theirIPLength = GetIPLength(theirIP);
-		checkLength   = MIN(theirIPLength, myIPLength);
-
-		// pers.connected is set correctly for fake players can't rely on userinfo being empty
-		if (ent->client->pers.connected != CON_DISCONNECTED)
-		{
-			qboolean ipMatch = qfalse;
-
-			// Don't compare the port - just the IP
-			if (checkLength < INT_MAX && !Q_strncmp(ip, theirIP, checkLength))
-			{
-				ipMatch = qtrue;
-			}
-			else if (checkLength == INT_MAX && !strcmp(ip, theirIP))
-			{
-				ipMatch = qtrue;
-			}
-
-			if (ipMatch == qtrue)
-			{
-				++count;
-				if (count > max)
-				{
-					G_Printf("IsFakepConnection: too many connections from %s\n", ip);
-					G_LogPrintf("IsFakepConnection: too many connections from %s\n", ip);
-					// TODO: should we drop / ban all connections from this IP?
-					return va("Only %d connection%s per IP %s allowed on this server!",
-					          max,
-					          max == 1 ? "" : "s",
-					          max == 1 ? "is" : "are");
-				}
-			}
-		}
-	}
-
-	// Ok let them connect
-	return NULL;
-}
-
 extern const char *country_name[MAX_COUNTRY_NUM];
 
-/*
-===========
-ClientConnect
-
-Called when a player begins connecting to the server.
-Called again for every map change or tournement restart.
-
-The session information will be valid after exit.
-
-Return NULL if the client should be allowed, otherwise return
-a string with the reason for denial.
-
-Otherwise, the client will be sent the current gamestate
-and will eventually get to ClientBegin.
-
-firstTime will be qtrue the very first time a client connects
-to the server machine, but qfalse on map changes and tournement
-restarts.
-============
-*/
+/**
+ * @brief Called when a player begins connecting to the server.
+ * Called again for every map change or tournement restart.
+ *
+ * @details The session information will be valid after exit.
+ *
+ * Return NULL if the client should be allowed, otherwise return
+ * a string with the reason for denial.
+ *
+ * Otherwise, the client will be sent the current gamestate
+ * and will eventually get to ClientBegin.
+ *
+ * @param[in] clientNum
+ * @param[in] firstTime will be qtrue the very first time a client connects to the server machine, but qfalse on map changes and tournement restarts.
+ * @param[in] isBot
+ *
+ * @return NULL if the client should be allowed, otherwise return
+ * a string with the reason for denial.
+ */
 char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 {
 	gclient_t  *client;
-	gentity_t  *ent          = &g_entities[clientNum];
-	const char *userinfo_ptr = NULL;
+	gentity_t  *ent = &g_entities[clientNum];
+	const char *userinfo_ptr;
 	char       userinfo[MAX_INFO_STRING];
 	char       cs_key[MAX_STRING_CHARS]      = "";
 	char       cs_value[MAX_STRING_CHARS]    = "";
@@ -2311,8 +1964,7 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 	char       cs_password[MAX_STRING_CHARS] = "";
 	char       cs_name[MAX_NETNAME]          = "";
 	char       cs_guid[MAX_GUID_LENGTH + 1]  = "";
-	char       cs_rate[MAX_STRING_CHARS]     = "";
-	char       *value;
+	//char       cs_rate[MAX_STRING_CHARS]     = "";
 #ifdef FEATURE_LUA
 	char reason[MAX_STRING_CHARS] = "";
 #endif
@@ -2347,9 +1999,9 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 		case TOK_password:
 			Q_strncpyz(cs_password, cs_value, MAX_STRING_CHARS);
 			break;
-		case TOK_rate:
-			Q_strncpyz(cs_rate, cs_value, MAX_STRING_CHARS);
-			break;
+		//case TOK_rate:
+		//	Q_strncpyz(cs_rate, cs_value, MAX_STRING_CHARS);
+		//	break;
 		default:
 			continue;
 		}
@@ -2389,7 +2041,7 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 	{
 		if (g_enforcemaxlives.integer && (g_maxlives.integer > 0 || g_axismaxlives.integer > 0 || g_alliedmaxlives.integer > 0))
 		{
-			if (trap_Cvar_VariableIntegerValue("sv_punkbuster")) // <- FIXME: -> g_protect cvar
+			if (g_protect.integer & G_PROTECT_MAX_LIVES_BAN_GUID)
 			{
 				if (G_FilterMaxLivesPacket(cs_guid))
 				{
@@ -2409,14 +2061,6 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 
 	if (!isBot)
 	{
-		// Check for fakep connections
-		value = IsFakepConnection(clientNum, cs_ip, cs_rate);
-		if (value != NULL)
-		{
-			// Too many connections from the same IP - don't permit the connection
-			return value;
-		}
-
 		// we don't check password for bots and local client
 		// NOTE: local client <-> "ip" "localhost"
 		//   this means this client is not running in our current process
@@ -2447,7 +2091,7 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 	ent->client = level.clients + clientNum;
 	client      = ent->client;
 
-	memset(client, 0, sizeof(*client));
+	Com_Memset(client, 0, sizeof(*client));
 
 	client->pers.connected   = CON_CONNECTING;
 	client->pers.connectTime = level.time;
@@ -2591,6 +2235,15 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 #endif
 
 	G_UpdateCharacter(client);
+
+#ifdef FEATURE_RATING
+	if (g_skillRating.integer)
+	{
+		G_SkillRatingGetUserRating(client, firstTime);
+		G_CalcRank(client);
+	}
+#endif
+
 	ClientUserinfoChanged(clientNum);
 
 	// don't do the "xxx connected" messages if they were caried over from previous level
@@ -2599,11 +2252,11 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 	{
 		if ((g_countryflags.integer & CF_CONNECT) && client->sess.uci > 0 && client->sess.uci < MAX_COUNTRY_NUM)
 		{
-			trap_SendServerCommand(-1, va("cpm \"%s" S_COLOR_WHITE " connected from %s\n\"", client->pers.netname, country_name[client->sess.uci]));
+			trap_SendServerCommand(-1, va("cpm \"" S_COLOR_WHITE "%s" S_COLOR_WHITE " connected from %s\n\"", client->pers.netname, country_name[client->sess.uci]));
 		}
 		else
 		{
-			trap_SendServerCommand(-1, va("cpm \"%s" S_COLOR_WHITE " connected\n\"", client->pers.netname));
+			trap_SendServerCommand(-1, va("cpm \"" S_COLOR_WHITE "%s" S_COLOR_WHITE " connected\n\"", client->pers.netname));
 		}
 	}
 
@@ -2613,38 +2266,50 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 	return NULL;
 }
 
-// Scaling for late-joiners of maxlives based on current game time
+/**
+ * @brief Scaling for late-joiners of maxlives based on current game time
+ * @param cl - unused
+ * @param[in] maxRespawns
+ * @return
+ */
 int G_ComputeMaxLives(gclient_t *cl, int maxRespawns)
 {
-	float scaled = (float)(maxRespawns - 1) * (1.0f - ((float)(level.time - level.startTime) / (g_timelimit.value * 60000.0f)));
-	int   val    = (int)scaled;
+	float scaled;
+	int   val;
 
 	// don't scale of the timelimit is 0
-	if (g_timelimit.value == 0.0)
+	if (g_timelimit.value == 0.0f) // map end
 	{
 		return maxRespawns - 1;
 	}
 
+	if (g_gamestate.integer != GS_PLAYING) // warmup
+	{
+		return maxRespawns - 1;
+	}
+
+	scaled = (float)(maxRespawns - 1) * (1.0f - ((float)(level.time - level.startTime) / (g_timelimit.value * 60000.0f)));
+	val    = (int)scaled;
+
 	val += ((scaled - (float)val) < 0.5f) ? 0 : 1;
-	return(val);
+
+	return val;
 }
 
-/*
-===========
-ClientBegin
-
-called when a client has finished connecting, and is ready
-to be placed into the level.  This will happen every level load,
-and on transition between teams, but doesn't happen on respawns
-============
-*/
+/**
+ * @brief Called when a client has finished connecting, and is ready
+ * to be placed into the level.  This will happen every level load,
+ * and on transition between teams, but doesn't happen on respawns
+ *
+ * @param[in] clientNum
+ */
 void ClientBegin(int clientNum)
 {
 	gentity_t *ent    = g_entities + clientNum;
 	gclient_t *client = level.clients + clientNum;
 	int       flags;
 	int       spawn_count, lives_left;
-	int       stat_xp, stat_xp_overflow, score; // restore xp & score
+	int       stat_xp, score; // restore xp & score
 	qboolean  inIntermission = (g_gamestate.integer == GS_INTERMISSION && client->ps.pm_type == PM_INTERMISSION) ? qtrue : qfalse;
 
 #ifdef FEATURE_LUA
@@ -2688,18 +2353,16 @@ void ClientBegin(int clientNum)
 	flags = client->ps.eFlags;
 
 	// restore xp & score
-	stat_xp          = ent->client->ps.stats[STAT_XP];
-	stat_xp_overflow = ent->client->ps.stats[STAT_XP_OVERFLOW];
-	score            = ent->client->ps.persistant[PERS_SCORE];
+	stat_xp = ent->client->ps.stats[STAT_XP];
+	score   = ent->client->ps.persistant[PERS_SCORE];
 
-	memset(&client->ps, 0, sizeof(client->ps));
+	Com_Memset(&client->ps, 0, sizeof(client->ps));
 
 	ent->client->ps.persistant[PERS_SCORE] = score;
 
 	if (ent->client->sess.spectatorState == SPECTATOR_FREE) // restore xp
 	{
-		ent->client->ps.stats[STAT_XP]          = stat_xp;
-		ent->client->ps.stats[STAT_XP_OVERFLOW] = stat_xp_overflow;
+		ent->client->ps.stats[STAT_XP] = stat_xp;
 	}
 
 	if (inIntermission == qtrue)
@@ -2778,16 +2441,30 @@ void ClientBegin(int clientNum)
 			{
 				if (g_axismaxlives.integer > 0 || g_alliedmaxlives.integer > 0)
 				{
-					if (client->sess.sessionTeam == TEAM_AXIS)
+					if (g_gamestate.integer == GS_PLAYING)
 					{
-						if (client->ps.persistant[PERS_RESPAWNS_LEFT] > g_axismaxlives.integer)
+						if (client->sess.sessionTeam == TEAM_AXIS)
+						{
+							if (client->ps.persistant[PERS_RESPAWNS_LEFT] > g_axismaxlives.integer)
+							{
+								client->ps.persistant[PERS_RESPAWNS_LEFT] = g_axismaxlives.integer;
+							}
+						}
+						else if (client->sess.sessionTeam == TEAM_ALLIES)
+						{
+							if (client->ps.persistant[PERS_RESPAWNS_LEFT] > g_alliedmaxlives.integer)
+							{
+								client->ps.persistant[PERS_RESPAWNS_LEFT] = g_alliedmaxlives.integer;
+							}
+						}
+					}
+					else // warmup
+					{
+						if (client->sess.sessionTeam == TEAM_AXIS)
 						{
 							client->ps.persistant[PERS_RESPAWNS_LEFT] = g_axismaxlives.integer;
 						}
-					}
-					else if (client->sess.sessionTeam == TEAM_ALLIES)
-					{
-						if (client->ps.persistant[PERS_RESPAWNS_LEFT] > g_alliedmaxlives.integer)
+						else if (client->sess.sessionTeam == TEAM_ALLIES)
 						{
 							client->ps.persistant[PERS_RESPAWNS_LEFT] = g_alliedmaxlives.integer;
 						}
@@ -2819,19 +2496,7 @@ void ClientBegin(int clientNum)
 
 	if (client->sess.sessionTeam != TEAM_SPECTATOR)
 	{
-		switch (client->sess.sessionTeam)
-		{
-		case TEAM_AXIS:
-			trap_SendServerCommand(-1, va("print \"[lof]%s" S_COLOR_WHITE " [lon]joined the Axis team\n\"", client->pers.netname));
-			break;
-		case TEAM_ALLIES:
-			trap_SendServerCommand(-1, va("print \"[lof]%s" S_COLOR_WHITE " [lon]joined the Allies team\n\"", client->pers.netname));
-			break;
-		default:
-			// Just in case
-			trap_SendServerCommand(-1, va("print \"[lof]%s" S_COLOR_WHITE " [lon]entered the game\n\"", client->pers.netname));
-			break;
-		}
+		trap_SendServerCommand(-1, va("print \"[lof]" S_COLOR_WHITE "%s" S_COLOR_WHITE " [lon]entered the game\n\"", client->pers.netname));
 	}
 
 	G_LogPrintf("ClientBegin: %i\n", clientNum);
@@ -2849,9 +2514,12 @@ void ClientBegin(int clientNum)
 			G_LogPrintf("EnforceMaxLives-GUID: %s\n", value);
 			AddMaxLivesGUID(value);
 
-			value = Info_ValueForKey(userinfo, "ip");
-			G_LogPrintf("EnforceMaxLives-IP: %s\n", value);
-			AddMaxLivesBan(value);
+			if (!(g_entities[client->ps.clientNum].r.svFlags & SVF_BOT))
+			{
+				value = Info_ValueForKey(userinfo, "ip");
+				G_LogPrintf("EnforceMaxLives-IP: %s\n", value);
+				AddMaxLivesBan(value);
+			}
 		}
 	}
 
@@ -2875,16 +2543,27 @@ void ClientBegin(int clientNum)
 #endif
 }
 
+#if 0 // not used
+
 #define MAX_SPAWNPOINTFROMLIST_POINTS   16
 
+/**
+ * @brief SelectSpawnPointFromList
+ * @param[in] list
+ * @param[out] spawn_origin
+ * @param[out] spawn_angles
+ * @return
+ *
+ * @note Unused
+ */
 gentity_t *SelectSpawnPointFromList(char *list, vec3_t spawn_origin, vec3_t spawn_angles)
 {
-	char      *pStr       = list, *token;
+	char      *pStr = list, *token;
 	gentity_t *spawnPoint = NULL, *trav;
 	int       valid[MAX_SPAWNPOINTFROMLIST_POINTS];
 	int       numValid = 0;
 
-	memset(valid, 0, sizeof(valid));
+	Com_Memset(valid, 0, sizeof(valid));
 
 	while ((token = COM_Parse(&pStr)) != NULL && token[0])
 	{
@@ -2921,7 +2600,13 @@ gentity_t *SelectSpawnPointFromList(char *list, vec3_t spawn_origin, vec3_t spaw
 	return spawnPoint;
 }
 
-#if 0 // not used
+/**
+ * @brief G_CheckVersion
+ * @param ent
+ * @return
+ *
+ * @note Unused
+ */
 static char *G_CheckVersion(gentity_t *ent)
 {
 	// Prevent nasty version mismatches (or people sticking in Q3Aimbot cgames)
@@ -2939,22 +2624,23 @@ static char *G_CheckVersion(gentity_t *ent)
 }
 #endif
 
-/*
-===========
-ClientSpawn
-
-Called every time a client is placed fresh in the world:
-after the first ClientBegin, and after each respawn
-Initializes all non-persistant parts of playerState
-============
-*/
+/**
+ * @brief Called every time a client is placed fresh in the world:
+ * after the first ClientBegin, and after each respawn
+ * Initializes all non-persistant parts of playerState
+ *
+ * @param[in,out] ent
+ * @param[in] revived
+ * @param[in] teamChange
+ * @param[in] restoreHealth
+ */
 void ClientSpawn(gentity_t *ent, qboolean revived, qboolean teamChange, qboolean restoreHealth)
 {
 	int                index = ent - g_entities;
 	vec3_t             spawn_origin, spawn_angles;
 	gclient_t          *client = ent->client;
 	int                i;
-	clientPersistant_t saved;
+	clientPersistant_t savedPers;
 	clientSession_t    savedSess;
 	int                persistant[MAX_PERSISTANT];
 	gentity_t          *spawnPoint;
@@ -2969,7 +2655,8 @@ void ClientSpawn(gentity_t *ent, qboolean revived, qboolean teamChange, qboolean
 	client->pers.lastBattleSenseBonusTime = level.timeCurrent;
 	client->pers.lastHQMineReportTime     = level.timeCurrent;
 
-/*#ifndef LEGACY_DEBUG
+/*
+#ifndef LEGACY_DEBUG
     if( !client->sess.versionOK ) {
         char *clientMismatchedVersion = G_CheckVersion( ent );	// returns NULL if version is identical
 
@@ -2979,7 +2666,8 @@ void ClientSpawn(gentity_t *ent, qboolean revived, qboolean teamChange, qboolean
             client->sess.versionOK = qtrue;
         }
     }
-#endif*/
+#endif
+*/
 
 	// find a spawn point
 	// do it before setting health back up, so farthest
@@ -3020,7 +2708,7 @@ void ClientSpawn(gentity_t *ent, qboolean revived, qboolean teamChange, qboolean
 
 	ent->s.eFlags &= ~EF_MOUNTEDTANK;
 
-	saved     = client->pers;
+	savedPers = client->pers;
 	savedSess = client->sess;
 	savedPing = client->ps.ping;
 	savedTeam = client->ps.teamNum;
@@ -3033,12 +2721,12 @@ void ClientSpawn(gentity_t *ent, qboolean revived, qboolean teamChange, qboolean
 	{
 		qboolean set = client->maxlivescalced;
 
-		memset(client, 0, sizeof(*client));
+		Com_Memset(client, 0, sizeof(*client));
 
 		client->maxlivescalced = set;
 	}
 
-	client->pers              = saved;
+	client->pers              = savedPers;
 	client->sess              = savedSess;
 	client->ps.ping           = savedPing;
 	client->ps.teamNum        = savedTeam;
@@ -3104,9 +2792,9 @@ void ClientSpawn(gentity_t *ent, qboolean revived, qboolean teamChange, qboolean
 
 	client->ps.crouchMaxZ = client->ps.maxs[2] - (client->ps.standViewHeight - client->ps.crouchViewHeight);
 
-	client->ps.runSpeedScale    = 0.8;
-	client->ps.sprintSpeedScale = 1.1;
-	client->ps.crouchSpeedScale = 0.25;
+	client->ps.runSpeedScale    = 0.8f;
+	client->ps.sprintSpeedScale = 1.1f;
+	client->ps.crouchSpeedScale = 0.25f;
 	client->ps.weaponstate      = WEAPON_READY;
 
 	client->pmext.sprintTime   = SPRINTTIME;
@@ -3139,7 +2827,7 @@ void ClientSpawn(gentity_t *ent, qboolean revived, qboolean teamChange, qboolean
 
 			classInfo = BG_PlayerClassForPlayerState(&ent->client->ps);
 
-			client->sess.latchPlayerWeapon = classInfo->classWeapons[0];
+			client->sess.latchPlayerWeapon = classInfo->classPrimaryWeapons[0].weapon;
 			update                         = qtrue;
 		}
 
@@ -3155,7 +2843,7 @@ void ClientSpawn(gentity_t *ent, qboolean revived, qboolean teamChange, qboolean
 
 			classInfo = BG_PlayerClassForPlayerState(&ent->client->ps);
 
-			client->sess.playerWeapon = classInfo->classWeapons[0];
+			client->sess.playerWeapon = classInfo->classPrimaryWeapons[0].weapon;
 			update                    = qtrue;
 		}
 
@@ -3282,7 +2970,7 @@ void ClientSpawn(gentity_t *ent, qboolean revived, qboolean teamChange, qboolean
 	ClientEndFrame(ent);
 
 	// set idle animation on weapon
-	ent->client->ps.weapAnim = ((ent->client->ps.weapAnim & ANIM_TOGGLEBIT) ^ ANIM_TOGGLEBIT) | PM_IdleAnimForWeapon(ent->client->ps.weapon);
+	ent->client->ps.weapAnim = ((ent->client->ps.weapAnim & ANIM_TOGGLEBIT) ^ ANIM_TOGGLEBIT) | GetWeaponTableData(ent->client->ps.weapon)->idleAnim;
 
 	// clear entity state values
 	BG_PlayerStateToEntityState(&client->ps, &ent->s, level.time, qtrue);
@@ -3296,26 +2984,24 @@ void ClientSpawn(gentity_t *ent, qboolean revived, qboolean teamChange, qboolean
 		G_Script_ScriptEvent(ent, "playerstart", "");
 	}
 
-	// when switching teams, reset the commandmap/radar icons,
-	// so your own meanwhile invalid landmine-markers don't show up..
-	if (teamChange && g_landminetimeout.integer)
+	// when switching teams, reset the commandmap/radar icons
+	// so your own (meanwhile invalid) landmine-markers don't show up ...
+	if (teamChange && !g_landminetimeout.integer)
 	{
 		G_ResetTeamMapData();
 	}
 }
 
-/*
-===========
-ClientDisconnect
-
-Called when a player drops from the server.
-Will not be called between levels.
-
-This should NOT be called directly by any game logic,
-call trap_DropClient(), which will call this and do
-server system housekeeping.
-============
-*/
+/**
+ * @brief Called when a player drops from the server.
+ * Will not be called between levels.
+ *
+ * @details This should NOT be called directly by any game logic,
+ * call trap_DropClient(), which will call this and do
+*  server system housekeeping.
+ *
+ * @param[in] clientNum
+ */
 void ClientDisconnect(int clientNum)
 {
 	gentity_t *ent  = g_entities + clientNum;
@@ -3326,6 +3012,14 @@ void ClientDisconnect(int clientNum)
 	{
 		return;
 	}
+
+#ifdef FEATURE_RATING
+	if (g_skillRating.integer && !level.intermissiontime)
+	{
+		// rating already recorded before intermission
+		G_SkillRatingSetUserRating(ent->client);
+	}
+#endif
 
 #ifdef FEATURE_LUA
 	// LUA API callbacks
@@ -3346,10 +3040,10 @@ void ClientDisconnect(int clientNum)
 		flag = g_entities + level.sortedClients[i];
 		if (flag->client->disguiseClientNum == clientNum && flag->client->ps.powerups[PW_OPS_DISGUISED])
 		{
-			CPx(flag->s.number,"cp \"Your cover has been blown, steal a new uniform soon!\" 1");
+			CPx(flag->s.number, "cp \"Your cover has been blown, steal a new uniform soon!\" 1");
 			flag->client->disguiseClientNum = flag->s.clientNum;
 			// sound effect
-			//G_AddEvent(flag, EV_DISGUISE_SOUND, 0); // FIXME: find a sound + add event
+			G_AddEvent(flag, EV_DISGUISE_SOUND, 0); // FIXME: find a new sound?
 			ClientUserinfoChanged(flag->s.clientNum);
 			// no break - uniform might be stolen more than once
 		}
@@ -3459,7 +3153,7 @@ void ClientDisconnect(int clientNum)
 
 	CalculateRanks();
 
-	G_verifyMatchState(i);
+	G_verifyMatchState((team_t)i);
 #ifdef FEATURE_MULTIVIEW
 	G_smvAllRemoveSingleClient(ent - g_entities);
 #endif
@@ -3468,21 +3162,30 @@ void ClientDisconnect(int clientNum)
 	if (g_skillRating.integer)
 	{
 		level.axisProb   = G_CalculateWinProbability(TEAM_AXIS);
-		level.alliesProb = 1.0 - level.axisProb;
+		level.alliesProb = 1.0f - level.axisProb;
 	}
 #endif
 }
 
-// In just the GAME DLL, we want to store the groundtrace surface stuff,
-// so we don't have to keep tracing.
+
+/**
+ * @brief In just the GAME DLL, we want to store the groundtrace surface stuff,
+ * so we don't have to keep tracing.
+ *
+ * @param[in] clientNum
+ * @param[in] surfaceFlags
+ */
 void ClientStoreSurfaceFlags(int clientNum, int surfaceFlags)
 {
 	// Store the surface flags
 	g_entities[clientNum].surfaceFlags = surfaceFlags;
 }
 
-// ClientHitboxMaxZ returns the proper value to use for
-// the entity's r.maxs[2] when running a trace.
+/**
+ * @brief ClientHitboxMaxZ
+ * @param[in] hitEnt
+ * @return the proper value to use for the entity's r.maxs[2] when running a trace.
+ */
 float ClientHitboxMaxZ(gentity_t *hitEnt)
 {
 	if (!hitEnt)

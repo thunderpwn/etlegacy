@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -35,14 +35,18 @@
 
 #include "ui_local.h"
 
+/**
+ * @brief Com_DPrintf
+ * @param[in] fmt
+ */
 void QDECL Com_DPrintf(const char *fmt, ...)
 {
 	va_list argptr;
 	char    msg[MAXPRINTMSG];
-	int     developer;
+	float   developer;
 
 	developer = trap_Cvar_VariableValue("developer");
-	if (!developer)
+	if (developer == 0.f)
 	{
 		return;
 	}
@@ -54,7 +58,12 @@ void QDECL Com_DPrintf(const char *fmt, ...)
 	Com_Printf("%s", msg);
 }
 
-void QDECL Com_Error(int level, const char *error, ...)
+/**
+ * @brief Com_Error
+ * @param code - unused
+ * @param[in] error
+ */
+void QDECL Com_Error(int code, const char *error, ...)
 {
 	va_list argptr;
 	char    text[1024];
@@ -66,6 +75,10 @@ void QDECL Com_Error(int level, const char *error, ...)
 	trap_Error(va("%s", text));
 }
 
+/**
+ * @brief Com_Printf
+ * @param[in] msg
+ */
 void QDECL Com_Printf(const char *msg, ...)
 {
 	va_list argptr;
@@ -78,6 +91,11 @@ void QDECL Com_Printf(const char *msg, ...)
 	trap_Print(va("%s", text));
 }
 
+/**
+ * @brief UI_Argv
+ * @param[in] arg
+ * @return
+ */
 char *UI_Argv(int arg)
 {
 	static char buffer[MAX_STRING_CHARS];
@@ -87,23 +105,36 @@ char *UI_Argv(int arg)
 	return buffer;
 }
 
-char *UI_Cvar_VariableString(const char *var_name)
+/**
+ * @brief UI_Cvar_VariableString
+ * @param[in] varName
+ * @return
+ */
+char *UI_Cvar_VariableString(const char *varName)
 {
 	static char buffer[2][MAX_STRING_CHARS];
 	static int  toggle;
 
 	toggle ^= 1;        // flip-flop to allow two returns without clash
 
-	trap_Cvar_VariableStringBuffer(var_name, buffer[toggle], sizeof(buffer[0]));
+	trap_Cvar_VariableStringBuffer(varName, buffer[toggle], sizeof(buffer[0]));
 
 	return buffer[toggle];
 }
 
+/**
+ * @brief UI_Cache_f
+ */
 static void UI_Cache_f(void)
 {
 	Display_CacheAll();
 }
 
+/**
+ * @brief UI_ConsoleCommand
+ * @param[in] realTime
+ * @return
+ */
 qboolean UI_ConsoleCommand(int realTime)
 {
 	char            *cmd;
@@ -116,7 +147,7 @@ qboolean UI_ConsoleCommand(int realTime)
 
 	if (Q_stricmp(cmd, "ui_test") == 0)
 	{
-		UI_ShowPostGame(qtrue);
+		UI_ShowPostGame();
 	}
 	else if (Q_stricmp(cmd, "ui_report") == 0)
 	{
@@ -143,7 +174,7 @@ qboolean UI_ConsoleCommand(int realTime)
 		UI_RemoveAllFavourites_f();
 		return qtrue;
 	}
-	else if (Q_stricmp(cmd, "show_menu") == 0 && DC->getCVarValue("developer"))
+	else if (Q_stricmp(cmd, "show_menu") == 0 && DC->getCVarValue("developer") != 0.f)
 	{
 		char *menu_name = UI_Argv(1);
 		if (menu_name)
@@ -172,6 +203,10 @@ qboolean UI_ConsoleCommand(int realTime)
 
 /**
  * @brief Adjusted for resolution and screen aspect ratio
+ * @param[in] x
+ * @param[in] y
+ * @param[in] w
+ * @param[in] h
  */
 void UI_AdjustFrom640(float *x, float *y, float *w, float *h)
 {
@@ -189,19 +224,33 @@ void UI_AdjustFrom640(float *x, float *y, float *w, float *h)
 	}
 }
 
-/**
+/*
  * @brief UI_DrawNamedPic
+ * @param[in] x
+ * @param[in] y
+ * @param[in] width
+ * @param[in] height
+ * @param[in] picname
+ *
  * @note Unused.
- */
 void UI_DrawNamedPic(float x, float y, float width, float height, const char *picname)
 {
-	qhandle_t hShader;
+    qhandle_t hShader;
 
-	hShader = trap_R_RegisterShaderNoMip(picname);
-	UI_AdjustFrom640(&x, &y, &width, &height);
-	trap_R_DrawStretchPic(x, y, width, height, 0, 0, 1, 1, hShader);
+    hShader = trap_R_RegisterShaderNoMip(picname);
+    UI_AdjustFrom640(&x, &y, &width, &height);
+    trap_R_DrawStretchPic(x, y, width, height, 0, 0, 1, 1, hShader);
 }
+*/
 
+/**
+ * @brief UI_DrawHandlePic
+ * @param[in] x
+ * @param[in] y
+ * @param[in] w
+ * @param[in] h
+ * @param[in] hShader
+ */
 void UI_DrawHandlePic(float x, float y, float w, float h, qhandle_t hShader)
 {
 	float s0;
@@ -237,7 +286,7 @@ void UI_DrawHandlePic(float x, float y, float w, float h, qhandle_t hShader)
 	trap_R_DrawStretchPic(x, y, w, h, s0, t0, s1, t1, hShader);
 }
 
-/**
+/*
  * @brief UI_DrawRotatedPic
  * Coordinates are 640*480 virtual values
  * @note Unused (cool stuff for ETL logo?!)
@@ -250,8 +299,12 @@ void UI_DrawRotatedPic(float x, float y, float width, float height, qhandle_t hS
 */
 
 /**
- * @brief UI_FillRect
  * Coordinates are 640*480 virtual values
+ * @param[in] x
+ * @param[in] y
+ * @param[in] width
+ * @param[in] height
+ * @param[in] color
  */
 void UI_FillRect(float x, float y, float width, float height, const float *color)
 {
@@ -263,55 +316,18 @@ void UI_FillRect(float x, float y, float width, float height, const float *color
 	trap_R_SetColor(NULL);
 }
 
-void UI_DrawSides(float x, float y, float w, float h)
-{
-	UI_AdjustFrom640(&x, &y, &w, &h);
-	trap_R_DrawStretchPic(x, y, 1, h, 0, 0, 0, 0, uiInfo.uiDC.whiteShader);
-	trap_R_DrawStretchPic(x + w - 1, y, 1, h, 0, 0, 0, 0, uiInfo.uiDC.whiteShader);
-}
-
+/**
+ * @brief UI_DrawTopBottom
+ * @param[in] x
+ * @param[in] y
+ * @param[in] w
+ * @param[in] h
+ *
+ * @note Unused
+ */
 void UI_DrawTopBottom(float x, float y, float w, float h)
 {
 	UI_AdjustFrom640(&x, &y, &w, &h);
 	trap_R_DrawStretchPic(x, y, w, 1, 0, 0, 0, 0, uiInfo.uiDC.whiteShader);
 	trap_R_DrawStretchPic(x, y + h - 1, w, 1, 0, 0, 0, 0, uiInfo.uiDC.whiteShader);
-}
-
-/**
- * @brief UI_DrawRect
- * Coordinates are 640*480 virtual values
- */
-void UI_DrawRect(float x, float y, float width, float height, const float *color)
-{
-	trap_R_SetColor(color);
-
-	UI_DrawTopBottom(x, y, width, height);
-	UI_DrawSides(x, y, width, height);
-
-	trap_R_SetColor(NULL);
-}
-
-/**
- * @note Unused.
- */
-void UI_DrawTextBox(int x, int y, int width, int lines)
-{
-	UI_FillRect(x + BIGCHAR_WIDTH / 2, y + BIGCHAR_HEIGHT / 2, (width + 1) * BIGCHAR_WIDTH, (lines + 1) * BIGCHAR_HEIGHT, colorBlack);
-	UI_DrawRect(x + BIGCHAR_WIDTH / 2, y + BIGCHAR_HEIGHT / 2, (width + 1) * BIGCHAR_WIDTH, (lines + 1) * BIGCHAR_HEIGHT, colorWhite);
-}
-
-/**
- * @note Unused.
- */
-qboolean UI_CursorInRect(int x, int y, int width, int height)
-{
-	if (uiInfo.uiDC.cursorx < x ||
-	    uiInfo.uiDC.cursory < y ||
-	    uiInfo.uiDC.cursorx > x + width ||
-	    uiInfo.uiDC.cursory > y + height)
-	{
-		return qfalse;
-	}
-
-	return qtrue;
 }

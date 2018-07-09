@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -36,13 +36,13 @@
 
 #include "tr_local.h"
 
-/*
-=================
-MDXSurfaceCompare
-compare function for qsort()
-=================
-*/
 #if 0
+/**
+ * @brief Compare function for qsort()
+ * @param[in] a
+ * @param[in] b
+ * @return
+ */
 static int MDXSurfaceCompare(const void *a, const void *b)
 {
 	mdvSurface_t *aa, *bb;
@@ -65,6 +65,10 @@ static int MDXSurfaceCompare(const void *a, const void *b)
 
 #endif
 
+/**
+ * @brief R_MD3_CreateVBO_Surfaces
+ * @param[in,out] mdvModel
+ */
 static void R_MD3_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 {
 	int            i, j, k;
@@ -95,7 +99,15 @@ static void R_MD3_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 	int vertexesNum;
 	int f;
 
-	Com_InitGrowList(&vboSurfaces, 10);
+	const float *v0, *v1, *v2;
+	const float *t0, *t1, *t2;
+	vec3_t      tangent;
+	vec3_t      binormal;
+	vec3_t      normal;
+
+	float       *v;
+
+	Com_InitGrowList(&vboSurfaces, 32);
 
 	for (i = 0, surf = mdvModel->surfaces; i < mdvModel->numSurfaces; i++, surf++)
 	{
@@ -104,12 +116,6 @@ static void R_MD3_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 
 		// calc tangent spaces
 		{
-			const float *v0, *v1, *v2;
-			const float *t0, *t1, *t2;
-			vec3_t      tangent = { 0, 0, 0 };
-			vec3_t      binormal;
-			vec3_t      normal;
-
 			for (j = 0, vert = vertexes; j < (surf->numVerts * mdvModel->numFrames); j++, vert++)
 			{
 				VectorClear(vert->tangent);
@@ -128,7 +134,6 @@ static void R_MD3_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 					t0 = surf->st[tri->indexes[0]].st;
 					t1 = surf->st[tri->indexes[1]].st;
 					t2 = surf->st[tri->indexes[2]].st;
-
 #if 1
 					R_CalcTangentSpace(tangent, binormal, normal, v0, v1, v2, t0, t1, t2);
 #else
@@ -138,8 +143,6 @@ static void R_MD3_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 
 					for (k = 0; k < 3; k++)
 					{
-						float *v;
-
 						v = vertexes[surf->numVerts * f + tri->indexes[k]].tangent;
 						VectorAdd(v, tangent, v);
 
@@ -158,6 +161,90 @@ static void R_MD3_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 				VectorNormalize(vert->binormal);
 				VectorNormalize(vert->normal);
 			}
+/* FIXME: Hunk_FreeTempMemory: not the final block
+ 	 	 	// Note: This does basically work - vanilla truck is fine with smoothed normals
+ 	 	 	//       ... but new r2 truck model fails ... :/ looks better w/o
+			if (r_smoothNormals->integer & FLAGS_SMOOTH_MD3) // do another extra smoothing for normals to avoid flat shading
+			{
+				int vf, vfj, vfk, numSame;
+				vec3_t   vertexj, vertexk, avgVector;
+				int *same;
+				qboolean *done;
+
+				// allocate temp memory for the "points already checked" array
+				done = (qboolean *)ri.Hunk_AllocateTempMemory(sizeof(done) * surf->numVerts);
+
+				 // allocate temp memory for the "points are the same" array
+				same = (int *)ri.Hunk_AllocateTempMemory(sizeof(same) * surf->numVerts);
+
+				for (f = 0; f < mdvModel->numFrames; f++)
+				{
+					// clear 'done' array:
+					for (j = 0; j < surf->numVerts; j++)
+					{
+						done[j] = qfalse; // use memset(&done[0], 0, surf->numVerts) ?
+					}
+
+					vf = surf->numVerts * f;
+					for (j = 0; j < surf->numVerts; j++)
+					{
+						if (done[j])
+						{
+							continue; // skip what is done
+						}
+
+						done[j] = qtrue; // , mark as done, and process..
+
+						vfj = vf + j;
+
+						numSame = 0; // new test, so reset the count..
+
+						// store this vertex number, and increment the found total of same vertices
+						same[numSame++] = vfj;
+
+						VectorCopy(surf->verts[vfj].xyz, vertexj);
+
+						// so far, there is only 1 vertex, so the average normal is simply the vertex's normal
+						VectorCopy(avgVector, vertexes[vfj].normal);
+
+						for (k = j + 1; k < surf->numVerts; k++)
+						{
+							if (done[k])
+							{
+								continue;
+							}
+
+							vfk = vf + k;
+
+							VectorCopy(surf->verts[vfk].xyz, vertexk);
+
+							//if (VectorCompare(vertexj, vertexk))
+							if (VectorCompareEpsilon(vertexj, vertexk, 0.02f))
+							{
+								done[k] = qtrue;
+
+								VectorAdd(avgVector, vertexes[vfk].normal, avgVector);
+
+								// store this vertex number, and increment the found total of same vertices
+								same[numSame++] = vfk;
+							}
+						}
+
+						// average the vector
+						VectorScale(avgVector, 1.0 / (float)numSame, avgVector);
+						//VectorNormalize(avgVector); //?!
+
+						// now write back the newly calculated average normal for all the same vertices
+						for (k = 0; k < numSame; k++)
+						{
+							VectorCopy(avgVector, vertexes[same[k]].normal);
+						}
+					}
+				}
+				ri.Hunk_FreeTempMemory(done);
+				ri.Hunk_FreeTempMemory(same);
+			}
+*/
 		}
 
 		//Ren_Print("...calculating MD3 mesh VBOs ( '%s', %i verts %i tris )\n", surf->name, surf->numVerts, surf->numTriangles);
@@ -324,7 +411,15 @@ static void R_MD3_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 	Com_DestroyGrowList(&vboSurfaces);
 }
 
-
+/**
+ * @brief R_LoadMD3
+ * @param[in,out] mod
+ * @param[in] lod
+ * @param[in,out] buffer
+ * @param bufferSize - unused
+ * @param[in] modName
+ * @return
+ */
 qboolean R_LoadMD3(model_t *mod, int lod, void *buffer, int bufferSize, const char *modName)
 {
 	int            i, j;
@@ -526,6 +621,8 @@ qboolean R_LoadMD3(model_t *mod, int lod, void *buffer, int bufferSize, const ch
 			v->xyz[0] = LittleShort(md3xyz->xyz[0]) * MD3_XYZ_SCALE;
 			v->xyz[1] = LittleShort(md3xyz->xyz[1]) * MD3_XYZ_SCALE;
 			v->xyz[2] = LittleShort(md3xyz->xyz[2]) * MD3_XYZ_SCALE;
+
+			md3xyz->normal = LittleShort(md3xyz->normal); // from r1
 		}
 
 		// swap all the ST

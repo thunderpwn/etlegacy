@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -45,31 +45,32 @@ static qboolean R_LoadMDX(model_t *mod, void *buffer, const char *name);
 qboolean R_LoadMD5(model_t *mod, byte *buffer, int bufferSize, const char *name);
 qboolean R_LoadPSK(model_t *mod, byte *buffer, int bufferSize, const char *name);
 
-model_t *loadmodel;
-
-/*
- R_GetModelByHandle
-*/
-model_t *R_GetModelByHandle(qhandle_t index)
+/**
+ * @brief R_GetModelByHandle
+ * @param[in] hModel
+ * @return
+ */
+model_t *R_GetModelByHandle(qhandle_t hModel)
 {
 	model_t *mod;
 
-	// out of range gets the defualt model
-	if (index < 1 || index >= tr.numModels)
+	// out of range gets the default model
+	if (hModel < 1 || hModel >= tr.numModels)
 	{
 		return tr.models[0];
 	}
 
-	mod = tr.models[index];
+	mod = tr.models[hModel];
 
 	return mod;
 }
 
 //===============================================================================
 
-/*
- R_AllocModel
-*/
+/**
+ * @brief R_AllocModel
+ * @return
+ */
 model_t *R_AllocModel(void)
 {
 	model_t *mod;
@@ -87,18 +88,14 @@ model_t *R_AllocModel(void)
 	return mod;
 }
 
-/*
-====================
-RE_RegisterModel
-
-Loads in a model for the given name
-
-Zero will be returned if the model fails to load.
-An entry will be retained for failed models as an
-optimization to prevent disk rescanning if they are
-asked for again.
-====================
-*/
+/**
+ * @brief Loads in a model for the given name
+ * @param[in] name
+ * @return Zero will be returned if the model fails to load.
+ * An entry will be retained for failed models as an
+ * optimization to prevent disk rescanning if they are
+ * asked for again.
+ */
 qhandle_t RE_RegisterModel(const char *name)
 {
 	model_t   *mod;
@@ -106,7 +103,7 @@ qhandle_t RE_RegisterModel(const char *name)
 	int       bufferLen = 0;
 	int       lod;
 	int       ident;
-	qboolean  loaded;
+	qboolean  loaded = qfalse;
 	qhandle_t hModel;
 	int       numLoaded;
 
@@ -134,6 +131,7 @@ qhandle_t RE_RegisterModel(const char *name)
 		{
 			if (mod->type == MOD_BAD)
 			{
+				Ren_Warning("RE_RegisterModel: bad model '%s' - already registered but in bad condition - returning 0\n", name);
 				return 0;
 			}
 			return hModel;
@@ -166,8 +164,6 @@ qhandle_t RE_RegisterModel(const char *name)
 		bufferLen = ri.FS_ReadFile(name, (void **)&buffer);
 		if (buffer)
 		{
-			loadmodel = mod;
-
 			ident = LittleLong(*(unsigned *)buffer);
 #if 0
 			if (ident == MDS_IDENT)
@@ -226,15 +222,15 @@ qhandle_t RE_RegisterModel(const char *name)
 			strcat(filename, namebuf);
 		}
 
-		filename[strlen(filename) - 1] = 'c';   // try MDC first
-		if (ri.FS_FOpenFileRead(filename, NULL, qfalse))
+		filename[strlen(filename) - 1] = '3';   // try MD3 first (changed order for 2.76)
+		if (ri.FS_FOpenFileRead(filename, NULL, qfalse) > 0)
 		{
 			ri.FS_ReadFile(filename, (void **)&buffer);
 		}
 		if (!buffer)
 		{
-			filename[strlen(filename) - 1] = '3';   // try MD3 second
-			if (ri.FS_FOpenFileRead(filename, NULL, qfalse))
+			filename[strlen(filename) - 1] = 'c';   // try MDC  second
+			if (ri.FS_FOpenFileRead(filename, NULL, qfalse) > 0)
 			{
 				ri.FS_ReadFile(filename, (void **)&buffer);
 			}
@@ -243,8 +239,6 @@ qhandle_t RE_RegisterModel(const char *name)
 				continue;
 			}
 		}
-
-		loadmodel = mod;
 
 		ident = LittleLong(*(unsigned *)buffer);
 		if (ident != MD3_IDENT && ident != MDC_IDENT)
@@ -327,12 +321,14 @@ fail:
 	return 0;
 }
 
-/*
-=================
-R_LoadMDX
-=================
-*/
-static qboolean R_LoadMDX(model_t *mod, void *buffer, const char *mod_name)
+/**
+ * @brief R_LoadMDX
+ * @param[in,out] mod
+ * @param[out] buffer
+ * @param[in] name
+ * @return
+ */
+static qboolean R_LoadMDX(model_t *mod, void *buffer, const char *name)
 {
 	int           i, j;
 	mdxHeader_t   *pinmodel = (mdxHeader_t *) buffer, *mdx;
@@ -346,7 +342,7 @@ static qboolean R_LoadMDX(model_t *mod, void *buffer, const char *mod_name)
 	version = LittleLong(pinmodel->version);
 	if (version != MDX_VERSION)
 	{
-		Ren_Warning("R_LoadMDX: %s has wrong version (%i should be %i)\n", mod_name, version, MDX_VERSION);
+		Ren_Warning("R_LoadMDX: %s has wrong version (%i should be %i)\n", name, version, MDX_VERSION);
 		return qfalse;
 	}
 
@@ -355,7 +351,7 @@ static qboolean R_LoadMDX(model_t *mod, void *buffer, const char *mod_name)
 	mod->dataSize += size;
 	mdx            = mod->mdx = (mdxHeader_t *)ri.Hunk_Alloc(size, h_low);
 
-	memcpy(mdx, buffer, LittleLong(pinmodel->ofsEnd));
+	Com_Memcpy(mdx, buffer, LittleLong(pinmodel->ofsEnd));
 
 	LL(mdx->ident);
 	LL(mdx->version);
@@ -406,28 +402,33 @@ static qboolean R_LoadMDX(model_t *mod, void *buffer, const char *mod_name)
 //=============================================================================
 
 /*
-=================
-R_XMLError
-=================
-*/
+ * @brief R_XMLError
+ * @param ctx - unused
+ * @param[in] fmt
+ *
+ * @note Unused
 void R_XMLError(void *ctx, const char *fmt, ...)
 {
-	va_list     argptr;
-	static char msg[4096];
+    va_list     argptr;
+    static char msg[4096];
 
-	va_start(argptr, fmt);
-	Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
-	va_end(argptr);
+    va_start(argptr, fmt);
+    Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
+    va_end(argptr);
 
-	Ren_Warning("%s", msg);
+    Ren_Warning("%s", msg);
 }
+*/
 
 /*
-=================
-R_LoadDAE
-=================
-*/
-/*
+ * @brief R_LoadDAE
+ * @param mod - unused
+ * @param[out] buffer
+ * @param[in] bufferLen
+ * @param[in] modName
+ * @return
+ *
+ * @note Unused
 static qboolean R_LoadDAE(model_t * mod, void *buffer, int bufferLen, const char *modName)
 {
     xmlDocPtr       doc;
@@ -474,7 +475,8 @@ static qboolean R_LoadDAE(model_t * mod, void *buffer, int bufferLen, const char
 //=============================================================================
 
 /**
- * RE_BeginRegistration
+ * @brief RE_BeginRegistration
+ * @param[out] glconfigOut
  */
 void RE_BeginRegistration(glconfig_t *glconfigOut)
 {
@@ -519,11 +521,9 @@ void RE_BeginRegistration(glconfig_t *glconfigOut)
 
 //=============================================================================
 
-/*
-===============
-R_ModelInit
-===============
-*/
+/**
+ * @brief R_ModelInit
+ */
 void R_ModelInit(void)
 {
 	model_t *mod;
@@ -535,11 +535,9 @@ void R_ModelInit(void)
 	mod->type = MOD_BAD;
 }
 
-/*
-================
-R_Modellist_f
-================
-*/
+/**
+ * @brief R_Modellist_f
+ */
 void R_Modellist_f(void)
 {
 	int      i, j, k;
@@ -625,11 +623,15 @@ void R_Modellist_f(void)
 
 //=============================================================================
 
-/*
-================
-R_GetTag
-================
-*/
+/**
+ * @brief R_GetTag
+ * @param[in] model
+ * @param[in] frame
+ * @param[in] _tagName
+ * @param[in] startTagIndex
+ * @param[out] outTag
+ * @return
+ */
 static int R_GetTag(mdvModel_t *model, int frame, const char *_tagName, int startTagIndex, mdvTag_t **outTag)
 {
 	int          i;
@@ -662,11 +664,18 @@ static int R_GetTag(mdvModel_t *model, int frame, const char *_tagName, int star
 	return -1;
 }
 
-/*
-================
-RE_LerpTagQ3A
-================
-*/
+/**
+ * @brief RE_LerpTagQ3A
+ * @param[in,out] tag
+ * @param[in] handle
+ * @param[in] startFrame
+ * @param[in] endFrame
+ * @param[in] frac
+ * @param[in] tagNameIn
+ * @return
+ *
+ * @note Unused
+ */
 int RE_LerpTagQ3A(orientation_t *tag, qhandle_t handle, int startFrame, int endFrame, float frac, const char *tagNameIn)
 {
 	mdvTag_t *start, *end;
@@ -688,6 +697,7 @@ int RE_LerpTagQ3A(orientation_t *tag, qhandle_t handle, int startFrame, int endF
 
 	start = end = NULL;
 
+	// FIXME: retval is reassigned before used, does it was intended ?
 	retval = R_GetTag(model->mdv[0], startFrame, tagName, 0, &start);
 	retval = R_GetTag(model->mdv[0], endFrame, tagName, 0, &end);
 	if (!start || !end)
@@ -713,11 +723,14 @@ int RE_LerpTagQ3A(orientation_t *tag, qhandle_t handle, int startFrame, int endF
 	return retval;
 }
 
-/*
-================
-RE_LerpTag
-================
-*/
+/**
+ * @brief RE_LerpTagET
+ * @param[in,out] tag
+ * @param[in] refent
+ * @param[in] tagNameIn
+ * @param[in] startIndex
+ * @return
+ */
 int RE_LerpTagET(orientation_t *tag, const refEntity_t *refent, const char *tagNameIn, int startIndex)
 {
 	mdvTag_t  *start, *end;
@@ -725,7 +738,7 @@ int RE_LerpTagET(orientation_t *tag, const refEntity_t *refent, const char *tagN
 	float     frontLerp, backLerp;
 	model_t   *model;
 	char      tagName[MAX_QPATH];       //, *ch;
-	int       retval;
+	int       retval = 0;
 	qhandle_t handle;
 	int       startFrame, endFrame;
 	float     frac;
@@ -733,7 +746,7 @@ int RE_LerpTagET(orientation_t *tag, const refEntity_t *refent, const char *tagN
 	handle     = refent->hModel;
 	startFrame = refent->oldframe;
 	endFrame   = refent->frame;
-	frac       = 1.0 - refent->backlerp;
+	frac       = 1.0f - refent->backlerp;
 
 	Q_strncpyz(tagName, tagNameIn, MAX_QPATH);
 /*
@@ -755,13 +768,14 @@ int RE_LerpTagET(orientation_t *tag, const refEntity_t *refent, const char *tagN
 	*/
 
 	frontLerp = frac;
-	backLerp  = 1.0 - frac;
+	backLerp  = 1.0f - frac;
 
 	start = end = NULL;
 
 	if (model->type == MOD_MESH)
 	{
 		// old MD3 style
+		// FIXME: retval is reassigned before used, does it was intended ?
 		retval = R_GetTag(model->mdv[0], startFrame, tagName, startIndex, &start);
 		retval = R_GetTag(model->mdv[0], endFrame, tagName, startIndex, &end);
 
@@ -872,11 +886,12 @@ int RE_LerpTagET(orientation_t *tag, const refEntity_t *refent, const char *tagN
 	return retval;
 }
 
-/*
-================
-RE_BoneIndex
-================
-*/
+/**
+ * @brief RE_BoneIndex
+ * @param[in] hModel
+ * @param[in] boneName
+ * @return
+ */
 int RE_BoneIndex(qhandle_t hModel, const char *boneName)
 {
 	int        i;
@@ -905,11 +920,12 @@ int RE_BoneIndex(qhandle_t hModel, const char *boneName)
 	return -1;
 }
 
-/*
-====================
-R_ModelBounds
-====================
-*/
+/**
+ * @brief R_ModelBounds
+ * @param[in] handle
+ * @param[out] mins
+ * @param[out] maxs
+ */
 void R_ModelBounds(qhandle_t handle, vec3_t mins, vec3_t maxs)
 {
 	model_t    *model;

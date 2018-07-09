@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -36,9 +36,10 @@
 #ifndef INCLUDE_MENUMACROS_H
 #define INCLUDE_MENUMACROS_H
 
-#define LEGACY_RESOLUTIONS cvarFloatList { "desktop resolution" - 2 "640*480" 3 "800*600" 4 "960*720" 5 "1024*768" 6 "1152*864" 7 "1280*1024" 8 "1600*1200" 9 "2048*1536" 10 "856*480 Wide Screen" 11 "1366x768 (16:9)" 12 "1440x900 (16:10)" 13 "1680x1050 (16:10)" 14 "1600x1200" 15 "1920x1080 (16:9)" 16 "1920x1200 (16:10)" 17 "2560x1440 (16:9)" 18 "2560x1600 (16:10)" 19 "3840x2160 (16:9)" 20 }
+#define LEGACY_RESOLUTIONS cvarFloatList { "desktop resolution" - 2 "custom resolution" - 1 "640*480" 3 "800*600" 4 "960*720" 5 "1024*768" 6 "1152*864" 7 "1280*1024" 8 "1600*1200" 9 "2048*1536" 10 "856*480 Wide Screen" 11 "1366x768 (16:9)" 12 "1440x900 (16:10)" 13 "1680x1050 (16:10)" 14 "1600x1200" 15 "1920x1080 (16:9)" 16 "1920x1200 (16:10)" 17 "2560x1440 (16:9)" 18 "2560x1600 (16:10)" 19 "3840x2160 (16:9)" 20 }
 #define LEGACY_WINDOWMODES cvarFloatList { "Windowed" 0 "Fullscreen" 1 "Windowed Fullscreen" 2 }
 #define LEGACY_LANGUAGES   cvarStrList { "English (default)  "; "en"; "French"; "fr"; "German"; "de"; "Polish"; "pl"; "Russian"; "ru"; "Dutch"; "nl"; "Czech"; "cs"; "Finnish"; "fi"; "Norwegian"; "no"; "Spanish"; "es"; "Italian"; "it" }
+#define LEGACY_RENDERERS   cvarStrList { "Vanilla (default)  "; "opengl1"; "ET: Legacy"; "opengl2" }
 
 // Marks text as translatable
 #define _(x) x
@@ -98,7 +99,7 @@
 		group GROUP_NAME                                                                                  \
 		rect        0 0 WINDOW_WIDTH WINDOW_HEIGHT                                                              \
 		style WINDOW_STYLE_FILLED                                                                         \
-		backcolor   0 0 0 .6                                                                                    \
+		backcolor   0 0 0 .9                                                                                    \
 		border WINDOW_BORDER_FULL                                                                          \
 		bordercolor .5 .5 .5 .5                                                                                 \
 		visible     1                                                                                           \
@@ -386,6 +387,14 @@
 		maxPaintChars EDITFIELD_MAXPAINTCHARS                         \
 		visible         1                                               \
 		tooltip EDITFIELD_TOOLTIP                               \
+                                                                        \
+		mouseEnter {                                                    \
+			setitemcolor "ef" ## EDITFIELD_TEXT forecolor .9 .9 .9 1 ;    \
+		}                                                               \
+                                                                        \
+		mouseExit {                                                     \
+			setitemcolor "ef" ## EDITFIELD_TEXT forecolor .6 .6 .6 1 ;    \
+		}                                                               \
 	}
 
 #define EDITFIELDLEFT(EDITFIELDLEFT_X, EDITFIELDLEFT_Y, EDITFIELDLEFT_W, EDITFIELDLEFT_H, EDITFIELDLEFT_TEXT, EDITFIELDLEFT_TEXT_SCALE, EDITFIELDLEFT_TEXT_ALIGN_Y, EDITFIELDLEFT_CVAR, EDITFIELDLEFT_MAXCHARS, EDITFIELDLEFT_MAXPAINTCHARS, EDITFIELDLEFT_TOOLTIP)   \
@@ -405,11 +414,19 @@
 		maxPaintChars EDITFIELDLEFT_MAXPAINTCHARS                     \
 		visible         1                                               \
 		tooltip EDITFIELDLEFT_TOOLTIP                           \
+                                                                        \
+		mouseEnter {                                                    \
+			setitemcolor "efleft" ## EDITFIELDLEFT_TEXT forecolor .9 .9 .9 1 ;    \
+		}                                                               \
+                                                                        \
+		mouseExit {                                                     \
+			setitemcolor "efleft" ## EDITFIELDLEFT_TEXT forecolor .6 .6 .6 1 ;    \
+		}                                                               \
 	}
 
 #define EDITFIELDLEFTACTION(EDITFIELDLEFTACTION_X, EDITFIELDLEFTACTION_Y, EDITFIELDLEFTACTION_W, EDITFIELDLEFTACTION_H, EDITFIELDLEFTACTION_TEXT, EDITFIELDLEFTACTION_TEXT_SCALE, EDITFIELDLEFTACTION_TEXT_ALIGN_Y, EDITFIELDLEFTACTION_CVAR, EDITFIELDLEFTACTION_MAXCHARS, EDITFIELDLEFTACTION_MAXPAINTCHARS, EDITFIELDLEFTACTION_ACTION, EDITFIELDLEFTACTION_TOOLTIP)   \
 	itemDef {                                                           \
-		name            "efleft" ## EDITFIELDLEFTACTION_TEXT                    \
+		name            "efleftaction" ## EDITFIELDLEFTACTION_TEXT                    \
 		group GROUP_NAME                                      \
 		rect $evalfloat(EDITFIELDLEFTACTION_X) $evalfloat(EDITFIELDLEFTACTION_Y) $evalfloat(EDITFIELDLEFTACTION_W) $evalfloat(EDITFIELDLEFTACTION_H) \
 		type ITEM_TYPE_EDITFIELD                             \
@@ -427,6 +444,14 @@
 		accept {                                                        \
 			EDITFIELDLEFTACTION_ACTION                               \
 		}                                                            \
+                                                                        \
+		mouseEnter {                                                    \
+			setitemcolor "efleftaction" ## EDITFIELDLEFTACTION_TEXT forecolor .9 .9 .9 1 ;    \
+		}                                                               \
+                                                                        \
+		mouseExit {                                                     \
+			setitemcolor "efleftaction" ## EDITFIELDLEFTACTION_TEXT forecolor .6 .6 .6 1 ;    \
+		}                                                               \
 	}
 
 #define EDITFIELDSIMPLE(EDITFIELDSIMPLE_X, EDITFIELDSIMPLE_Y, EDITFIELDSIMPLE_W, EDITFIELDSIMPLE_H, EDITFIELDSIMPLE_TEXT, EDITFIELDSIMPLE_TEXT_SCALE, EDITFIELDSIMPLE_TEXT_ALIGN_Y, EDITFIELDSIMPLE_CVAR, EDITFIELDSIMPLE_MAXCHARS, EDITFIELDSIMPLE_MAXPAINTCHARS, EDITFIELDSIMPLE_ACCEPT, EDITFIELDSIMPLE_TOOLTIP)   \
@@ -460,6 +485,14 @@
 		accept {                                                        \
 			EDITFIELDSIMPLE_ACCEPT                               \
 		}                                                         \
+                                                                        \
+		mouseEnter {                                                    \
+			setitemcolor "efsimple" ## EDITFIELDSIMPLE_TEXT forecolor .9 .9 .9 1 ;    \
+		}                                                               \
+                                                                        \
+		mouseExit {                                                     \
+			setitemcolor "efsimple" ## EDITFIELDSIMPLE_TEXT forecolor .6 .6 .6 1 ;    \
+		}                                                               \
 	}
 
 #define NUMERICFIELD(NUMERICFIELD_X, NUMERICFIELD_Y, NUMERICFIELD_W, NUMERICFIELD_H, NUMERICFIELD_TEXT, NUMERICFIELD_TEXT_SCALE, NUMERICFIELD_TEXT_ALIGN_Y, NUMERICFIELD_CVAR, NUMERICFIELD_MAXCHARS, NUMERICFIELD_TOOLTIP)   \
@@ -490,6 +523,14 @@
 		maxChars NUMERICFIELD_MAXCHARS                           \
 		visible         1                                               \
 		tooltip NUMERICFIELD_TOOLTIP                            \
+                                                                        \
+		mouseEnter {                                                    \
+			setitemcolor "nf" ## NUMERICFIELD_TEXT forecolor .9 .9 .9 1 ;    \
+		}                                                               \
+                                                                        \
+		mouseExit {                                                     \
+			setitemcolor "nf" ## NUMERICFIELD_TEXT forecolor .6 .6 .6 1 ;    \
+		}                                                               \
 	}
 
 #define NUMERICFIELDLEFTEXT(NUMERICFIELDLEFTEXT_X, NUMERICFIELDLEFTEXT_Y, NUMERICFIELDLEFTEXT_W, NUMERICFIELDLEFTEXT_H, NUMERICFIELDLEFTEXT_TEXT, NUMERICFIELDLEFTEXT_TEXT_SCALE, NUMERICFIELDLEFTEXT_TEXT_ALIGN_Y, NUMERICFIELDLEFTEXT_CVAR, NUMERICFIELDLEFTEXT_MAXCHARS, NUMERICFIELDLEFTEXT_EXT, NUMERICFIELDLEFTEXT_TOOLTIP) \
@@ -508,6 +549,14 @@
 		maxChars NUMERICFIELDLEFTEXT_MAXCHARS                    \
 		visible         1                                               \
 		tooltip NUMERICFIELDLEFTEXT_TOOLTIP                     \
+                                                                        \
+		mouseEnter {                                                    \
+			setitemcolor "nfleftext" ## NUMERICFIELDLEFTEXT_TEXT forecolor .9 .9 .9 1 ;    \
+		}                                                               \
+                                                                        \
+		mouseExit {                                                     \
+			setitemcolor "nfleftext" ## NUMERICFIELDLEFTEXT_TEXT forecolor .6 .6 .6 1 ;    \
+		}                                                               \
                                                                         \
 		NUMERICFIELDLEFTEXT_EXT                                         \
 	}

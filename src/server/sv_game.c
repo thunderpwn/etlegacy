@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -42,8 +42,18 @@
 
 botlib_export_t *botlib_export;
 
-// these functions must be used instead of pointer arithmetic, because
-// the game allocates gentities with private information after the server shared part
+/**
+* @todo TODO: These functions must be used instead of pointer arithmetic, because
+* the game allocates gentities with private information after the server shared part
+*/
+
+/**
+ * @brief SV_NumForGentity
+ * @param[in] ent
+ * @return
+ *
+ * @note Unused
+ */
 int SV_NumForGentity(sharedEntity_t *ent)
 {
 	int num = ((byte *)ent - (byte *)sv.gentities) / sv.gentitySize;
@@ -51,6 +61,11 @@ int SV_NumForGentity(sharedEntity_t *ent)
 	return num;
 }
 
+/**
+ * @brief SV_GentityNum
+ * @param[in] num
+ * @return
+ */
 sharedEntity_t *SV_GentityNum(int num)
 {
 	sharedEntity_t *ent = ( sharedEntity_t * )((byte *)sv.gentities + sv.gentitySize * (num));
@@ -58,6 +73,11 @@ sharedEntity_t *SV_GentityNum(int num)
 	return ent;
 }
 
+/**
+ * @brief SV_GameClientNum
+ * @param[in] num
+ * @return
+ */
 playerState_t *SV_GameClientNum(int num)
 {
 	playerState_t *ps = ( playerState_t * )((byte *)sv.gameClients + sv.gameClientSize * (num));
@@ -65,6 +85,11 @@ playerState_t *SV_GameClientNum(int num)
 	return ps;
 }
 
+/**
+ * @brief SV_SvEntityForGentity
+ * @param[in] gEnt
+ * @return
+ */
 svEntity_t *SV_SvEntityForGentity(sharedEntity_t *gEnt)
 {
 	if (!gEnt || gEnt->s.number < 0 || gEnt->s.number >= MAX_GENTITIES)
@@ -74,6 +99,11 @@ svEntity_t *SV_SvEntityForGentity(sharedEntity_t *gEnt)
 	return &sv.svEntities[gEnt->s.number];
 }
 
+/**
+ * @brief SV_GEntityForSvEntity
+ * @param[in] svEnt
+ * @return
+ */
 sharedEntity_t *SV_GEntityForSvEntity(svEntity_t *svEnt)
 {
 	int num = svEnt - sv.svEntities;
@@ -81,13 +111,11 @@ sharedEntity_t *SV_GEntityForSvEntity(svEntity_t *svEnt)
 	return SV_GentityNum(num);
 }
 
-/*
-===============
-SV_GameSendServerCommand
-
-Sends a command string to a client
-===============
-*/
+/**
+ * @brief Sends a command string to a client
+ * @param[in] clientNum
+ * @param[in] text
+ */
 void SV_GameSendServerCommand(int clientNum, const char *text)
 {
 	// record the game server commands in demos
@@ -115,13 +143,12 @@ void SV_GameSendServerCommand(int clientNum, const char *text)
 	}
 }
 
-/*
-===============
-SV_GameDropClient
-
-Disconnects the client with a message
-===============
-*/
+/**
+ * @brief Disconnects the client with a message
+ * @param[in] clientNum
+ * @param[in] reason
+ * @param[in] length
+ */
 void SV_GameDropClient(int clientNum, const char *reason, int length)
 {
 	if (clientNum < 0 || clientNum >= sv_maxclients->integer)
@@ -135,13 +162,11 @@ void SV_GameDropClient(int clientNum, const char *reason, int length)
 	}
 }
 
-/*
-=================
-SV_SetBrushModel
-
-sets mins and maxs for inline bmodels
-=================
-*/
+/**
+ * @brief Sets mins and maxs for inline bmodels
+ * @param[in,out] ent
+ * @param[in] name
+ */
 void SV_SetBrushModel(sharedEntity_t *ent, const char *name)
 {
 	clipHandle_t h;
@@ -170,13 +195,12 @@ void SV_SetBrushModel(sharedEntity_t *ent, const char *name)
 	SV_LinkEntity(ent);         // FIXME: remove
 }
 
-/*
-=================
-SV_inPVS
-
-Also checks portalareas so that doors block sight
-=================
-*/
+/**
+ * @brief Also checks portalareas so that doors block sight
+ * @param[in] p1
+ * @param[in] p2
+ * @return
+ */
 qboolean SV_inPVS(const vec3_t p1, const vec3_t p2)
 {
 	int  leafnum;
@@ -204,13 +228,12 @@ qboolean SV_inPVS(const vec3_t p1, const vec3_t p2)
 	return qtrue;
 }
 
-/*
-=================
-SV_inPVSIgnorePortals
-
-Does NOT check portalareas
-=================
-*/
+/**
+ * @brief Does NOT check portalareas
+ * @param[in] p1
+ * @param[in] p2
+ * @return
+ */
 qboolean SV_inPVSIgnorePortals(const vec3_t p1, const vec3_t p2)
 {
 	int  leafnum;
@@ -232,11 +255,11 @@ qboolean SV_inPVSIgnorePortals(const vec3_t p1, const vec3_t p2)
 	return qtrue;
 }
 
-/*
-========================
-SV_AdjustAreaPortalState
-========================
-*/
+/**
+ * @brief SV_AdjustAreaPortalState
+ * @param[in] ent
+ * @param[in] open
+ */
 void SV_AdjustAreaPortalState(sharedEntity_t *ent, qboolean open)
 {
 	svEntity_t *svEnt = SV_SvEntityForGentity(ent);
@@ -249,12 +272,15 @@ void SV_AdjustAreaPortalState(sharedEntity_t *ent, qboolean open)
 	CM_AdjustAreaPortalState(svEnt->areanum, svEnt->areanum2, open);
 }
 
-/*
-==================
-SV_EntityContact
-==================
-*/
-qboolean SV_EntityContact(const vec3_t mins, const vec3_t maxs, const sharedEntity_t *gEnt, const int capsule)
+/**
+ * @brief SV_EntityContact
+ * @param[in] mins
+ * @param[in] maxs
+ * @param[in] gEnt
+ * @param[in] capsule
+ * @return
+ */
+qboolean SV_EntityContact(const vec3_t mins, const vec3_t maxs, const sharedEntity_t *gEnt, const qboolean capsule)
 {
 	const float  *origin = gEnt->r.currentOrigin;
 	const float  *angles = gEnt->r.currentAngles;
@@ -269,25 +295,28 @@ qboolean SV_EntityContact(const vec3_t mins, const vec3_t maxs, const sharedEnti
 	return trace.startsolid;
 }
 
-/*
-===============
-SV_GetServerinfo
-===============
-*/
-void SV_GetServerinfo(char *buffer, int bufferSize)
+/**
+ * @brief SV_GetServerinfo
+ * @param[out] buffer
+ * @param[in] bufferSize
+ */
+void SV_GetServerinfo(char *buffer, unsigned int bufferSize)
 {
 	if (bufferSize < 1)
 	{
-		Com_Error(ERR_DROP, "SV_GetServerinfo: bufferSize == %i", bufferSize);
+		Com_Error(ERR_DROP, "SV_GetServerinfo: bufferSize == %u", bufferSize);
 	}
 	Q_strncpyz(buffer, Cvar_InfoString(CVAR_SERVERINFO | CVAR_SERVERINFO_NOUPDATE), bufferSize);
 }
 
-/*
-===============
-SV_LocateGameData
-===============
-*/
+/**
+ * @brief SV_LocateGameData
+ * @param[in] gEnts
+ * @param[in] numGEntities
+ * @param[in] sizeofGEntity_t
+ * @param[in] clients
+ * @param[in] sizeofGameClient
+ */
 void SV_LocateGameData(sharedEntity_t *gEnts, int numGEntities, int sizeofGEntity_t,
                        playerState_t *clients, int sizeofGameClient)
 {
@@ -299,11 +328,11 @@ void SV_LocateGameData(sharedEntity_t *gEnts, int numGEntities, int sizeofGEntit
 	sv.gameClientSize = sizeofGameClient;
 }
 
-/*
-===============
-SV_GetUsercmd
-===============
-*/
+/**
+ * @brief SV_GetUsercmd
+ * @param[in] clientNum
+ * @param[out] cmd
+ */
 void SV_GetUsercmd(int clientNum, usercmd_t *cmd)
 {
 	if (clientNum < 0 || clientNum >= sv_maxclients->integer)
@@ -313,35 +342,39 @@ void SV_GetUsercmd(int clientNum, usercmd_t *cmd)
 	*cmd = svs.clients[clientNum].lastUsercmd;
 }
 
-/*
-====================
-SV_SendBinaryMessage
-====================
-*/
-static void SV_SendBinaryMessage(int cno, char *buf, int buflen)
+/**
+ * @brief SV_SendBinaryMessage
+ * @param[in] cno
+ * @param[out] buf
+ * @param[in] buflen
+ * @return 1 if message is in queue - 0 not sent (since 2.76)
+ */
+static int SV_SendBinaryMessage(int cno, char *buf, int buflen)
 {
 	if (cno < 0 || cno >= sv_maxclients->integer)
 	{
-		Com_Error(ERR_DROP, "SV_SendBinaryMessage: bad client %i", cno);
-		return;
+		Com_Printf("SV_SendBinaryMessage: bad client %i - message not sent\n", cno);
+		svs.clients[cno].binaryMessageLength = 0;
+		return 0;
 	}
 
 	if (buflen < 0 || buflen > MAX_BINARY_MESSAGE)
 	{
-		Com_Error(ERR_DROP, "SV_SendBinaryMessage: bad length %i", buflen);
+		Com_Printf("SV_SendBinaryMessage: bad buffer length %i - message not sent to client #%i\n", buflen, cno);
 		svs.clients[cno].binaryMessageLength = 0;
-		return;
+		return 0;
 	}
 
 	svs.clients[cno].binaryMessageLength = buflen;
-	memcpy(svs.clients[cno].binaryMessage, buf, buflen);
+	Com_Memcpy(svs.clients[cno].binaryMessage, buf, buflen);
+	return 1;
 }
 
-/*
-====================
-SV_BinaryMessageStatus
-====================
-*/
+/**
+ * @brief SV_BinaryMessageStatus
+ * @param[in] cno
+ * @return
+ */
 static int SV_BinaryMessageStatus(int cno)
 {
 	if (cno < 0 || cno >= sv_maxclients->integer)
@@ -362,11 +395,13 @@ static int SV_BinaryMessageStatus(int cno)
 	return MESSAGE_WAITING;
 }
 
-/*
-====================
-SV_GameBinaryMessageReceived
-====================
-*/
+/**
+ * @brief SV_GameBinaryMessageReceived
+ * @param[in] cno
+ * @param[in] buf
+ * @param[in] buflen
+ * @param[in] commandTime
+ */
 void SV_GameBinaryMessageReceived(int cno, const char *buf, int buflen, int commandTime)
 {
 	VM_Call(gvm, GAME_MESSAGERECEIVED, cno, buf, buflen, commandTime);
@@ -374,6 +409,11 @@ void SV_GameBinaryMessageReceived(int cno, const char *buf, int buflen, int comm
 
 //==============================================
 
+/**
+ * @brief FloatAsInt
+ * @param[in] f
+ * @return
+ */
 static int FloatAsInt(float f)
 {
 	floatint_t fi;
@@ -382,17 +422,14 @@ static int FloatAsInt(float f)
 	return fi.i;
 }
 
-/*
-====================
-SV_GameSystemCalls
-
-The module is making a system call
-====================
-*/
-
 extern int S_RegisterSound(const char *name, qboolean compressed);
 extern int S_GetSoundLength(sfxHandle_t sfxHandle);
 
+/**
+ * @brief The module is making a system call
+ * @param[in] args
+ * @return
+ */
 intptr_t SV_GameSystemCalls(intptr_t *args)
 {
 	switch (args[0])
@@ -584,19 +621,34 @@ intptr_t SV_GameSystemCalls(intptr_t *args)
 	case BOTLIB_GET_CONSOLE_MESSAGE:
 		return SV_BotGetConsoleMessage(args[1], VMA(2), args[3]);
 	case BOTLIB_USER_COMMAND:
-		SV_ClientThink(&svs.clients[args[1]], VMA(2));
+		{
+			unsigned clientNum = args[1];
+
+			if ( clientNum < sv_maxclients->integer )
+			{
+				SV_ClientThink(&svs.clients[clientNum], VMA(2));
+			}
+		}
 		return 0;
 
 	case BOTLIB_EA_COMMAND:
-		SV_ExecuteClientCommand(&svs.clients[args[1]], VMA(2), qtrue, qfalse);
+		{
+			unsigned clientNum = args[1];
+
+			if ( clientNum < sv_maxclients->integer )
+			{
+				SV_ExecuteClientCommand(&svs.clients[clientNum], VMA(2), qtrue, qfalse);
+			}
+		}
+
 		return 0;
 
 	case TRAP_MEMSET:
-		memset(VMA(1), args[2], args[3]);
+		Com_Memset(VMA(1), args[2], args[3]);
 		return 0;
 
 	case TRAP_MEMCPY:
-		memcpy(VMA(1), VMA(2), args[3]);
+		Com_Memcpy(VMA(1), VMA(2), args[3]);
 		return 0;
 
 	case TRAP_STRNCPY:
@@ -633,11 +685,10 @@ intptr_t SV_GameSystemCalls(intptr_t *args)
 		return FloatAsInt(ceil(VMF(1)));
 
 	case PB_STAT_REPORT:
-		return 0 ;
+		return 0;
 
 	case G_SENDMESSAGE:
-		SV_SendBinaryMessage(args[1], VMA(2), args[3]);
-		return 0;
+		return SV_SendBinaryMessage(args[1], VMA(2), args[3]);
 	case G_MESSAGESTATUS:
 		return SV_BinaryMessageStatus(args[1]);
 
@@ -649,13 +700,9 @@ intptr_t SV_GameSystemCalls(intptr_t *args)
 	return -1;
 }
 
-/*
-===============
-SV_ShutdownGameProgs
-
-Called every time a map changes
-===============
-*/
+/**
+ * @brief Called every time a map changes
+ */
 void SV_ShutdownGameProgs(void)
 {
 	if (!gvm)
@@ -663,18 +710,19 @@ void SV_ShutdownGameProgs(void)
 		return;
 	}
 
+	// stop any demos
+	SV_DemoStopAll();
+
+	// shutdown game
 	VM_Call(gvm, GAME_SHUTDOWN, qfalse);
 	VM_Free(gvm);
 	gvm = NULL;
 }
 
-/*
-==================
-SV_InitGameVM
-
-Called for both a full init and a restart
-==================
-*/
+/**
+ * @brief Called for both a full init and a restart
+ * @param[in] restart
+ */
 static void SV_InitGameVM(qboolean restart)
 {
 	int i;
@@ -692,15 +740,17 @@ static void SV_InitGameVM(qboolean restart)
 	// use the current msec count for a random seed
 	// init for this gamestate
 	VM_Call(gvm, GAME_INIT, svs.time, Com_Milliseconds(), restart, qtrue, ETLEGACY_VERSION_INT);
+
+	// start recording a demo
+	if (sv_autoDemo->integer)
+	{
+		SV_DemoAutoDemoRecord();
+	}
 }
 
-/*
-===================
-SV_RestartGameProgs
-
-Called on a map_restart, but not on a normal map change
-===================
-*/
+/**
+ * @brief Called on a map_restart, but not on a normal map change
+ */
 void SV_RestartGameProgs(void)
 {
 	if (!gvm)
@@ -723,13 +773,9 @@ void SV_RestartGameProgs(void)
 #endif
 }
 
-/*
-===============
-SV_InitGameProgs
-
-Called on a normal map change, not on a map_restart
-===============
-*/
+/**
+ * @brief Called on a normal map change, not on a map_restart
+ */
 void SV_InitGameProgs(void)
 {
 	sv.num_tagheaders = 0;
@@ -749,13 +795,10 @@ void SV_InitGameProgs(void)
 #endif
 }
 
-/*
-====================
-SV_GameCommand
-
-See if the current console command is claimed by the game
-====================
-*/
+/**
+ * @brief See if the current console command is claimed by the game
+ * @return
+ */
 qboolean SV_GameCommand(void)
 {
 	if (sv.state != SS_GAME)
@@ -767,6 +810,11 @@ qboolean SV_GameCommand(void)
 }
 
 /**
+ * @brief SV_GetTag
+ * @param[in] clientNum - unused
+ * @param[in] tagFileNumber
+ * @param[out] tagname
+ * @param[out] orientation
  * @return qfalse if unable to retrieve tag information for this client
  */
 qboolean SV_GetTag(int clientNum, int tagFileNumber, char *tagname, orientation_t *orientation)

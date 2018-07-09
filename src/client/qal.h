@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -51,7 +51,7 @@
 #include <AL/alext.h>
 #include <AL/efx.h>
 
-/* Hack to enable compiling both on OpenAL SDK and OpenAL-soft. */
+// Hack to enable compiling both on OpenAL SDK and OpenAL-soft.
 #ifndef ALC_ENUMERATE_ALL_EXT
 #  define ALC_ENUMERATE_ALL_EXT 1
 #  define ALC_DEFAULT_ALL_DEVICES_SPECIFIER        0x1012

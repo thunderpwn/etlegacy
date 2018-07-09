@@ -1,6 +1,6 @@
 /*
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -54,7 +54,7 @@ void Bot_Event_EntityCreated(gentity_t *pEnt);
 
 bool IsBot(gentity_t *e)
 {
-	return e->r.svFlags & SVF_BOT ? true : false;
+	return (e->r.svFlags & SVF_BOT) ? true : false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -238,7 +238,7 @@ void GetMG42s()
 		name = (char *)_GetEntityName(trav);
 		if (name)
 		{
-			strcpy(mg42.name, name);
+			Q_strncpyz(mg42s[0].name, name, sizeof(mg42s[0].name));
 		}
 		else
 		{
@@ -252,6 +252,14 @@ void GetMG42s()
 void UpdateMG42(gentity_t *ent)
 {
 	vec3_t entpos;
+
+	for (int i = 0; i < numofmg42s; ++i)
+	{
+		if (mg42s[i].ent == ent)
+		{
+			return;
+		}
+	}
 
 	GetEntityCenter(ent, entpos);
 
@@ -282,18 +290,18 @@ void CheckForMG42(gentity_t *ent, const char *newname)
 		    (fabs(mg42s[i].position[1] - entpos[1]) < 100.0))
 		{
 			mg42s[i].buildable = true;
-			strcpy(mg42s[i].newname, newname);
+			Q_strncpyz(mg42s[i].newname, newname, sizeof(mg42s[0].newname));
 		}
 	}
 
 	return;
 }
 
-void GetEntityCenter(gentity_t *ent, vec3_t _pos)
+void GetEntityCenter(gentity_t *ent, vec3_t pos)
 {
-	_pos[0] = ent->r.currentOrigin[0] + ((ent->r.maxs[0] + ent->r.mins[0]) * 0.5f);
-	_pos[1] = ent->r.currentOrigin[1] + ((ent->r.maxs[1] + ent->r.mins[1]) * 0.5f);
-	_pos[2] = ent->r.currentOrigin[2] + ((ent->r.maxs[2] + ent->r.mins[2]) * 0.5f);
+	pos[0] = ent->r.currentOrigin[0] + ((ent->r.maxs[0] + ent->r.mins[0]) * 0.5f);
+	pos[1] = ent->r.currentOrigin[1] + ((ent->r.maxs[1] + ent->r.mins[1]) * 0.5f);
+	pos[2] = ent->r.currentOrigin[2] + ((ent->r.maxs[2] + ent->r.mins[2]) * 0.5f);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -597,7 +605,7 @@ int Bot_PlayerClassGameToBot(int playerClass)
 	}
 }
 
-static int _weaponBotToGame(int weapon)
+static weapon_t _weaponBotToGame(int weapon)
 {
 	switch (weapon)
 	{
@@ -1286,7 +1294,7 @@ static int _choosePriWeap(gentity_t *bot, int playerClass, int team)
 	while (G_IsWeaponDisabled(bot, (weapon_t)_weaponBotToGame(iSelected), bot->client->sess.sessionTeam, qtrue));
 #else
 	}
-	while (G_IsWeaponDisabled(bot, (weapon_t)_weaponBotToGame(iSelected)));
+	while (G_IsWeaponDisabled(bot, _weaponBotToGame(iSelected)));
 #endif
 
 	return iSelected;
@@ -1533,7 +1541,7 @@ static int _chooseSecWeap(gentity_t *bot, int playerClass, int team)
 	while (G_IsWeaponDisabled(bot, (weapon_t)_weaponBotToGame(iSelected), bot->client->sess.sessionTeam, qtrue));
 #else
 	}
-	while (G_IsWeaponDisabled(bot, (weapon_t)_weaponBotToGame(iSelected)));
+	while (G_IsWeaponDisabled(bot, _weaponBotToGame(iSelected)));
 #endif // ETPUB_VERSION
 #endif // NOQUARTER
 
@@ -1558,8 +1566,8 @@ static void ReTransmitWeapons(const gentity_t *bot)
 	}
 }
 
-#define MAX_SMOKE_RADIUS 320.0
-#define MAX_SMOKE_RADIUS_TIME 10000.0
+#define MAX_SMOKE_RADIUS 320.0f
+#define MAX_SMOKE_RADIUS_TIME 10000.0f
 #define UNAFFECTED_BY_SMOKE_DIST Square(100)
 
 gentity_t *Bot_EntInvisibleBySmokeBomb(vec3_t start, vec3_t end)
@@ -1644,7 +1652,7 @@ void Bot_Util_AddGoal(const char *_type, gentity_t *_ent, int _team, const char 
 
 static int _GetEntityTeam(gentity_t *_ent)
 {
-	// hack, when the game joins clients again after warmup, they are temporarily ET_GENERAL entities(LAME)
+	// FIXME: hack, when the game joins clients again after warmup, they are temporarily ET_GENERAL entities(LAME)
 	if (_ent->client && (_ent - g_entities) < MAX_CLIENTS)
 	{
 		//t = ET_PLAYER;
@@ -1656,7 +1664,11 @@ static int _GetEntityTeam(gentity_t *_ent)
 	switch (t)
 	{
 	case ET_PLAYER:
-		return Bot_TeamGameToBot(_ent->client->sess.sessionTeam);
+		if (_ent->client)
+		{
+			return Bot_TeamGameToBot(_ent->client->sess.sessionTeam);
+		}
+		break;
 	case ET_CORPSE:
 		return Bot_TeamGameToBot(BODY_TEAM(_ent));
 	case ET_MISSILE:
@@ -1764,7 +1776,7 @@ static int _GetEntityClass(gentity_t *_ent)
 		}
 		else if (_ent->item && _ent->item->giType == IT_WEAPON)
 		{
-			return ET_CLASSEX_WEAPON + Bot_WeaponGameToBot(_ent->item->giTag);
+			return ET_CLASSEX_WEAPON + Bot_WeaponGameToBot(_ent->item->giWeapon);
 		}
 		break;
 	}
@@ -1819,7 +1831,6 @@ static int _GetEntityClass(gentity_t *_ent)
 	case ET_FLAMETHROWER_CHUNK:
 	{
 		return ET_CLASSEX_FLAMECHUNK;
-		break;
 	}
 	case ET_MOVER:
 	{
@@ -2284,13 +2295,13 @@ public:
 				bot->client->sess.latchPlayerWeapon2 = 0;
 			}
 #else
-			if (G_IsWeaponDisabled(bot, (weapon_t)bot->client->sess.latchPlayerWeapon))
+			if (G_IsWeaponDisabled(bot, bot->client->sess.latchPlayerWeapon))
 			{
-				bot->client->sess.latchPlayerWeapon = 0;
+				bot->client->sess.latchPlayerWeapon = WP_NONE;
 			}
-			if (G_IsWeaponDisabled(bot, (weapon_t)bot->client->sess.latchPlayerWeapon2))
+			if (G_IsWeaponDisabled(bot, bot->client->sess.latchPlayerWeapon2))
 			{
-				bot->client->sess.latchPlayerWeapon2 = 0;
+				bot->client->sess.latchPlayerWeapon2 = WP_NONE;
 			}
 #endif
 		}
@@ -2317,7 +2328,7 @@ public:
 
 		// if SetTeam() fails, be sure to at least send a note to the bot about the current team
 		// (else this won't be neccessary because on respawn messages will be sent automatically)
-		if (!SetTeam(bot, teamName, qtrue, (weapon_t)-1, (weapon_t)-1, qfalse))
+		if (!SetTeam(bot, teamName, qtrue, WP_NONE, WP_NONE, qfalse))
 		{
 			// also retransmit weapons stuff
 			//ReTransmitWeapons(bot);
@@ -2460,13 +2471,13 @@ public:
 				bot->client->sess.latchPlayerWeapon2 = 0;
 			}
 #else
-			if (G_IsWeaponDisabled(bot, (weapon_t)bot->client->sess.latchPlayerWeapon))
+			if (G_IsWeaponDisabled(bot, bot->client->sess.latchPlayerWeapon))
 			{
-				bot->client->sess.latchPlayerWeapon = 0;
+				bot->client->sess.latchPlayerWeapon = WP_NONE;
 			}
-			if (G_IsWeaponDisabled(bot, (weapon_t)bot->client->sess.latchPlayerWeapon2))
+			if (G_IsWeaponDisabled(bot, bot->client->sess.latchPlayerWeapon2))
 			{
-				bot->client->sess.latchPlayerWeapon2 = 0;
+				bot->client->sess.latchPlayerWeapon2 = WP_NONE;
 			}
 #endif
 		}
@@ -2538,7 +2549,7 @@ public:
 		// only causes problems
 		bot->client->ps.pm_flags &= ~PMF_RESPAWNED;
 
-		memset(&cmd, 0, sizeof(cmd));
+		Com_Memset(&cmd, 0, sizeof(cmd));
 
 		cmd.identClient = _client;
 		cmd.serverTime  = level.time;
@@ -2627,7 +2638,7 @@ public:
 #else
 		if (cmd.weapon == WP_GPG40 && bot->client->ps.weapon == WP_GPG40 /*&& bot->client->ps.weapon != WP_KAR98*/)
 		{
-			const int ammo = bot->client->ps.ammoclip[BG_FindClipForWeapon(WP_GPG40)];
+			const int ammo = bot->client->ps.ammoclip[GetWeaponTableData(WP_GPG40)->clipIndex];
 			if (ammo == 0 && bot->client->ps.weaponstate == WEAPON_READY)
 			{
 				cmd.weapon = WP_KAR98;
@@ -2635,7 +2646,7 @@ public:
 		}
 		else if (cmd.weapon == WP_M7 && bot->client->ps.weapon == WP_M7 /*&& bot->client->ps.weapon != WP_CARBINE*/)
 		{
-			const int ammo = bot->client->ps.ammoclip[BG_FindClipForWeapon(WP_M7)];
+			const int ammo = bot->client->ps.ammoclip[GetWeaponTableData(WP_M7)->clipIndex];
 			if (ammo == 0 && bot->client->ps.weaponstate == WEAPON_READY)
 			{
 				cmd.weapon = WP_CARBINE;
@@ -4177,7 +4188,7 @@ public:
 					if (pEnt->r.ownerNum != pEnt->s.number)
 					{
 						gentity_t *pOwner = &g_entities[pEnt->r.ownerNum];
-						if (pOwner && pOwner->active && pOwner->client && pOwner->s.eFlags & EF_MG42_ACTIVE)
+						if (pOwner && pOwner->active && pOwner->client && (pOwner->s.eFlags & EF_MG42_ACTIVE))
 						{
 							owner = HandleFromEntity(pOwner);
 						}
@@ -4221,7 +4232,7 @@ public:
 #ifdef NOQUARTER
 			_curclip = bot->client->ps.ammoclip[WeaponTable[(weapon_t)iWeapon].clipindex];
 #else
-			_curclip = bot->client->ps.ammoclip[BG_FindClipForWeapon((weapon_t)iWeapon)];
+			_curclip = bot->client->ps.ammoclip[GetWeaponTableData(iWeapon)->clipIndex];
 #endif
 
 			// sanity check for non-clipped weapons
@@ -4257,7 +4268,7 @@ public:
 #ifdef NOQUARTER
 				_maxclip = GetWeaponTableData(iWeapon)->maxclip;
 #else
-				_maxclip = GetAmmoTableData(iWeapon)->maxclip;
+				_maxclip = GetWeaponTableData(iWeapon)->maxClip;
 #endif
 			}
 			return Success;
@@ -4312,13 +4323,13 @@ public:
 			}
 #endif
 
-			ammoIndex = BG_FindAmmoForWeapon((weapon_t)_weaponId);
+			ammoIndex = GetWeaponTableData(_weaponId)->ammoIndex;
 
 #ifdef NOQUARTER
 			_cur = bot->client->ps.ammoclip[WeaponTable[(weapon_t)_weaponId].clipindex] +
 			       bot->client->ps.ammo[WeaponTable[(weapon_t)_weaponId].ammoindex];
 #else
-			_cur = bot->client->ps.ammoclip[BG_FindClipForWeapon((weapon_t)_weaponId)] +
+			_cur = bot->client->ps.ammoclip[GetWeaponTableData(_weaponId)->clipIndex] +
 			       bot->client->ps.ammo[ammoIndex];
 #endif
 
@@ -4355,7 +4366,7 @@ public:
 #ifdef NOQUARTER
 				maxclip = GetWeaponTableData(ammoIndex)->maxclip;
 #else
-				maxclip = GetAmmoTableData(ammoIndex)->maxclip;
+				maxclip = GetWeaponTableData(ammoIndex)->maxClip;
 #endif
 			}
 #ifdef NOQUARTER
@@ -5074,7 +5085,7 @@ public:
 				gentity_t *pWho = EntityFromHandle(pMsg->m_WhoToKill);
 				if (pWho)
 				{
-					G_Damage(pWho, NULL, NULL, NULL, NULL, 100000, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
+					G_Damage(pWho, NULL, NULL, NULL, NULL, pWho->client ? GIB_DAMAGE(pWho->health) : GIB_ENT, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
 				}
 			}
 			break;
@@ -5228,7 +5239,7 @@ public:
 			if (pMsg && pEnt && pEnt->inuse && pEnt->client)
 			{
 				pMsg->m_CurrentHeat = pEnt->client->ps.weapHeat[WP_DUMMY_MG42];
-				pMsg->m_MaxHeat     = MAX_MG42_HEAT;
+				pMsg->m_MaxHeat     = GetWeaponTableData(WP_DUMMY_MG42)->maxHeat;
 			}
 			break;
 		}
@@ -5391,7 +5402,7 @@ public:
 				if (pEnt && pEnt->client && pGunEntity)
 				{
 					pMsg->m_Current = pEnt->client->ps.weapHeat[WP_DUMMY_MG42];
-					pMsg->m_Max     = (int)MAX_MG42_HEAT;
+					pMsg->m_Max     = GetWeaponTableData(WP_DUMMY_MG42)->maxHeat;
 				}
 				else
 				{
@@ -5476,7 +5487,7 @@ public:
 #ifdef NOQUARTER
 						int iMaxHeat = GetWeaponTableData(_weaponBotToGame(pMsg->m_Weapon))->maxHeat;
 #else
-						int iMaxHeat = GetAmmoTableData(_weaponBotToGame(pMsg->m_Weapon))->maxHeat;
+						int iMaxHeat = GetWeaponTableData(_weaponBotToGame(pMsg->m_Weapon))->maxHeat;
 #endif
 						pMsg->m_IsOverheated = iMaxHeat ? ((iCurHeat >= iMaxHeat) ? True : False) : False;
 					}
@@ -6095,7 +6106,7 @@ public:
 		}
 		else
 		{
-			memset(&_aabb, 0, sizeof(AABB));
+			Com_Memset(&_aabb, 0, sizeof(AABB));
 		}
 	}
 
@@ -6118,7 +6129,7 @@ public:
 		{
 			gentity_t *pStart = g_entities;
 			int iIndex        = pEnt - pStart;
-			assert(iIndex >= 0);
+			etl_assert(iIndex >= 0);
 			return (iIndex < MAX_GENTITIES) ? iIndex : -1;
 		}
 		return -1;
@@ -6525,19 +6536,19 @@ const char *_GetEntityName(gentity_t *_ent)
 
 		if (_ent->track)
 		{
-			strcpy(newentname, _ent->track);
+			Q_strncpyz(newentname, _ent->track, sizeof(newentname));
 		}
 		else if (_ent->scriptName)
 		{
-			strcpy(newentname, _ent->scriptName);
+			Q_strncpyz(newentname, _ent->scriptName, sizeof(newentname));
 		}
 		else if (_ent->targetname)
 		{
-			strcpy(newentname, _ent->targetname);
+			Q_strncpyz(newentname, _ent->targetname, sizeof(newentname));
 		}
 		else if (_ent->message)
 		{
-			strcpy(newentname, _ent->message);
+			Q_strncpyz(newentname, _ent->message, sizeof(newentname));
 		}
 
 		name = newentname;
@@ -6550,8 +6561,8 @@ const char *_GetEntityName(gentity_t *_ent)
 				                '^', '&', '<', '>', '+', '=','|',  '\'', '%',
 				                '.', ':', '/', '(', ')', (char)NULL };
 			char *curchar = NULL;
-			char *tmp     = NULL;
-			char *tmpdst  = NULL;
+			char *tmp;
+			char *tmpdst;
 			tmp    = name;
 			tmpdst = name;
 
@@ -6890,11 +6901,11 @@ void Bot_Event_Spectated(int _client, int _who)
 	}
 }
 
-void Bot_Event_ChatMessage(int _to, gentity_t *_source, int _type, const char *_message)
+void Bot_Event_ChatMessage(int _client, gentity_t *_source, int _type, const char *_message)
 {
 	if (IsOmnibotLoaded())
 	{
-		if (IsBot(&g_entities[_to]))
+		if (IsBot(&g_entities[_client]))
 		{
 			int iMsg = PERCEPT_HEAR_GLOBALCHATMSG;
 			switch (_type)
@@ -6915,7 +6926,7 @@ void Bot_Event_ChatMessage(int _to, gentity_t *_source, int _type, const char *_
 			d.m_WhoSaidIt = HandleFromEntity(_source);
 			Q_strncpyz(d.m_Message, _message ? _message : "<unknown>",
 			           sizeof(d.m_Message) / sizeof(d.m_Message[0]));
-			g_BotFunctions.pfnSendEvent(_to, MessageHelper(iMsg, &d, sizeof(d)));
+			g_BotFunctions.pfnSendEvent(_client, MessageHelper(iMsg, &d, sizeof(d)));
 		}
 	}
 }
@@ -7067,7 +7078,7 @@ void Bot_Event_EntityCreated(gentity_t *pEnt)
 
 	//////////////////////////////////////////////////////////////////////////
 	// Cache smoke bombs
-	if ((pEnt->s.eType == ET_MISSILE && pEnt->s.weapon == WP_SMOKE_BOMB))
+	if (pEnt && pEnt->s.eType == ET_MISSILE && pEnt->s.weapon == WP_SMOKE_BOMB)
 	{
 		for (int i = 0; i < MAX_SMOKEGREN_CACHE; ++i)
 		{

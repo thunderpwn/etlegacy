@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -89,26 +89,59 @@ char *Sys_DefaultHomePath(void)
 }
 
 /**
- * @brief Chmod a file
+ * @brief Safe function to Chmod a file and preventing TOCTOU attacks
  * @param[in] file Filename
- * @param     mode Access Mode
+ * @param[in] mode Access Mode
  */
-void Sys_Chmod(char *file, int mode)
+void Sys_Chmod(const char *file, int mode)
 {
-	struct stat s_buf;
+	struct stat stat_infoBefore;
+	struct stat fstat_infoAfter;
 	int         perm;
+	int         fd;
 
-	if (stat(file, &s_buf) != 0)
+	// Get the state of the file
+	if (stat(file, &stat_infoBefore) == -1)
 	{
-		Com_Printf("stat('%s')  failed: errno %d\n", file, errno);
+		Com_Printf("Sys_Chmod: first stat('%s')  failed: errno %d\n", file, errno);
 		return;
 	}
-	perm = s_buf.st_mode | mode;
-	if (chmod(file, perm) != 0)
+
+	perm = stat_infoBefore.st_mode | mode;
+
+	// Try to get the file descriptor
+	if ((fd = open(file, O_RDONLY, S_IXUSR)) == -1)
 	{
-		Com_Printf("chmod('%s', %d) failed: errno %d\n", file, perm, errno);
+		Com_Printf("Sys_Chmod: open('%s', %d, %d) failed: errno %d\n", file, O_RDONLY, S_IXUSR, errno);
+		return;
 	}
 
+	Com_DPrintf("chmod +%d '%s'\n", mode, file);
+
+	// Get the state of the file after opening function
+	if (stat(file, &fstat_infoAfter) == -1)
+	{
+		Com_Printf("Sys_Chmod: second stat('%s')  failed: errno %d\n", file, errno);
+		close(fd);
+		return;
+	}
+
+	// Compare the state before and after opening
+	if (stat_infoBefore.st_mode != fstat_infoAfter.st_mode ||
+	    stat_infoBefore.st_ino != fstat_infoAfter.st_ino)
+	{
+		Com_Printf("Sys_Chmod: stat before and after open are different. The file ('%s') may differ (TOCTOU Attacks ?)\n", file);
+		close(fd);
+		return;
+	}
+
+	// Chmod the file by using the file descriptor
+	if (fchmod(fd, perm) != 0)
+	{
+		Com_Printf("Sys_Chmod: fchmod('%s', %d) failed: errno %d\n", file, perm, errno);
+	}
+
+	close(fd);
 	Com_DPrintf("chmod +%d '%s'\n", mode, file);
 }
 
@@ -175,7 +208,7 @@ qboolean Sys_RandomBytes(byte *string, int len)
 
 	setvbuf(fp, NULL, _IONBF, 0); // don't buffer reads from /dev/urandom
 
-	if (!fread(string, sizeof(byte), len, fp))
+	if (fread(string, sizeof(byte), len, fp) != len)
 	{
 		fclose(fp);
 		return qfalse;
@@ -219,17 +252,92 @@ const char *Sys_Dirname(char *path)
 	return dirname(path);
 }
 
+/**
+ * @brief Safe function to open a file and preventing TOCTOU attacks
+ * @param[in] ospath The file path to open
+ * @param[in] mode The mode used to open the file ('rb','wb','ab')
+ * @return
+ */
 FILE *Sys_FOpen(const char *ospath, const char *mode)
 {
-	struct stat buf;
+	struct stat stat_infoBefore;
+	struct stat stat_infoAfter;
+	FILE        *fp;
+	int         fd;
+	int         oflag = 0;
 
-	// check if path exists and is a directory
-	if (!stat(ospath, &buf) && S_ISDIR(buf.st_mode))
+	// Retrive the oflag for open depending of mode parameter
+	if (*mode == 'w')
+	{
+		oflag |= O_WRONLY | O_CREAT | O_TRUNC;
+	}
+	else if (*mode == 'r')
+	{
+		oflag |= O_RDONLY;
+	}
+	else if (*mode == 'a')
+	{
+		oflag |= O_WRONLY | O_APPEND;
+	}
+	else
+	{
+		Com_Printf("Sys_FOpen: invalid mode parameter to open file ('%s')", mode);
+		return NULL;
+	}
+
+	// Check the state (if path exists)
+	if (stat(ospath, &stat_infoBefore) == -1)
+	{
+		// Check the error in case the the file doesn't exist
+		if (errno != ENOENT)
+		{
+			Com_Printf("Sys_FOpen: first stat('%s')  failed: errno %d\n", ospath, errno);
+			return NULL;
+		}
+		else if (*mode != 'w')
+		{
+			return NULL;
+		}
+	}
+	else if (S_ISDIR(stat_infoBefore.st_mode))
 	{
 		return NULL;
 	}
 
-	return fopen(ospath, mode);
+	// Try to open the file and get the file descriptor
+	if ((fd = open(ospath, oflag, S_IRWXU)) == -1)
+	{
+		Com_Printf("Sys_FOpen: open('%s', %d) failed: errno %d\n", ospath, oflag, errno);
+		return NULL;
+	}
+
+	// Get the state of the current handle file only if the file wasn't created
+	if (*mode != 'w' && fstat(fd, &stat_infoAfter) == -1)
+	{
+		Com_Printf("Sys_FOpen: second stat('%s')  failed: errno %d\n", ospath, errno);
+		close(fd);
+		return NULL;
+	}
+
+	// Compare the state before and after opening only if the file wasn't created
+	if (*mode != 'w' && (stat_infoBefore.st_mode != stat_infoAfter.st_mode ||
+	                     stat_infoBefore.st_ino != stat_infoAfter.st_ino))
+	{
+		Com_Printf("Sys_FOpen: stat before and after chmod are different. The file ('%s') may differ (TOCTOU Attacks ?)\n", ospath);
+		close(fd);
+		return NULL;
+	}
+
+	// Try to open the file with the file descriptor
+	if (!(fp = fdopen(fd, mode)))
+	{
+		Com_Printf("Sys_FOpen: fdopen('%s', %s) failed: errno %d\n", ospath, mode, errno);
+		close(fd);
+		unlink(ospath);
+		return NULL;
+	}
+
+	return fp;
 }
 
 /**
@@ -275,7 +383,7 @@ DIRECTORY SCANNING
 ==============================================================
 */
 
-void Sys_ListFilteredFiles(const char *basedir, char *subdirs, char *filter, char **list, int *numfiles)
+void Sys_ListFilteredFiles(const char *basedir, const char *subdirs, const char *filter, char **list, int *numfiles)
 {
 	char          search[MAX_OSPATH], newsubdirs[MAX_OSPATH];
 	char          filename[MAX_OSPATH];
@@ -353,7 +461,7 @@ void Sys_ListFilteredFiles(const char *basedir, char *subdirs, char *filter, cha
  * @param      wantsubs  Do we want to list subdirectories too?
  * @return Array of strings with files
  */
-char **Sys_ListFiles(const char *directory, const char *extension, char *filter, int *numfiles, qboolean wantsubs)
+char **Sys_ListFiles(const char *directory, const char *extension, const char *filter, int *numfiles, qboolean wantsubs)
 {
 	struct dirent *d;
 	DIR           *fdir;
@@ -365,9 +473,7 @@ char **Sys_ListFiles(const char *directory, const char *extension, char *filter,
 	int           i;
 	struct stat   st;
 	int           extLen;
-#ifdef DEDICATED
-	qboolean invalid;
-#endif
+	qboolean      invalid;
 
 	if (filter)
 	{
@@ -435,16 +541,15 @@ char **Sys_ListFiles(const char *directory, const char *extension, char *filter,
 			}
 		}
 
-#ifdef DEDICATED
 		// check for bad file names
 		invalid = qfalse;
 		// note: this isn't done in Sys_ListFilteredFiles()
 
 		for (i = 0; i < strlen(d->d_name); i++)
 		{
-			if (d->d_name[i] <= 31 || d->d_name[i] == 127)
+			if (d->d_name[i] <= 31 || d->d_name[i] >= 123)
 			{
-				Com_Printf("ERROR: invalid char in name of file '%s'.\n", d->d_name);
+				Com_Printf(S_COLOR_RED "ERROR: invalid char in name of file '%s'.\n", d->d_name);
 				invalid = qtrue;
 				break;
 			}
@@ -453,11 +558,13 @@ char **Sys_ListFiles(const char *directory, const char *extension, char *filter,
 		if (invalid)
 		{
 			remove(va("%s%c%s", directory, PATH_SEP, d->d_name));
-			Sys_Error("Invalid character in filename '%s'. The file has been removed. Start the server again.", d->d_name);
-
-			continue; // never add invalid files
-		}
+#ifdef DEDICATED
+			Sys_Error("Invalid character in file name '%s'. The file has been removed. Start the server again.", d->d_name);
+#else
+			Cvar_Set("com_missingFiles", "");
+			Com_Error(ERR_DROP, "Invalid file name detected & removed\nFile \"%s\" did contain an invalid character for ET: L file structure.\nSome admins take advantage of this to ensure their menu loads last.\nThe file has been removed.", d->d_name);
 #endif
+		}
 
 		if (nfiles == MAX_FOUND_FILES - 1)
 		{
@@ -1019,4 +1126,48 @@ int Sys_PID(void)
 qboolean Sys_PIDIsRunning(unsigned int pid)
 {
 	return kill(pid, 0) == 0;
+}
+
+/**
+ * @brief Check if filename should be allowed to be loaded as a DLL.
+ * @param name
+ */
+qboolean Sys_DllExtension(const char *name)
+{
+	const char *p;
+	char       c = 0;
+
+	if (COM_CompareExtension(name, DLL_EXT))
+	{
+		return qtrue;
+	}
+
+	// Check for format of filename.so.1.2.3
+	p = strstr(name, DLL_EXT "." );
+
+	if (p)
+	{
+		p += strlen(DLL_EXT);
+
+		// Check if .so is only followed for periods and numbers.
+		while (*p)
+		{
+			c = *p;
+
+			if (!isdigit(c) && c != '.')
+			{
+				return qfalse;
+			}
+
+			p++;
+		}
+
+		// Don't allow filename to end in a period. file.so., file.so.0., etc
+		if (c != '.')
+		{
+			return qtrue;
+		}
+	}
+
+	return qfalse;
 }

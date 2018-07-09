@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: ET:Legacy\n"
 "Report-Msgid-Bugs-To: mail@etlegacy.com\n"
 "POT-Creation-Date: 2015-01-10 20:22+0100\n"
-"PO-Revision-Date: 2016-03-28 23:37+0000\n"
+"PO-Revision-Date: 2017-04-05 15:25+0000\n"
 "Last-Translator: rafal1137 <rafal1137@yahoo.pl>\n"
 "Language-Team: Czech (http://www.transifex.com/etlegacy/etlegacy/language/cs/)\n"
 "MIME-Version: 1.0\n"
@@ -2440,11 +2440,6 @@ msgstr "Zobrazovat tipy:"
 msgid "Display Tool Tips in the UI"
 msgstr "Povolí zobrazování tipů"
 
-#: etmain/ui/options_customise_game.menu:1
-#: etmain/ui/wm_ftquickmessageAlt.menu:1
-msgid "ui/menudef.h"
-msgstr "ui/menudef.h"
-
 #: etmain/ui/options_customise_hud.menu:28 etmain/ui/options.menu:33
 #: etmain/ui/viewreplay.menu:62
 msgid "VIEW"
@@ -4592,6 +4587,10 @@ msgstr "STAV KAMPANĚ: %s"
 msgid "SECS TO NEXT MAP"
 msgstr "SEKUND DO DALŠÍ ÚROVNĚ"
 
+#: src/cgame/cg_debriefing.c:2905
+msgid "SEC TO NEXT MAP"
+msgstr ""
+
 #: src/cgame/cg_debriefing.c:3371
 #, c-format
 msgid "Campaign: %s"
@@ -5229,6 +5228,11 @@ msgstr "Obdržené poškození: %6d Obdržené poškození od týmu: %6d"
 msgid "Kills:  %3d    Team Kills: %3d    Accuracy:  %5.1f%%"
 msgstr "Zabití: %3d Zabití spoluhráčů: %3d Přesnost: %5.1f%%"
 
+#: src/cgame/cg_servercmds.c:1941
+#, c-format
+msgid "Gibs:   %3d    Team Gibs:  %3d"
+msgstr ""
+
 #: src/cgame/cg_servercmds.c:1879
 #, c-format
 msgid "Deaths: %3d    Self Kills: %3d    Headshots: %5.1f%%"
@@ -5588,8 +5592,8 @@ msgstr "Diváci"
 msgid "You must be a player or following a player to use +stats\n"
 msgstr "Je třeba být hráčem nebo jej sledovat k využití +stats\n"
 
-msgid "^9You must be alive to use ^3/kill."
-msgstr "^9Musíš být naživu pro použití ^3/kill^9."
+msgid "You must be alive to use ^3/kill^7."
+msgstr ""
 
 msgid "No vote in progress.\n"
 msgstr "Neprobíhá hlasování.\n"
@@ -5881,8 +5885,8 @@ msgstr "změněn na"
 msgid "Arming landmine..."
 msgstr "Nastražování miny..."
 
-msgid "Landmine armed..."
-msgstr "Mina nastražena..."
+msgid "Landmine armed"
+msgstr ""
 
 msgid "Dynamite is set, but NOT armed!"
 msgstr "Dynamit je nastaven, ale NEAKTIVOVÁN!"
@@ -5893,11 +5897,11 @@ msgstr "Aktivace dynamitu..."
 msgid "Dynamite is now armed with a 30 second timer!"
 msgstr "Dynamit je aktivován se zpožděním 30 sekund!"
 
-msgid "Defusing landmine"
-msgstr "Zneškodňování miny..."
+msgid "Defusing landmine..."
+msgstr ""
 
-msgid "Landmine defused..."
-msgstr "Mina zneškodněna..."
+msgid "Landmine defused"
+msgstr ""
 
 msgid "Defusing dynamite..."
 msgstr "Dynamit zneškodněn..."
@@ -6007,8 +6011,8 @@ msgstr "Soutěžní nastavení nahrána!\n"
 msgid "Public Settings Loaded!\n"
 msgstr "Běžná nastavení nahrána!\n"
 
-msgid "Landmine cannot be armed here..."
-msgstr "Zde nelze nastražit minu..."
+msgid "Landmine cannot be armed here"
+msgstr ""
 
 msgid "Your team has too many landmines placed..."
 msgstr "Tvůj tým nastražil příliš mnoho min..."
@@ -6316,6 +6320,9 @@ msgstr "Hlas odevzdán.\n"
 msgid "'s KA-BAR"
 msgstr " [KA-BAR]"
 
+msgid "'s knife arts"
+msgstr ""
+
 msgid "'s .45ACP 1911"
 msgstr " [.45ACP 1911]"
 
@@ -6474,6 +6481,9 @@ msgstr "usmrcen hráčem"
 
 msgid "was stabbed by"
 msgstr "pobodán hráčem"
+
+msgid "was backstabbed by"
+msgstr ""
 
 msgid "was blasted by"
 msgstr "rozmetán hráčem"
@@ -6851,6 +6861,21 @@ msgstr "Ocenění: Nezná bratra"
 msgid "Welcome Newbie! Award"
 msgstr "Ocenění: Vítej zelenáči!"
 
+msgid "Highest Headshots Percentage"
+msgstr ""
+
+msgid "Best Survivor"
+msgstr ""
+
+msgid "Most Gibs"
+msgstr ""
+
+msgid "Most Selfkills"
+msgstr ""
+
+msgid "Most Deaths"
+msgstr ""
+
 msgid ""
 "\n"
 "ET: Legacy with OpenGL 3.x renderer can not run on this machine since it is missing one or more required OpenGL extensions. Please update your video card drivers and try again.\n"
@@ -6859,8 +6884,8 @@ msgstr "\nET: Legacy s OpenGL 3.x rendererem nebude fungovat na tomto počítač
 msgid "Gib command not allowed during intermission.\n"
 msgstr "Příkaz 'gib' není povolen během přestávky.\n"
 
-msgid "^9%d players gibbed."
-msgstr "^9%d hráčů bylo vykucháno."
+msgid "^3%d^7 players gibbed."
+msgstr ""
 
 msgid "There is no player to gib."
 msgstr "Není zde hráč vhodný k vykuchání."
@@ -6877,8 +6902,8 @@ msgstr "^7%s^7 byl vykuchán."
 msgid "Die command not allowed during intermission.\n"
 msgstr "Příkaz 'die' není povolen během přestávky.\n"
 
-msgid "^9%d players died."
-msgstr "^9%d hráčů zemřelo."
+msgid "^3%d^7 players died."
+msgstr ""
 
 msgid "There is no player to die.\n"
 msgstr "Není zde hráč vhodný k usmrcení.\n"
@@ -6895,8 +6920,8 @@ msgstr "^7%s^7 zemřel."
 msgid "Freeze command not allowed during intermission.\n"
 msgstr "Příkaz 'freeze' není povolen během přestávky.\n"
 
-msgid "^9%d players are frozen."
-msgstr "^9%d hráčů zmrazeno."
+msgid "^3%d^7 players are frozen."
+msgstr ""
 
 msgid "No players in team or they are already frozen.\n"
 msgstr "Není zde vhodný hráč ke zmrazení.\n"
@@ -6910,8 +6935,8 @@ msgstr "Aby hráče bylo možné zmrazit, musí být v týmu.\n"
 msgid "^7%s^7 is frozen."
 msgstr "^7%s^7 zmražen."
 
-msgid "^9%d players are unfrozen."
-msgstr "^9%d hráčů rozmrazeno."
+msgid "^3%d^7 players are unfrozen."
+msgstr ""
 
 msgid "No players in team or they are already unfrozen.\n"
 msgstr "Není zde vhodný hráč ke rozmrazení.\n"
@@ -6928,8 +6953,8 @@ msgstr "^7%s^7 rozmražen."
 msgid "Burn command not allowed during intermission.\n"
 msgstr "Příkaz 'burn' není povolen během přestávky.\n"
 
-msgid "^9%d players burned."
-msgstr "^9%d hráčů bylo popáleno."
+msgid "^3%d^7 players burned."
+msgstr ""
 
 msgid "No players in team or they are already burned.\n"
 msgstr "Není zde vhodný hráč k popálení.\n"
@@ -6946,8 +6971,8 @@ msgstr "^7%s^7 popálen."
 msgid "Pip command not allowed during intermission.\n"
 msgstr "Příkaz 'pip' není povolen během přestávky.\n"
 
-msgid "^9%d players pipped."
-msgstr "^9%d hráčů dostalo pohlavek."
+msgid "^3%d^7 players pipped."
+msgstr ""
 
 msgid "No players in team or they are already pipped.\n"
 msgstr "Není zde vhodný hráč pro pohlavek.\n"
@@ -6964,8 +6989,8 @@ msgstr "^7%s^7 dostal pohlavek."
 msgid "%s command not allowed during intermission.\n"
 msgstr "Příkaz %s není povolen během přestávky.\n"
 
-msgid "^9%d players %s."
-msgstr "^9Na %d hráčů aplikováno: %s."
+msgid "^3%d^7 players %s."
+msgstr ""
 
 msgid "No players in team or they are already %s.\n"
 msgstr "Nejsou zde vhodní hráči k: %s.\n"
@@ -7067,4 +7092,177 @@ msgid "^7BACKSPACE ^3help on/off"
 msgstr ""
 
 msgid "^7BACKSPACE ^mgo  back"
+msgstr ""
+
+msgid "CURRENT PROFILE"
+msgstr ""
+
+#: src/cgame/cg_draw.c:1504
+msgid "%s^7's dynamite"
+msgstr ""
+
+#: src/cgame/cg_draw.c:1516
+msgid "%s^7's mine"
+msgstr ""
+
+msgid "You are frozen - ^3/kill^7 is disabled."
+msgstr ""
+
+msgid "Renderer:"
+msgstr ""
+
+msgid "Set your desired renderer (does a video restart)"
+msgstr ""
+
+msgid "Custom Width:"
+msgstr ""
+
+msgid ""
+"Specifies custom resolution width - requires custom resolution set. *Use on "
+"your own risk!"
+msgstr ""
+
+msgid "Custom Height:"
+msgstr ""
+
+msgid ""
+"Specifies custom resolution height - requires custom resolution set .*Use on"
+" your own risk!"
+msgstr ""
+
+msgid "Max. Frames Per Second:"
+msgstr ""
+
+msgid ""
+"Sets the limit of frames per second - keep the values between 20 and 333"
+msgstr ""
+
+msgid "JOYSTICK"
+msgstr ""
+
+msgid "Enable Joysticks:"
+msgstr ""
+
+msgid "General joystick initialization. Requires vid_restart."
+msgstr ""
+
+msgid "Use Joystick#:"
+msgstr ""
+
+msgid "Specifies active joystick"
+msgstr ""
+
+msgid "Analog Joystick:"
+msgstr ""
+
+msgid "Use analog joystick?"
+msgstr ""
+
+msgid "Joystick Threshold:"
+msgstr ""
+
+msgid "Sets joystick threshold sensitivity"
+msgstr ""
+
+msgid ""
+"Includes or excludes servers with anti-lag support from the server list"
+msgstr ""
+
+msgid "Allow players to vote for teams to be shuffled by XP"
+msgstr ""
+
+msgid "Allow players to vote for teams to be shuffled by XP without a restart"
+msgstr ""
+
+msgid "SR Shuffle:"
+msgstr ""
+
+msgid "Allow players to vote for teams to be shuffled by SR"
+msgstr ""
+
+msgid "SR Shuffle No Rstrt:"
+msgstr ""
+
+msgid "Allow players to vote for teams to be shuffled by SR without a restart"
+msgstr ""
+
+msgid "Voice text:"
+msgstr ""
+
+msgid "Show voice text in-game"
+msgstr ""
+
+msgid "Voice chat:"
+msgstr ""
+
+msgid "Play voice chat in-game"
+msgstr ""
+
+#: cgame/cg_limbopanel:1907
+msgid "1of%i"
+msgstr ""
+
+#: cgame/cg_limbopanel:1911 cgame/cg_limbopanel:2553 cgame/cg_limbopanel:2570
+#: cgame/cg_limbopanel:2590
+msgid "%iof%i"
+msgstr ""
+
+msgid "IRC CLIENT"
+msgstr ""
+
+msgid "Mode:"
+msgstr ""
+
+msgid "Specifies IRC client behavior"
+msgstr ""
+
+msgid "Name of IRC server"
+msgstr ""
+
+msgid "Channel #:"
+msgstr ""
+
+msgid "Name of IRC channel - no '#' required"
+msgstr ""
+
+msgid "Port of IRC server"
+msgstr ""
+
+msgid "Nickname:"
+msgstr ""
+
+msgid "IRC nickame in channel"
+msgstr ""
+
+msgid "Auto rejoin time after kick"
+msgstr ""
+
+msgid "Reconnect time ms:"
+msgstr ""
+
+msgid "Reconnect time in ms"
+msgstr ""
+
+msgid "SR SHUFFLE"
+msgstr ""
+
+msgid "NO SR SHUFFLE"
+msgstr ""
+
+msgid "JOIN A TEAM"
+msgstr ""
+
+msgid "SOLDIER"
+msgstr ""
+
+msgid "MEDIC"
+msgstr ""
+
+msgid "ENGINEER"
+msgstr ""
+
+msgid "FIELD OPS"
+msgstr ""
+
+msgid "COVERT OPS"
 msgstr ""

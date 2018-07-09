@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -42,6 +42,9 @@
 #define Com_AddReliableCommand(x) CL_AddReliableCommand(x)
 #endif
 
+/**
+ * @brief Com_ClearDownload
+ */
 void Com_ClearDownload(void)
 {
 	dld.download           = 0;
@@ -57,15 +60,12 @@ void Com_ClearDownload(void)
 	dld.badChecksumList[0] = '\0';
 }
 
-/*
-=====================
-CL_ClearStaticDownload
-Clear download information that we keep in cls (disconnected download support)
-=====================
-*/
+/**
+ * @brief Clear download information that we keep in cls (disconnected download support)
+ */
 void Com_ClearStaticDownload(void)
 {
-	assert(!dld.bWWWDlDisconnected);    // reset before calling
+	etl_assert(!dld.bWWWDlDisconnected);    // reset before calling
 	dld.noReconnect             = qfalse;
 	dld.downloadRestart         = qfalse;
 	dld.downloadTempName[0]     = '\0';
@@ -92,6 +92,7 @@ static void Com_DownloadsComplete(void)
 #ifdef DEDICATED
 		FS_Restart(sv.checksumFeed);
 #else
+		Com_Printf("Client download complete - restarting ...\n");
 		FS_Restart(clc.checksumFeed);    // We possibly downloaded a pak, restart the file system to load it
 
 		if (!dld.bWWWDlDisconnected)
@@ -108,30 +109,36 @@ static void Com_DownloadsComplete(void)
 		// so we don't want to load stuff yet
 		return;
 	}
+#ifndef DEDICATED
+	else
+	{
+		Com_Printf("Client download complete\n");
+	}
+#endif
 
 	// I wonder if that happens - it should not but I suspect it could happen if a download fails in the middle or is aborted
-	assert(!dld.bWWWDlDisconnected);
+	etl_assert(!dld.bWWWDlDisconnected);
 
 #ifndef DEDICATED
 	CL_DownloadsComplete();
 #endif
 }
 
-/*
-=================
-Com_BeginDownload
-
-Requests a file to download from the server.  Stores it in the current
-game directory.
-=================
-*/
+/**
+ * @brief Requests a file to download from the server. Stores it in the current
+ * game directory.
+ *
+ * @param[in] localName
+ * @param[in] remoteName
+ */
 void Com_BeginDownload(const char *localName, const char *remoteName)
 {
+	//Com_DPrintf("***** Com_BeginDownload *****\n"
+	//          "Localname: %s\n"
+	//          "Remotename: %s\n"
+	//          "****************************\n", localName, remoteName);
 
-	Com_DPrintf("***** Com_BeginDownload *****\n"
-	            "Localname: %s\n"
-	            "Remotename: %s\n"
-	            "****************************\n", localName, remoteName);
+	Com_Printf("Client downloading: %s\n", remoteName); // localName and remoteName are the same name
 
 	Q_strncpyz(dld.downloadName, localName, sizeof(dld.downloadName));
 	Com_sprintf(dld.downloadTempName, sizeof(dld.downloadTempName), "%s.tmp", localName);
@@ -150,13 +157,23 @@ void Com_BeginDownload(const char *localName, const char *remoteName)
 #endif
 }
 
-/*
-=================
-Com_NextDownload
+static void checkDownloadName(char *filename)
+{
+	int i;
 
-A download completed or failed
-=================
-*/
+	for (i = 0; i < strlen(filename); i++)
+	{
+		if (filename[i] <= 31 || filename[i] >= 123)
+		{
+			Cvar_Set("com_missingFiles", "");
+			Com_Error(ERR_DROP, "Disconnected from server.\n\nServer file name \"%s\" is containing an invalid character for the ET: Legacy file structure.\n\nDownloading file denied.", filename);
+		}
+	}
+}
+
+/**
+ * @brief A download completed or failed
+ */
 void Com_NextDownload(void)
 {
 	char *s;
@@ -193,6 +210,9 @@ void Com_NextDownload(void)
 			s = localName + strlen(localName);    // point at the nul byte
 
 		}
+
+		checkDownloadName(remoteName);
+
 		Com_BeginDownload(localName, remoteName);
 
 		dld.downloadRestart = qtrue;
@@ -240,9 +260,6 @@ void Com_InitDownloads(void)
 #else
 		if (cl_allowDownload->integer && FS_ComparePaks(dld.downloadList, sizeof(dld.downloadList), qtrue))
 		{
-			// this gets printed to UI, i18n
-			Com_Printf(CL_TranslateStringBuf("Need paks: %s\n"), dld.downloadList);
-
 			if (*dld.downloadList)
 			{
 				// if autodownloading is not enabled on the server
@@ -261,11 +278,9 @@ void Com_InitDownloads(void)
 	Com_DownloadsComplete();
 }
 
-/*
-==================
-Com_WWWDownload
-==================
-*/
+/**
+ * @brief Com_WWWDownload
+ */
 void Com_WWWDownload(void)
 {
 	char            *to_ospath;
@@ -364,15 +379,15 @@ void Com_WWWDownload(void)
 	Com_NextDownload();
 }
 
-/*
-==================
-Com_WWWBadChecksum
-
-FS code calls this when doing FS_ComparePaks
-we can detect files that we got from a www dl redirect with a wrong checksum
-this indicates that the redirect setup is broken, and next dl attempt should NOT redirect
-==================
-*/
+/**
+ * @brief FS code calls this when doing FS_ComparePaks
+ * we can detect files that we got from a www dl redirect with a wrong checksum
+ * this indicates that the redirect setup is broken, and next dl attempt should NOT redirect
+ *
+ * @param[in] pakname
+ *
+ * @return
+ */
 qboolean Com_WWWBadChecksum(const char *pakname)
 {
 	if (strstr(dld.redirectedList, va("@%s", pakname)))
@@ -392,6 +407,11 @@ qboolean Com_WWWBadChecksum(const char *pakname)
 	return qfalse;
 }
 
+/**
+ * @brief Com_SetupDownload
+ * @param[in] remote
+ * @param[in] filename
+ */
 static void Com_SetupDownload(const char *remote, const char *filename)
 {
 	dld.bWWWDl             = qtrue;
@@ -410,6 +430,9 @@ static void Com_SetupDownload(const char *remote, const char *filename)
 	}
 }
 
+/**
+ * @brief Com_Download_f
+ */
 void Com_Download_f(void)
 {
 #ifndef DEDICATED

@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -39,6 +39,8 @@
 
 typedef enum
 {
+	K_NONE = 0,
+
 	K_TAB    = 9,
 	K_ENTER  = 13,
 	K_ESCAPE = 27,
@@ -56,9 +58,10 @@ typedef enum
 	K_LEFTARROW,
 	K_RIGHTARROW,
 
-	K_ALT,
-	K_CTRL,
-	K_SHIFT,
+	K_LALT,   // K_ALT
+	K_LCTRL,  // K_CTRL
+	K_LSHIFT, // K_SHIFT
+
 	K_INS,
 	K_DEL,
 	K_PGDN,
@@ -199,6 +202,10 @@ typedef enum
 	// Pseudo-key that brings the console down
 	K_CONSOLE,
 
+	K_RALT,
+	K_RCTRL,
+	K_RSHIFT,
+
 	MAX_KEYS
 } keyNum_t;
 
@@ -213,7 +220,7 @@ typedef enum
  */
 //#define K_LAST_KEY              256
 
-/*
+/**
  * @def K_CHAR_FLAG
  *
  * The menu code needs to get both key and char events, but

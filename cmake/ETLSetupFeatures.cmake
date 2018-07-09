@@ -1,3 +1,7 @@
+#-----------------------------------------------------------------
+# Setup Features
+#-----------------------------------------------------------------
+
 # If we change architecture we need to force rescan of libraries
 if(NOT OLD_CROSS_COMPILE32 STREQUAL CROSS_COMPILE32)
 	force_rescan_library(SDL32)
@@ -34,25 +38,29 @@ if(BUILD_CLIENT)
 		list(APPEND RENDERER_LIBRARIES ${OPENGL_LIBRARIES})
 		include_directories(SYSTEM ${OPENGL_INCLUDE_DIR})
 	else() # FEATURE_RENDERER_GLES
-			find_package(GLES REQUIRED)
-    		list(APPEND RENDERER_LIBRARIES ${GLES_LIBRARY})
-    		include_directories(SYSTEM ${GLES_INCLUDE_DIR})
+		find_package(GLES REQUIRED)
+		list(APPEND RENDERER_LIBRARIES ${GLES_LIBRARY})
+		include_directories(SYSTEM ${GLES_INCLUDE_DIR})
 	endif()
 
 	if(NOT BUNDLED_SDL)
-		find_package(SDL2 2.0.4 REQUIRED) # FindSDL doesn't detect 32bit lib when crosscompiling
+		find_package(SDL2 2.0.8 REQUIRED) # FindSDL doesn't detect 32bit lib when crosscompiling
 		list(APPEND SDL_LIBRARIES ${SDL2_LIBRARY})
 		include_directories(SYSTEM ${SDL2_INCLUDE_DIR})
 	else() # BUNDLED_SDL
+		if(MINGW AND WIN32)
+			# We append the mingw32 library to the client list since SDL2Main requires it
+			list(APPEND CLIENT_LIBRARIES mingw32)
+		endif()
 		list(APPEND SDL_LIBRARIES ${SDL32_BUNDLED_LIBRARIES})
 		include_directories(SYSTEM ${SDL32_BUNDLED_INCLUDE_DIR})
 		add_definitions(-DBUNDLED_SDL)
-		add_definitions(-DHAVE_SDL) # for tinygettext
 	endif()
 	if(APPLE)
 		add_library(INTERNAL_SDLMain ${CMAKE_SOURCE_DIR}/src/sys/SDLMain.m )
 		list(APPEND RENDERER_LIBRARIES ${INTERNAL_SDLMain})
 	endif(APPLE)
+	add_definitions(-DHAVE_SDL) # for tinygettext (always force SDL icons -> less dependancies)
 
 	if(NOT BUNDLED_JPEG)
 		find_package(JPEGTURBO)
@@ -126,10 +134,6 @@ if(BUILD_CLIENT)
 		set(CLIENT_SRC ${CLIENT_SRC} ${GETTEXT_SRC})
 	endif(FEATURE_GETTEXT)
 
-	if(FEATURE_AUTOUPDATE)
-		add_definitions(-DFEATURE_AUTOUPDATE)
-	endif(FEATURE_AUTOUPDATE)
-
 	if(FEATURE_IPV6)
 		add_definitions(-DFEATURE_IPV6)
 	endif(FEATURE_IPV6)
@@ -188,10 +192,6 @@ if(BUILD_CLIENT)
 		add_definitions(-DFEATURE_IRC_CLIENT)
 		list(APPEND CLIENT_SRC ${IRC_CLIENT_FILES})
 	endif(FEATURE_IRC_CLIENT)
-
-	if(FEATURE_LIVEAUTH)
-		add_definitions(-DFEATURE_LIVEAUTH)
-	endif(FEATURE_LIVEAUTH)
 endif(BUILD_CLIENT)
 
 if(BUILD_CLIENT OR BUILD_SERVER)
@@ -212,10 +212,26 @@ if(BUILD_CLIENT OR BUILD_SERVER)
 		endif()
 		set(CLIENT_SRC ${CLIENT_SRC} "src/qcommon/dl_main_curl.c")
 		set(SERVER_SRC ${SERVER_SRC} "src/qcommon/dl_main_curl.c")
-	else(FEATURE_CURL)
+	else()
 		set(CLIENT_SRC ${CLIENT_SRC} "src/qcommon/dl_main_stubs.c")
 		set(SERVER_SRC ${SERVER_SRC} "src/qcommon/dl_main_stubs.c")
-	endif(FEATURE_CURL)
+	endif()
+
+	if(FEATURE_OPENSSL)
+		if(NOT BUNDLED_OPENSSL)
+			find_package(OpenSSL REQUIRED)
+			list(APPEND CLIENT_LIBRARIES ${OPENSSL_LIBRARIES})
+			list(APPEND SERVER_LIBRARIES ${OPENSSL_LIBRARIES})
+			include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
+		else()
+			list(APPEND CLIENT_LIBRARIES ${OPENSSL_BUNDLED_LIBRARY})
+			list(APPEND SERVER_LIBRARIES ${OPENSSL_BUNDLED_LIBRARY})
+			include_directories(SYSTEM ${OPENSSD_BUNDLED_INCLUDE_DIR})
+		endif()
+		add_definitions(-DLEGACY_AUTH)
+		add_definitions(-DFEATURE_OPENSSL)
+	else()
+	endif()
 
 	if(FEATURE_DBMS)
 		if(NOT BUNDLED_SQLITE3)
@@ -232,13 +248,24 @@ if(BUILD_CLIENT OR BUILD_SERVER)
 		FILE(GLOB DBMS_SRC
 			"src/db/db_sql.h"
 			"src/db/db_sqlite3.c"
-			"src/db/db_sql_console.c"
+			"src/db/db_sql_cmds.c"
 		)
 		set(CLIENT_SRC ${CLIENT_SRC} ${DBMS_SRC})
 		set(SERVER_SRC ${SERVER_SRC} ${DBMS_SRC})
 	endif(FEATURE_DBMS)
 
+	if(FEATURE_AUTOUPDATE)
+		add_definitions(-DFEATURE_AUTOUPDATE)
+	endif(FEATURE_AUTOUPDATE)
 endif()
+
+if(BUILD_SERVER)
+	# FIXME: this is actually DEDICATED only
+	if(FEATURE_IRC_SERVER)
+		add_definitions(-DFEATURE_IRC_SERVER)
+		list(APPEND SERVER_SRC ${IRC_CLIENT_FILES})
+	endif(FEATURE_IRC_SERVER)
+endif(BUILD_SERVER)
 
 #-----------------------------------------------------------------
 # Mod features
@@ -270,7 +297,7 @@ if(BUILD_MOD)
 		LIST(APPEND QAGAME_SRC "src/Omnibot/Common/BotLoadLibrary.cpp")
 		add_definitions(-DFEATURE_OMNIBOT)
 	endif(FEATURE_OMNIBOT)
-	
+
 	if(FEATURE_EDV)
 		add_definitions(-DFEATURE_EDV)
 	endif(FEATURE_EDV)
@@ -291,7 +318,7 @@ else()
 endif()
 
 if(NOT BUNDLED_MINIZIP)
-	find_package(MiniZip)
+	find_package(MiniZip REQUIRED)
 	list(APPEND CLIENT_LIBRARIES ${MINIZIP_LIBRARIES})
 	list(APPEND SERVER_LIBRARIES ${MINIZIP_LIBRARIES})
 	include_directories(SYSTEM ${MINIZIP_INCLUDE_DIRS})

@@ -2,7 +2,7 @@
  * Copyright (C) 2012 Stephen Larroque <lrq3000@gmail.com>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -44,12 +44,11 @@
  ***********************************************/
 
 /*
-====================
-SV_GentityGetHealthField
-
-Get the value of the gentity_t->health field (only used for testing purposes)
-====================
-*/
+ * @brief Get the value of the gentity_t->health field (only used for testing purposes)
+ * @param[in] gent
+ * @return
+ *
+ * @note Unused - Test purpose
 int SV_GentityGetHealthField(sharedEntity_t *gent)
 {
 	gentity_t *ent = (gentity_t *)gent;
@@ -57,33 +56,48 @@ int SV_GentityGetHealthField(sharedEntity_t *gent)
 	//Com_Printf("DEMODEBUG GENGETFIELD: health: %i\n", ent->health);
 	return ent->health;
 }
+*/
 
 /*
-====================
-SV_GentitySetHealthField
-
-Set the value of the gentity_t->health field (only used for testing purposes)
-====================
-*/
+ * @brief Set the value of the gentity_t->health field (only used for testing purposes)
+ * @param[out] gent
+ * @param[in] value
+ *
+ * @note Unused - Test purpose
 void SV_GentitySetHealthField(sharedEntity_t *gent, int value)
 {
 	gentity_t *ent = (gentity_t *)gent;
 
 	ent->health = value;
 }
-
-/*
-====================
-SV_GentityUpdateHealthField
-
-Update the value of the gentity_t->health field with playerState_t->stats[STAT_HEALTH] for a given player
-You need to supply the player's sharedEntity and playerState (because since we have special includes here, we don't have access to the functions that can return a player from their int id).
-The concrete effect is that when replaying a demo, the players' health will be updated on the HUD (if it weren't for this function to update the health, the health wouldn't change and stay kinda static).
-
-Note: we need to do that because the demo can only records this stats[stat_health], which is concretely the same as gentity_t->health. The latter should have been removed altogether considering the comments in g_active.c (ent->client->ps.stats[STAT_HEALTH] = ent->health;	// FIXME: get rid of ent->health...), but it seems to have survived because it allows non-player entities to have health, such as obelisks. And weirdly, gentity_t->health has ascendence over stat_health (meaning stat_health is updated following gentity_t->health, but never the other way around), when for example stat_armor has ascendence over anything else of the same kind, so here we have to update it by ourselves.
-Note2: this works pretty simply: sharedEntity_t = gentity_t but with only the first 2 fields declared (entityShared_t and entityState_t), but all the other fields are still in memory! We only need to get a valid declaration for gentity_t (which we do by doing the right includes at the top of this file, in g_local.h), and then we can convert the limited sharedEntity_t into a gentity_t with all the fields!
-====================
 */
+
+/**
+ * @brief Update the value of the gentity_t->health field with playerState_t->stats[STAT_HEALTH] for a given player
+ *
+ * @details
+ * You need to supply the player's sharedEntity and playerState (because since we have special includes here,
+ * we don't have access to the functions that can return a player from their int id).
+ *
+ * The concrete effect is that when replaying a demo,
+ * the players' health will be updated on the HUD (if it weren't for this function to update the health,
+ * the health wouldn't change and stay kinda static).
+ *
+ * @param[out] gent
+ * @param[in] player
+ *
+ * @note 1. We need to do that because the demo can only records this stats[stat_health], which is concretely the same as gentity_t->health.
+ * The latter should have been removed altogether considering the comments in g_active.c :
+ * (ent->client->ps.stats[STAT_HEALTH] = ent->health;	// FIXME: get rid of ent->health...),
+ * but it seems to have survived because it allows non-player entities to have health, such as obelisks.
+ * And weirdly, gentity_t->health has ascendence over stat_health (meaning stat_health is updated following gentity_t->health, but never the other way around),
+ * when for example stat_armor has ascendence over anything else of the same kind, so here we have to update it by ourselves.
+ *
+ * @note 2. This works pretty simply: sharedEntity_t = gentity_t but with only the first 2 fields declared (entityShared_t and entityState_t),
+ * but all the other fields are still in memory!
+ * We only need to get a valid declaration for gentity_t (which we do by doing the right includes at the top of this file, in g_local.h),
+ * and then we can convert the limited sharedEntity_t into a gentity_t with all the fields!
+ */
 void SV_GentityUpdateHealthField(sharedEntity_t *gent, playerState_t *player)
 {
 	gentity_t *ent = (gentity_t *)gent; // convert the sharedEntity_t to a gentity_t by using a simple cast (now that we have included g_local.h that contains the definition of gentity_t, and at the same time we have linked to g_public.h via g_local.h with the definition of sharedEntity_t)

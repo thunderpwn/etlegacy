@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -142,6 +142,11 @@ static inline unsigned int loadWord(void *addr)
 	#define loadWord(addr) *((int *)addr)
 #endif
 
+/**
+ * @brief VM_Indent
+ * @param[in] vm
+ * @return
+ */
 char *VM_Indent(vm_t *vm)
 {
 	static char *string = "                                        ";
@@ -153,6 +158,13 @@ char *VM_Indent(vm_t *vm)
 	return string + 2 * (20 - vm->callLevel);
 }
 
+#ifdef DEBUG_VM
+/**
+ * @brief VM_StackTrace
+ * @param[in] vm
+ * @param[in] programCounter
+ * @param[in] programStack
+ */
 void VM_StackTrace(vm_t *vm, int programCounter, int programStack)
 {
 	int count = 0;
@@ -165,14 +177,19 @@ void VM_StackTrace(vm_t *vm, int programCounter, int programStack)
 	}
 	while (programCounter != -1 && ++count < 32);
 }
+#endif
 
-/*
-====================
-VM_PrepareInterpreter
-====================
-*/
+
+/**
+ * @brief VM_PrepareInterpreter
+ * @param[in,out] vm
+ * @param[in] header
+ *
+ * @note Unused : commented in VM_Create(), where it called.
+ */
 void VM_PrepareInterpreter(vm_t *vm, vmHeader_t *header)
 {
+#if 0
 	int  op;
 	int  pc          = 0;
 	byte *code       = { 0 };
@@ -180,7 +197,7 @@ void VM_PrepareInterpreter(vm_t *vm, vmHeader_t *header)
 	int  *codeBase;
 
 	vm->codeBase = Hunk_Alloc(vm->codeLength * 4, h_high);            // we're now int aligned
-	//memcpy( vm->codeBase, (byte *)header + header->codeOffset, vm->codeLength );
+	//Com_Memcpy( vm->codeBase, (byte *)header + header->codeOffset, vm->codeLength );
 
 	// we don't need to translate the instructions, but we still need
 	// to find each instructions starting point for jumps
@@ -235,7 +252,6 @@ void VM_PrepareInterpreter(vm_t *vm, vmHeader_t *header)
 		default:
 			break;
 		}
-
 	}
 	pc          = 0;
 	instruction = 0;
@@ -302,37 +318,39 @@ void VM_PrepareInterpreter(vm_t *vm, vmHeader_t *header)
 			break;
 		}
 	}
+#endif
 }
 
-/*
-==============
-VM_Call
-
-
-Upon a system call, the stack will look like:
-
-sp+32	parm1
-sp+28	parm0
-sp+24	return stack
-sp+20	return address
-sp+16	local1
-sp+14	local0
-sp+12	arg1
-sp+8	arg0
-sp+4	return stack
-sp		return address
-
-An interpreted function will immediately execute
-an OP_ENTER instruction, which will subtract space for
-locals from sp
-==============
-*/
 #define MAX_STACK   256
 #define STACK_MASK  (MAX_STACK - 1)
 //#define	DEBUG_VM
 
 #define DEBUGSTR va("%s%i", VM_Indent(vm), opStack - stack)
 
+/**
+ * @brief VM_CallInterpreted
+ *
+ * @details Upon a system call, the stack will look like:
+ *
+ * sp+32	parm1
+ * sp+28	parm0
+ * sp+24	return stack
+ * sp+20	return address
+ * sp+16	local1
+ * sp+14	local0
+ * sp+12	arg1
+ * sp+8	arg0
+ * sp+4	return stack
+ * sp		return address
+ *
+ * An interpreted function will immediately execute
+ * an OP_ENTER instruction, which will subtract space for
+ * locals from sp
+ *
+ * @param[in,out] vm
+ * @param[in] args
+ * @return
+ */
 int VM_CallInterpreted(vm_t *vm, int *args)
 {
 	int  stack[MAX_STACK];
@@ -894,10 +912,7 @@ nextInstruction2:
 			opStack[-1] = ((unsigned)r1) % (unsigned)r0;
 			opStack--;
 			goto nextInstruction;
-		case OP_MULI:
-			opStack[-1] = r1 * r0;
-			opStack--;
-			goto nextInstruction;
+		case OP_MULI: // fall through
 		case OP_MULU:
 			opStack[-1] = ((unsigned)r1) * ((unsigned)r0);
 			opStack--;

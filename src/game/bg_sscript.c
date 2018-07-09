@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -40,21 +40,38 @@
 static bg_speaker_t scriptSpeakers[MAX_SCRIPTSPEAKERS];
 static int          numScriptSpeakers;
 
+/**
+ * @brief BG_ClearScriptSpeakerPool
+ */
 void BG_ClearScriptSpeakerPool(void)
 {
 	numScriptSpeakers = 0;
 }
 
+/**
+ * @brief BG_NumScriptSpeakers
+ * @return
+ */
 int BG_NumScriptSpeakers(void)
 {
 	return numScriptSpeakers;
 }
 
+/**
+ * @brief BG_GetIndexForSpeaker
+ * @param[in] speaker
+ * @return
+ */
 int BG_GetIndexForSpeaker(bg_speaker_t *speaker)
 {
 	return speaker - scriptSpeakers;
 }
 
+/**
+ * @brief BG_GetScriptSpeaker
+ * @param[in] index
+ * @return
+ */
 bg_speaker_t *BG_GetScriptSpeaker(int index)
 {
 	if (index < 0 || index >= numScriptSpeakers)
@@ -65,6 +82,11 @@ bg_speaker_t *BG_GetScriptSpeaker(int index)
 	return &scriptSpeakers[index];
 }
 
+/**
+ * @brief BG_SS_DeleteSpeaker
+ * @param[in] index
+ * @return
+ */
 qboolean BG_SS_DeleteSpeaker(int index)
 {
 	if (index < 0 || index >= numScriptSpeakers)
@@ -72,13 +94,18 @@ qboolean BG_SS_DeleteSpeaker(int index)
 		return qfalse;
 	}
 
-	memcpy(&scriptSpeakers[index], &scriptSpeakers[index + 1], sizeof(bg_speaker_t) * (numScriptSpeakers - index - 1));
+	Com_Memcpy(&scriptSpeakers[index], &scriptSpeakers[index + 1], sizeof(bg_speaker_t) * (numScriptSpeakers - index - 1));
 
 	numScriptSpeakers--;
 
 	return qtrue;
 }
 
+/**
+ * @brief BG_SS_StoreSpeaker
+ * @param[in] speaker
+ * @return
+ */
 qboolean BG_SS_StoreSpeaker(bg_speaker_t *speaker)
 {
 	if (numScriptSpeakers >= MAX_SCRIPTSPEAKERS)
@@ -87,11 +114,17 @@ qboolean BG_SS_StoreSpeaker(bg_speaker_t *speaker)
 		return qfalse;
 	}
 
-	memcpy(&scriptSpeakers[numScriptSpeakers++], speaker, sizeof(bg_speaker_t));
+	Com_Memcpy(&scriptSpeakers[numScriptSpeakers++], speaker, sizeof(bg_speaker_t));
 
 	return qtrue;
 }
 
+/**
+ * @brief BG_SS_ParseError
+ * @param[in] handle
+ * @param[in] format
+ * @return
+ */
 static qboolean BG_SS_ParseError(int handle, char *format, ...)
 {
 	int         line = 0;
@@ -114,12 +147,17 @@ static qboolean BG_SS_ParseError(int handle, char *format, ...)
 	return qfalse;
 }
 
+/**
+ * @brief BG_SS_ParseSpeaker
+ * @param[in] handle
+ * @return
+ */
 static qboolean BG_SS_ParseSpeaker(int handle)
 {
 	pc_token_t   token;
 	bg_speaker_t speaker;
 
-	memset(&speaker, 0, sizeof(speaker));
+	Com_Memset(&speaker, 0, sizeof(speaker));
 
 	speaker.volume = 127;
 	speaker.range  = 1250;
@@ -277,6 +315,11 @@ static qboolean BG_SS_ParseSpeaker(int handle)
 	return qtrue;
 }
 
+/**
+ * @brief BG_LoadSpeakerScript
+ * @param[in] filename
+ * @return
+ */
 qboolean BG_LoadSpeakerScript(const char *filename)
 {
 	pc_token_t token;

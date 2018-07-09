@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -46,49 +46,18 @@
 
 extern vec3_t muzzleTrace;
 
-/*
-============
-AddScore
-
-Adds score to both the client and his team
-============
-*/
-void AddScore(gentity_t *ent, int score)
-{
-	if (!ent || !ent->client)
-	{
-		return;
-	}
-	// no scoring during pre-match warmup
-	if (g_gamestate.integer != GS_PLAYING)
-	{
-		return;
-	}
-
-	if (g_gametype.integer == GT_WOLF_LMS)
-	{
-		return;
-	}
-
-	//ent->client->ps.persistant[PERS_SCORE] += score;
-
-	//level.teamScores[ ent->client->ps.persistant[PERS_TEAM] ] += score;
-	CalculateRanks();
-}
-
-/*
-============
-AddKillScore
-
-Adds score to both the client and his team, only used for playerkills, for lms
-============
-*/
+/**
+ * @brief Adds score to both the client and his team, only used for LMS
+ * @param[in,out] ent
+ * @param[in] score
+ */
 void AddKillScore(gentity_t *ent, int score)
 {
 	if (!ent || !ent->client)
 	{
 		return;
 	}
+
 	// no scoring during pre-match warmup
 	if (level.warmupTime)
 	{
@@ -101,22 +70,14 @@ void AddKillScore(gentity_t *ent, int score)
 		return;
 	}
 
-	if (g_gametype.integer == GT_WOLF_LMS)
-	{
-		ent->client->ps.persistant[PERS_SCORE]                  += score;
-		level.teamScores[ent->client->ps.persistant[PERS_TEAM]] += score;
-	}
-
-	CalculateRanks();
+	ent->client->ps.persistant[PERS_SCORE]                  += score;
+	level.teamScores[ent->client->ps.persistant[PERS_TEAM]] += score;
 }
 
-/*
-=================
-TossWeapons
-
-Toss the weapon and powerups for the killed player
-=================
-*/
+/**
+ * @brief Toss the weapon and powerups for the killed player
+ * @param[in] self
+ */
 void TossWeapons(gentity_t *self)
 {
 	/*gitem_t       *item;
@@ -210,11 +171,12 @@ void TossWeapons(gentity_t *self)
 	}
 }
 
-/*
-==================
-LookAtKiller
-==================
-*/
+/**
+ * @brief LookAtKiller
+ * @param[in,out] self
+ * @param[in] inflictor
+ * @param[in] attacker
+ */
 void LookAtKiller(gentity_t *self, gentity_t *inflictor, gentity_t *attacker)
 {
 	vec3_t dir;
@@ -236,11 +198,11 @@ void LookAtKiller(gentity_t *self, gentity_t *inflictor, gentity_t *attacker)
 	self->client->ps.stats[STAT_DEAD_YAW] = vectoyaw(dir);
 }
 
-/*
-==================
-GibEntity
-==================
-*/
+/**
+ * @brief GibEntity
+ * @param[in,out] self
+ * @param[in] killer
+ */
 void GibEntity(gentity_t *self, int killer)
 {
 	gentity_t *other = &g_entities[killer];
@@ -266,12 +228,15 @@ void GibEntity(gentity_t *self, int killer)
 	self->r.contents = 0;
 }
 
-/*
-==================
-body_die
-==================
-*/
-void body_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath)
+/**
+ * @brief body_die
+ * @param[in,out] self
+ * @param inflictor - unused
+ * @param attacker - unused
+ * @param damage - unused
+ * @param meansOfDeath - unused
+ */
+void body_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, meansOfDeath_t meansOfDeath)
 {
 	if (self->health <= GIB_HEALTH)
 	{
@@ -279,117 +244,35 @@ void body_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int da
 	}
 }
 
-// these are just for logging, the client prints its own messages
-char *modNames[] =
-{
-	"MOD_UNKNOWN",
-	"MOD_MACHINEGUN",
-	"MOD_BROWNING",
-	"MOD_MG42",
-	"MOD_GRENADE",
-
-	// modified wolf weap mods
-	"MOD_KNIFE",
-	"MOD_LUGER",
-	"MOD_COLT",
-	"MOD_MP40",
-	"MOD_THOMPSON",
-	"MOD_STEN",
-	"MOD_GARAND",
-	"MOD_SILENCER",
-	"MOD_FG42",
-	"MOD_FG42SCOPE",
-	"MOD_PANZERFAUST",
-	"MOD_GRENADE_LAUNCHER",
-	"MOD_FLAMETHROWER",
-	"MOD_GRENADE_PINEAPPLE",
-
-	"MOD_MAPMORTAR",
-	"MOD_MAPMORTAR_SPLASH",
-
-	"MOD_KICKED",
-
-	"MOD_DYNAMITE",
-	"MOD_AIRSTRIKE",
-	"MOD_SYRINGE",
-	"MOD_AMMO",
-	"MOD_ARTY",
-
-	"MOD_WATER",
-	"MOD_SLIME",
-	"MOD_LAVA",
-	"MOD_CRUSH",
-	"MOD_TELEFRAG",
-	"MOD_FALLING",
-	"MOD_SUICIDE",
-	"MOD_TARGET_LASER",
-	"MOD_TRIGGER_HURT",
-	"MOD_EXPLOSIVE",
-
-	"MOD_CARBINE",
-	"MOD_KAR98",
-	"MOD_GPG40",
-	"MOD_M7",
-	"MOD_LANDMINE",
-	"MOD_SATCHEL",
-
-	"MOD_SMOKEBOMB",
-	"MOD_MOBILE_MG42",
-	"MOD_SILENCED_COLT",
-	"MOD_GARAND_SCOPE",
-
-	"MOD_CRUSH_CONSTRUCTION",
-	"MOD_CRUSH_CONSTRUCTIONDEATH",
-	"MOD_CRUSH_CONSTRUCTIONDEATH_NOATTACKER",
-
-	"MOD_K43",
-	"MOD_K43_SCOPE",
-
-	"MOD_MORTAR",
-
-	"MOD_AKIMBO_COLT",
-	"MOD_AKIMBO_LUGER",
-	"MOD_AKIMBO_SILENCEDCOLT",
-	"MOD_AKIMBO_SILENCEDLUGER",
-
-	"MOD_SMOKEGRENADE",
-
-	"MOD_SWAP_PLACES",
-
-	// keep these 2 entries last
-	"MOD_SWITCHTEAM",
-
-	"MOD_SHOVE",
-
-	"MOD_KNIFE_KABAR",
-	"MOD_MOBILE_BROWNING",
-	"MOD_MORTAR2",
-	"MOD_BAZOOKA",
-
-	// MOD_NUM_MODS
-};
-
-/*
-==================
-player_die
-==================
-*/
-void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath)
+/**
+ * @brief player_die
+ * @param[in,out] self
+ * @param[in] inflictor
+ * @param[in,out] attacker
+ * @param[in] damage
+ * @param[in] meansOfDeath
+ */
+void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, meansOfDeath_t meansOfDeath)
 {
 	weapon_t  weap;
 	gclient_t *client;
-	int       contents     = 0, i, killer = ENTITYNUM_WORLD;
-	char      *killerName  = "<world>";
-	qboolean  nogib        = qtrue;
+	int       contents = 0, i, killer = ENTITYNUM_WORLD;
+	char      *killerName = "<world>";
+	qboolean  nogib = qtrue;
 	qboolean  killedintank = qfalse;
-	qboolean  attackerClient, dieFromSameTeam;
+	qboolean  attackerClient, dieFromSameTeam = qfalse;
 
 	//G_Printf( "player_die\n" );
 
-	weap = BG_WeaponForMOD(meansOfDeath);
-
 	if (!self->client)
 	{
+		return;
+	}
+
+	// don't broadcast invalid MODs (this shouldn't occure ...)
+	if (!IS_VALID_MOD(meansOfDeath))
+	{
+		G_Printf("Warning: invalid meansOfDeath [%i] in player_die\n", meansOfDeath);
 		return;
 	}
 
@@ -403,15 +286,28 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 			meansOfDeath = MOD_SHOVE;
 		}
 		break;
+	case MOD_BACKSTAB: // overwritten for client attackers below
+		weap = WP_KNIFE;
+		break;
+	default:
+		weap = GetMODTableData(meansOfDeath)->weaponIcon;
+		break;
 	}
 
-	attackerClient  = (attacker && attacker->client) ? qtrue : qfalse;
-	dieFromSameTeam = OnSameTeam(self, attacker) || (attacker->client && self->client->sess.sessionTeam == G_GetTeamFromEntity(inflictor));
+	attackerClient = (attacker && attacker->client) ? qtrue : qfalse;
 
 	if (attackerClient)
 	{
+		// dieFromSameTeam is valid client attacker only
+		dieFromSameTeam = OnSameTeam(self, attacker) || self->client->sess.sessionTeam == G_GetTeamFromEntity(inflictor);
+
 		self->client->pers.lastkiller_client     = attacker->s.clientNum;
 		attacker->client->pers.lastkilled_client = self->s.clientNum;
+
+		if (meansOfDeath == MOD_BACKSTAB)
+		{
+			weap = attacker->s.weapon;
+		}
 	}
 
 	// this is used for G_DropLimboHealth()/G_DropLimboAmmo()
@@ -427,40 +323,33 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 
 	if (attacker == self)
 	{
-		if (self->client)
-		{
-			self->client->pers.playerStats.selfkills++;
-		}
+		self->client->pers.playerStats.selfkills++;
+		self->isProp = qtrue; // selfkill is teamkill ...
 	}
 	else if (dieFromSameTeam)
 	{
 		G_LogTeamKill(attacker, weap);
+		self->isProp = qtrue; // teamkilled
 	}
 	else
 	{
 		G_LogDeath(self, weap);
-		G_LogKill(attacker, weap);
 
-		if (g_gamestate.integer == GS_PLAYING)
+		if (attackerClient)
 		{
-			if (attacker->client)
+			G_LogKill(attacker, weap);
+
+			if (g_gamestate.integer == GS_PLAYING)
 			{
 				attacker->client->combatState |= (1 << COMBATSTATE_KILLEDPLAYER);
 			}
 		}
-	}
 
-	if (!dieFromSameTeam)
-	{
-		self->isProp = qfalse;  // were we teamkilled or not?
-	}
-	else
-	{
-		self->isProp = qtrue;
+		self->isProp = qfalse; // no teamkill
 	}
 
 	// if we got killed by a landmine, update our map
-	if (self->client && meansOfDeath == MOD_LANDMINE)
+	if (meansOfDeath == MOD_LANDMINE)
 	{
 		// if it's an enemy mine, update both teamlists
 		mapEntityData_t *mEnt;
@@ -530,24 +419,13 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 
 	if (g_gamestate.integer == GS_PLAYING)
 	{
-		char *obit;
-
-		if (meansOfDeath < 0 || meansOfDeath >= sizeof(modNames) / sizeof(modNames[0]))
-		{
-			obit = "<bad obituary>";
-		}
-		else
-		{
-			obit = modNames[meansOfDeath];
-		}
-
 #ifdef FEATURE_OMNIBOT
 		// send the events
-		Bot_Event_Death(self - g_entities, &g_entities[attacker - g_entities], obit);
-		Bot_Event_KilledSomeone(attacker - g_entities, &g_entities[self - g_entities], obit);
+		Bot_Event_Death(self - g_entities, &g_entities[attacker - g_entities], GetMODTableData(meansOfDeath)->modName);
+		Bot_Event_KilledSomeone(attacker - g_entities, &g_entities[self - g_entities], GetMODTableData(meansOfDeath)->modName);
 #endif
 
-		G_LogPrintf("Kill: %i %i %i: %s killed %s by %s\n", killer, self->s.number, meansOfDeath, killerName, self->client->pers.netname, obit);
+		G_LogPrintf("Kill: %i %i %i: ^7%s^7 killed %s^7 by %s\n", killer, self->s.number, meansOfDeath, killerName, self->client->pers.netname, GetMODTableData(meansOfDeath)->modName);
 	}
 
 #ifdef FEATURE_LUA
@@ -582,7 +460,7 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 	self->client->ps.persistant[PERS_KILLED]++;
 
 	// if player is holding ticking grenade, drop it
-	if ((self->client->ps.grenadeTimeLeft) && (self->s.weapon != WP_DYNAMITE) && (self->s.weapon != WP_LANDMINE) && (self->s.weapon != WP_SATCHEL))
+	if (self->client->ps.grenadeTimeLeft)
 	{
 		vec3_t launchvel, launchspot;
 
@@ -593,10 +471,8 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 		VectorCopy(self->r.currentOrigin, launchspot);
 		launchspot[2] += 40;
 
-		{
-			// fixes premature grenade explosion, ta bani ;)
-			fire_grenade(self, launchspot, launchvel, self->s.weapon);
-		}
+		// fixes premature grenade explosion, ta bani ;)
+		fire_grenade(self, launchspot, launchvel, self->s.weapon);
 	}
 
 	if (attackerClient)
@@ -625,7 +501,6 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 					{
 						if (g_complaintlimit.integer)
 						{
-
 							if (!(meansOfDeath == MOD_LANDMINE && (g_disableComplaints.integer & TKFL_MINES)) &&
 							    !((meansOfDeath == MOD_ARTY || meansOfDeath == MOD_AIRSTRIKE) && (g_disableComplaints.integer & TKFL_AIRSTRIKE)) &&
 							    !((meansOfDeath == MOD_MORTAR || meansOfDeath == MOD_MORTAR2) && (g_disableComplaints.integer & TKFL_MORTAR)))
@@ -645,14 +520,11 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 			// high penalty to offset medic heal
 			if (g_gametype.integer == GT_WOLF_LMS)
 			{
-				AddKillScore(attacker, WOLF_FRIENDLY_PENALTY);
+				AddKillScore(attacker, -3);
 			}
 		}
 		else
 		{
-			// mostly added as conveneience so we can tweak from the #defines all in one place
-			AddScore(attacker, WOLF_FRAG_BONUS);
-
 			if (g_gametype.integer == GT_WOLF_LMS)
 			{
 				if (level.firstbloodTeam == -1)
@@ -660,7 +532,7 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 					level.firstbloodTeam = attacker->client->sess.sessionTeam;
 				}
 
-				AddKillScore(attacker, WOLF_FRAG_BONUS);
+				AddKillScore(attacker, 1);
 			}
 
 			attacker->client->lastKillTime = level.time;
@@ -668,23 +540,20 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 	}
 	else
 	{
-		AddScore(self, -1);
-
 		if (g_gametype.integer == GT_WOLF_LMS)
 		{
 			AddKillScore(self, -1);
 		}
 	}
 
-	// Add team bonuses
-	Team_FragBonuses(self, inflictor, attacker);
+	// prepare scoreboard
+	CalculateRanks();
 
 	G_DropItems(self);
 
 	// send a fancy "MEDIC!" scream.  Sissies, ain' they?
 	if (self->health > GIB_HEALTH &&
-	    meansOfDeath != MOD_SUICIDE &&
-	    meansOfDeath != MOD_SWITCHTEAM &&
+	    !GetMODTableData(meansOfDeath)->noYellMedic && // these mods gib -> no fancy scream
 	    !killedintank &&
 	    self->waterlevel < 3)
 	{
@@ -741,7 +610,7 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 	// g_forcerespawn may force spawning at some later time
 	self->client->respawnTime = level.timeCurrent + 800;
 
-	memset(self->client->ps.powerups, 0, sizeof(self->client->ps.powerups));
+	Com_Memset(self->client->ps.powerups, 0, sizeof(self->client->ps.powerups));
 
 	// never gib in a nodrop
 	// FIXME: contents is always 0 here
@@ -795,10 +664,10 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 	// automatically go to limbo from tank
 	if (killedintank)
 	{
-		limbo(self, qfalse);   // but no corpse
 #ifdef FEATURE_SERVERMDX
 		self->client->deathAnim = qfalse;    // add no animation time
 #endif
+		limbo(self, qfalse);   // but no corpse
 	}
 	else if ((meansOfDeath == MOD_SUICIDE && g_gamestate.integer == GS_PLAYING))
 	{
@@ -821,6 +690,13 @@ void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 
 #define REALHEAD_HEAD 1
 
+/**
+ * @brief G_BuildHead
+ * @param[in] ent
+ * @param[in] refent
+ * @param[in] newRefent
+ * @return
+ */
 gentity_t *G_BuildHead(gentity_t *ent, grefEntity_t *refent, qboolean newRefent)
 {
 	gentity_t     *head;
@@ -866,7 +742,7 @@ gentity_t *G_BuildHead(gentity_t *ent, grefEntity_t *refent, qboolean newRefent)
 		{
 			height = ent->client->ps.viewheight - 60;
 		}
-		else if ((ent->client->ps.eFlags & EF_DEAD))
+		else if (ent->client->ps.eFlags & EF_DEAD)
 		{
 			height = ent->client->ps.viewheight - 64;
 		}
@@ -883,11 +759,11 @@ gentity_t *G_BuildHead(gentity_t *ent, grefEntity_t *refent, qboolean newRefent)
 		VectorCopy(ent->client->ps.viewangles, angles);
 		if (angles[PITCH] > 180)
 		{
-			dest = (-360 + angles[PITCH]) * 0.75;
+			dest = (-360 + angles[PITCH]) * 0.75f;
 		}
 		else
 		{
-			dest = angles[PITCH] * 0.75;
+			dest = angles[PITCH] * 0.75f;
 		}
 		angles[PITCH] = dest;
 
@@ -904,7 +780,7 @@ gentity_t *G_BuildHead(gentity_t *ent, grefEntity_t *refent, qboolean newRefent)
 		{
 			VectorScale(forward, 24, v);
 		}
-		else if ((ent->client->ps.eFlags & EF_DEAD))
+		else if (ent->client->ps.eFlags & EF_DEAD)
 		{
 			VectorScale(forward, -26, v);
 			VectorMA(v, 5.0f, right, v);
@@ -935,6 +811,13 @@ gentity_t *G_BuildHead(gentity_t *ent, grefEntity_t *refent, qboolean newRefent)
 	return head;
 }
 
+/**
+ * @brief G_BuildLeg
+ * @param[in] ent
+ * @param[in] refent
+ * @param[in] newRefent
+ * @return
+ */
 gentity_t *G_BuildLeg(gentity_t *ent, grefEntity_t *refent, qboolean newRefent)
 {
 	gentity_t *leg;
@@ -959,7 +842,7 @@ gentity_t *G_BuildLeg(gentity_t *ent, grefEntity_t *refent, qboolean newRefent)
 		mdx_legs_position(ent, refent, org);
 
 		org[2] += ent->client->pmext.proneLegsOffset;
-		org[2] -= (playerlegsProneMins[2] + playerlegsProneMaxs[2]) * 0.5;
+		org[2] -= (playerlegsProneMins[2] + playerlegsProneMaxs[2]) * 0.5f;
 
 	}
 	else
@@ -999,7 +882,17 @@ gentity_t *G_BuildLeg(gentity_t *ent, grefEntity_t *refent, qboolean newRefent)
 	return leg;
 }
 
-qboolean IsHeadShot(gentity_t *targ, vec3_t dir, vec3_t point, int mod, grefEntity_t *refent, qboolean newRefent)
+/**
+ * @brief IsHeadShot
+ * @param[in] targ
+ * @param[in] dir
+ * @param[in] point
+ * @param[in] mod
+ * @param[in] refent
+ * @param[in] newRefent
+ * @return
+ */
+qboolean IsHeadShot(gentity_t *targ, vec3_t dir, vec3_t point, meansOfDeath_t mod, grefEntity_t *refent, qboolean newRefent)
 {
 	gentity_t *head;
 	trace_t   tr;
@@ -1017,7 +910,7 @@ qboolean IsHeadShot(gentity_t *targ, vec3_t dir, vec3_t point, int mod, grefEnti
 		return qfalse;
 	}
 
-	if (!modTable[mod].isHeadshot)
+	if (!GetMODTableData(mod)->isHeadshot)
 	{
 		return qfalse;
 	}
@@ -1035,15 +928,15 @@ qboolean IsHeadShot(gentity_t *targ, vec3_t dir, vec3_t point, int mod, grefEnti
 	{
 		if (g_debugBullets.integer >= 3)     // show hit player head bb
 		{
-			G_RailBox(head->r.currentOrigin, head->r.mins, head->r.maxs, tv(1.f,0.f,0.f), head->s.number|HITBOXBIT_HEAD);
+			G_RailBox(head->r.currentOrigin, head->r.mins, head->r.maxs, tv(1.f, 0.f, 0.f), head->s.number | HITBOXBIT_HEAD);
 
 			// show headshot trace
 			// end the headshot trace at the head box if it hits
-			if(tr.fraction != 1)
+			if (tr.fraction != 1.f)
 			{
 				VectorMA(start, (tr.fraction * 64.f), dir, end);
 			}
-			G_RailTrail(start, end, tv(1.f,0.f,0.f));
+			G_RailTrail(start, end, tv(1.f, 0.f, 0.f));
 		}
 
 		if (g_antilag.integer)
@@ -1059,7 +952,17 @@ qboolean IsHeadShot(gentity_t *targ, vec3_t dir, vec3_t point, int mod, grefEnti
 	return qfalse;
 }
 
-qboolean IsLegShot(gentity_t *targ, vec3_t dir, vec3_t point, int mod, grefEntity_t *refent, qboolean newRefent)
+/**
+ * @brief IsLegShot
+ * @param[in] targ
+ * @param[in] dir
+ * @param[in] point
+ * @param[in] mod
+ * @param[in] refent
+ * @param[in] newRefent
+ * @return
+ */
+qboolean IsLegShot(gentity_t *targ, vec3_t dir, vec3_t point, meansOfDeath_t mod, grefEntity_t *refent, qboolean newRefent)
 {
 	gentity_t *leg;
 
@@ -1078,7 +981,7 @@ qboolean IsLegShot(gentity_t *targ, vec3_t dir, vec3_t point, int mod, grefEntit
 		return qfalse;
 	}
 
-	if (!modTable[mod].isHeadshot)
+	if (!GetMODTableData(mod)->isHeadshot)
 	{
 		return qfalse;
 	}
@@ -1102,16 +1005,16 @@ qboolean IsLegShot(gentity_t *targ, vec3_t dir, vec3_t point, int mod, grefEntit
 		{
 			if (g_debugBullets.integer >= 3)     // show hit player leg bb
 			{
-				G_RailBox(leg->r.currentOrigin, leg->r.mins, leg->r.maxs, tv(1.f,0.f,0.f), leg->s.number|HITBOXBIT_LEGS);
+				G_RailBox(leg->r.currentOrigin, leg->r.mins, leg->r.maxs, tv(1.f, 0.f, 0.f), leg->s.number | HITBOXBIT_LEGS);
 
 				// show headshot trace
 				// end the headshot trace at the head box if it hits
-				if(tr.fraction != 1)
+				if (tr.fraction != 1.f)
 				{
 					VectorMA(start, (tr.fraction * 64.f), dir, end);
 				}
 
-				G_RailTrail(start, end, tv(1.f,0.f,0.f));
+				G_RailTrail(start, end, tv(1.f, 0.f, 0.f));
 			}
 
 			if (g_antilag.integer)
@@ -1140,7 +1043,15 @@ qboolean IsLegShot(gentity_t *targ, vec3_t dir, vec3_t point, int mod, grefEntit
 	return qfalse;
 }
 
-qboolean IsArmShot(gentity_t *targ, gentity_t *ent, vec3_t point, int mod)
+/**
+ * @brief IsArmShot
+ * @param[in] targ
+ * @param ent - unused
+ * @param[in] point
+ * @param[in] mod
+ * @return
+ */
+qboolean IsArmShot(gentity_t *targ, gentity_t *ent, vec3_t point, meansOfDeath_t mod)
 {
 	vec3_t path, view;
 	vec_t  dot;
@@ -1155,7 +1066,7 @@ qboolean IsArmShot(gentity_t *targ, gentity_t *ent, vec3_t point, int mod)
 		return qfalse;
 	}
 
-	if (!modTable[mod].isHeadshot)
+	if (!GetMODTableData(mod)->isHeadshot)
 	{
 		return qfalse;
 	}
@@ -1178,35 +1089,38 @@ qboolean IsArmShot(gentity_t *targ, gentity_t *ent, vec3_t point, int mod)
 	return qtrue;
 }
 
-
-/*
-============
-G_Damage
-
-targ        entity that is being damaged
-inflictor   entity that is causing the damage
-attacker    entity that caused the inflictor to damage targ
-    example: targ=monster, inflictor=rocket, attacker=player
-
-dir         direction of the attack for knockback
-point       point at which the damage is being inflicted, used for headshots
-damage      amount of damage being inflicted
-knockback   force to be applied against targ as a result of the damage
-
-inflictor, attacker, dir, and point can be NULL for environmental effects
-
-dflags      these flags are used to control how T_Damage works
-    DAMAGE_RADIUS           damage was indirect (from a nearby explosion)
-    DAMAGE_NO_ARMOR         armor does not protect from this damage
-    DAMAGE_NO_KNOCKBACK     do not affect velocity, just view angles
-    DAMAGE_NO_PROTECTION    kills godmode, armor, everything
-============
-*/
-
-// This variable needs to be here in order for isHeadShot() to access it..
+/**
+ * @var refent
+ * @brief This variable needs to be here in order for isHeadShot() to access it..
+ */
 static grefEntity_t refent;
 
-void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, int mod)
+/**
+ * @brief G_Damage
+ *
+ * @param[in,out] targ        entity that is being damaged
+ * @param[in,out] inflictor   entity that is causing the damage
+ * @param[in,out] attacker    entity that caused the inflictor to damage targ
+ *     example: targ=monster, inflictor=rocket, attacker=player
+ *
+ * @param[in] dir         direction of the attack for knockback
+ * @param[in] point       point at which the damage is being inflicted, used for headshots
+ * @param[in] damage      amount of damage being inflicted
+ *
+ * @param[in] dflags      these flags are used to control how T_Damage works
+ *     DAMAGE_RADIUS           damage was indirect (from a nearby explosion)
+ *     DAMAGE_NO_ARMOR         armor does not protect from this damage
+ *     DAMAGE_NO_KNOCKBACK     do not affect velocity, just view angles
+ *     DAMAGE_NO_PROTECTION    kills godmode, armor, everything
+ *
+ * @param[in] mod
+ *
+ * @note inflictor, attacker, dir, and point can be NULL for environmental effects
+ *
+ * @note This parameter was previously present : knockback   force to be applied against targ as a result of the damage
+ *
+ */
+void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, meansOfDeath_t mod)
 {
 	int         take;
 	int         knockback;
@@ -1219,9 +1133,9 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 	}
 
 	// DEBUG
-	//trap_SendServerCommand( -1, va("print \"%i\n\"\n", targ->health) );
+	//trap_SendServerCommand( -1, va("print \"%i\n\"", targ->health) );
 
-	// The intermission has allready been qualified for, so don't allow any extra scoring.
+	// The intermission has already been qualified for, so don't allow any extra scoring.
 	// Don't do damage if at warmup and warmupdamage is set to 'None' and the target is a client.
 	if (level.intermissionQueued || (g_gamestate.integer != GS_PLAYING && match_warmupDamage.integer == 0 && targ->client))
 	{
@@ -1278,7 +1192,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 
 		if ((targ->spawnflags & 4) && !targ->isProp)
 		{
-			if (!G_ModIsExplosive(mod))
+			if (!GetMODTableData(mod)->isExplosive)
 			{
 				return;
 			}
@@ -1305,7 +1219,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 		}
 		break;
 	case ET_EXPLOSIVE:
-		if (targ->parent && G_GetWeaponClassForMOD(mod) == 2)
+		if (targ->parent && GetMODTableData(mod)->weaponClassForMOD == WEAPON_CLASS_FOR_MOD_DYNAMITE)
 		{
 			return;
 		}
@@ -1316,7 +1230,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 			return;
 		}
 
-		if (G_GetWeaponClassForMOD(mod) < targ->constructibleStats.weaponclass)
+		if (GetMODTableData(mod)->weaponClassForMOD < targ->constructibleStats.weaponclass)
 		{
 			return;
 		}
@@ -1326,7 +1240,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 		{
 			if (targ->s.modelindex2)
 			{
-				if (G_ModIsExplosive(mod))
+				if (GetMODTableData(mod)->isExplosive)
 				{
 					mapEntityData_t *mEnt;
 
@@ -1338,11 +1252,6 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 					if ((mEnt = G_FindMapEntityData(&mapEntityData[1], targ - g_entities)) != NULL)
 					{
 						G_FreeMapEntityData(&mapEntityData[1], mEnt);
-					}
-
-					if (attacker && attacker->client)
-					{
-						AddScore(attacker, 1);
 					}
 
 					G_ExplodeMissile(targ);
@@ -1357,7 +1266,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 			return;
 		}
 
-		if (G_GetWeaponClassForMOD(mod) < targ->constructibleStats.weaponclass)
+		if (GetMODTableData(mod)->weaponClassForMOD < targ->constructibleStats.weaponclass)
 		{
 			return;
 		}
@@ -1416,7 +1325,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 	}
 
 	// set weapons means less knockback
-	if (targ->client && IS_SET_WEAPON(targ->client->ps.weapon))
+	if (targ->client && GetWeaponTableData(targ->client->ps.weapon)->isSetWeapon)
 	{
 		knockback *= 0.5;
 	}
@@ -1436,7 +1345,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 		VectorAdd(targ->client->ps.velocity, kvel, targ->client->ps.velocity);
 
 		// are we pushed? Do not count when already flying ...
-		if (attacker && attacker->client && (targ->client->ps.groundEntityNum != ENTITYNUM_NONE || G_ModIsExplosive(mod)))
+		if (attacker && attacker->client && (targ->client->ps.groundEntityNum != ENTITYNUM_NONE || GetMODTableData(mod)->isExplosive))
 		{
 			targ->client->pmext.shoved = qtrue;
 			targ->client->pmext.pusher = attacker - g_entities;
@@ -1521,29 +1430,9 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 	// save some from flak jacket
 	if (targ->client && targ->client->sess.skill[SK_EXPLOSIVES_AND_CONSTRUCTION] >= 4 && targ->client->sess.playerType == PC_ENGINEER)
 	{
-		switch (mod)
+		if (GetMODTableData(mod)->isExplosive)
 		{
-		case MOD_GRENADE:
-		case MOD_GRENADE_LAUNCHER:
-		case MOD_GRENADE_PINEAPPLE:
-		case MOD_MAPMORTAR:
-		case MOD_MAPMORTAR_SPLASH:
-		case MOD_EXPLOSIVE:
-		case MOD_LANDMINE:
-		case MOD_GPG40:
-		case MOD_M7:
-		case MOD_SATCHEL:
-		case MOD_ARTY:
-		case MOD_AIRSTRIKE:
-		case MOD_DYNAMITE:
-		case MOD_MORTAR:
-		case MOD_MORTAR2:
-		case MOD_PANZERFAUST:
-		case MOD_BAZOOKA:
 			take -= take * .5f;
-			break;
-		default:
-			break;
 		}
 	}
 
@@ -1561,12 +1450,10 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 		}
 		if (dflags & DAMAGE_DISTANCEFALLOFF)
 		{
-			vec_t  dist;
-			vec3_t shotvec;
-			float  scale;
+			vec_t dist;
+			float scale;
 
-			VectorSubtract(point, muzzleTrace, shotvec);
-			dist = VectorLength(shotvec);
+			dist = VectorDistance(point, muzzleTrace);
 
 			// start at 100% at 1500 units (and before),
 			// and go to 20% at 2500 units (and after)
@@ -1616,7 +1503,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 
 		if (g_debugBullets.integer)
 		{
-			trap_SendServerCommand(attacker - g_entities, "print \"Head Shot\n\"\n");
+			trap_SendServerCommand(attacker - g_entities, "print \"Head Shot\n\"");
 		}
 		G_LogRegionHit(attacker, HR_HEAD);
 		hr = HR_HEAD;
@@ -1627,7 +1514,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 		hr = HR_LEGS;
 		if (g_debugBullets.integer)
 		{
-			trap_SendServerCommand(attacker - g_entities, "print \"Leg Shot\n\"\n");
+			trap_SendServerCommand(attacker - g_entities, "print \"Leg Shot\n\"");
 		}
 	}
 	else if (IsArmShot(targ, attacker, point, mod))
@@ -1636,16 +1523,16 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 		hr = HR_ARMS;
 		if (g_debugBullets.integer)
 		{
-			trap_SendServerCommand(attacker - g_entities, "print \"Arm Shot\n\"\n");
+			trap_SendServerCommand(attacker - g_entities, "print \"Arm Shot\n\"");
 		}
 	}
-	else if (targ->client && targ->health > 0 && modTable[mod].isHeadshot)
+	else if (targ->client && targ->health > 0 && GetMODTableData(mod)->isHeadshot)
 	{
 		G_LogRegionHit(attacker, HR_BODY);
 		hr = HR_BODY;
 		if (g_debugBullets.integer)
 		{
-			trap_SendServerCommand(attacker - g_entities, "print \"Body Shot\n\"\n");
+			trap_SendServerCommand(attacker - g_entities, "print \"Body Shot\n\"");
 		}
 	}
 
@@ -1653,7 +1540,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 	if (g_debugDamage.integer)
 #endif
 	{
-		G_Printf("client:%i health:%i damage:%i mod:%s\n", targ->s.number, targ->health, take, modNames[mod]);
+		G_Printf("client:%i health:%i damage:%i mod:%s\n", targ->s.number, targ->health, take, GetMODTableData(mod)->modName);
 	}
 
 #ifdef FEATURE_LUA
@@ -1714,7 +1601,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 		//if ( attacker == inflictor && targ->health <= GIB_HEALTH) {
 		if (targ->health <= GIB_HEALTH)
 		{
-			if (!G_ModIsExplosive(mod))
+			if (!GetMODTableData(mod)->isExplosive)
 			{
 				targ->health = GIB_HEALTH + 1;
 			}
@@ -1730,7 +1617,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 
 		if (targ->s.eType == ET_MOVER && !Q_stricmp(targ->classname, "script_mover"))
 		{
-			targ->s.dl_intensity = 255.f * (targ->health / (float)targ->count);   // send it to the client
+			targ->s.dl_intensity = (int)(255.f * (targ->health / (float)targ->count));   // send it to the client
 		}
 
 		//G_Printf("health at: %d\n", targ->health);
@@ -1845,28 +1732,31 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t
 
 void G_RailTrail(vec_t *start, vec_t *end, vec_t *color)
 {
-	gentity_t* temp;
+	gentity_t *temp;
 
 	temp = G_TempEntity(start, EV_RAILTRAIL);
 	VectorCopy(end, temp->s.origin2);
 
 	temp->s.dmgFlags  = 0;
-	temp->s.angles[0] = (int)(color[0]*255);
-	temp->s.angles[1] = (int)(color[1]*255);
-	temp->s.angles[2] = (int)(color[2]*255);
+	temp->s.angles[0] = (int)(color[0] * 255);
+	temp->s.angles[1] = (int)(color[1] * 255);
+	temp->s.angles[2] = (int)(color[2] * 255);
 	temp->s.density   = -1;
 }
 
-/*
-==================
-G_RailBox
-==================
-*/
+/**
+ * @brief G_RailBox
+ * @param[in] origin
+ * @param[in] mins
+ * @param[in] maxs
+ * @param[in] color
+ * @param[in] index
+ */
 void G_RailBox(vec_t *origin, vec_t *mins, vec_t *maxs, vec_t *color, int index)
 {
-	vec3_t	   b1;
-	vec3_t	   b2;
-	gentity_t* temp;
+	vec3_t    b1;
+	vec3_t    b2;
+	gentity_t *temp;
 
 	VectorCopy(origin, b1);
 	VectorCopy(origin, b2);
@@ -1875,27 +1765,25 @@ void G_RailBox(vec_t *origin, vec_t *mins, vec_t *maxs, vec_t *color, int index)
 
 	temp = G_TempEntity(b1, EV_RAILTRAIL);
 
-	VectorCopy(b2,	temp->s.origin2);
+	VectorCopy(b2, temp->s.origin2);
 	VectorCopy(color, temp->s.angles);
 	temp->s.dmgFlags = 1;
 
-	temp->s.angles[0] = (int)(color[0]*255);
-	temp->s.angles[1] = (int)(color[1]*255);
-	temp->s.angles[2] = (int)(color[2]*255);
+	temp->s.angles[0] = (int)(color[0] * 255);
+	temp->s.angles[1] = (int)(color[1] * 255);
+	temp->s.angles[2] = (int)(color[2] * 255);
 
 	temp->s.effect1Time = index + 1;
 }
 
 #define MASK_CAN_DAMAGE     (CONTENTS_SOLID | CONTENTS_BODY)
 
-/*
-============
-CanDamage
-
-Returns qtrue if the inflictor can directly damage the target.  Used for
-explosions and melee attacks.
-============
-*/
+/**
+ * @brief Used for explosions and melee attacks.
+ * @param[in] targ
+ * @param[in] origin
+ * @return qtrue if the inflictor can directly damage the target.
+ */
 qboolean CanDamage(gentity_t *targ, vec3_t origin)
 {
 	vec3_t  dest;
@@ -1907,7 +1795,7 @@ qboolean CanDamage(gentity_t *targ, vec3_t origin)
 	// use the midpoint of the bounds instead of the origin, because
 	// bmodels may have their origin is 0,0,0
 	// - well, um, just check then ...
-	if (targ->r.currentOrigin[0] || targ->r.currentOrigin[1] || targ->r.currentOrigin[2])
+	if (targ->r.currentOrigin[0] != 0.f || targ->r.currentOrigin[1] != 0.f || targ->r.currentOrigin[2] != 0.f)
 	{
 		VectorCopy(targ->r.currentOrigin, midpoint);
 
@@ -1919,13 +1807,13 @@ qboolean CanDamage(gentity_t *targ, vec3_t origin)
 	else
 	{
 		VectorAdd(targ->r.absmin, targ->r.absmax, midpoint);
-		VectorScale(midpoint, 0.5, midpoint);
+		VectorScale(midpoint, 0.5f, midpoint);
 	}
 
 	//G_RailTrail( origin, dest );
 
 	trap_Trace(&tr, origin, vec3_origin, vec3_origin, midpoint, ENTITYNUM_NONE, MASK_CAN_DAMAGE);
-	if (tr.fraction == 1.0 || &g_entities[tr.entityNum] == targ)
+	if (tr.fraction == 1.0f || &g_entities[tr.entityNum] == targ)
 	{
 		return qtrue;
 	}
@@ -1943,7 +1831,7 @@ qboolean CanDamage(gentity_t *targ, vec3_t origin)
 	dest[1] += offsetmaxs[1];
 	dest[2] += offsetmaxs[2];
 	trap_Trace(&tr, origin, vec3_origin, vec3_origin, dest, ENTITYNUM_NONE, MASK_CAN_DAMAGE);
-	if (tr.fraction == 1 || &g_entities[tr.entityNum] == targ)
+	if (tr.fraction == 1.f || &g_entities[tr.entityNum] == targ)
 	{
 		return qtrue;
 	}
@@ -1953,7 +1841,7 @@ qboolean CanDamage(gentity_t *targ, vec3_t origin)
 	dest[1] += offsetmins[1];
 	dest[2] += offsetmaxs[2];
 	trap_Trace(&tr, origin, vec3_origin, vec3_origin, dest, ENTITYNUM_NONE, MASK_CAN_DAMAGE);
-	if (tr.fraction == 1 || &g_entities[tr.entityNum] == targ)
+	if (tr.fraction == 1.f || &g_entities[tr.entityNum] == targ)
 	{
 		return qtrue;
 	}
@@ -1963,7 +1851,7 @@ qboolean CanDamage(gentity_t *targ, vec3_t origin)
 	dest[1] += offsetmaxs[1];
 	dest[2] += offsetmaxs[2];
 	trap_Trace(&tr, origin, vec3_origin, vec3_origin, dest, ENTITYNUM_NONE, MASK_CAN_DAMAGE);
-	if (tr.fraction == 1 || &g_entities[tr.entityNum] == targ)
+	if (tr.fraction == 1.f || &g_entities[tr.entityNum] == targ)
 	{
 		return qtrue;
 	}
@@ -1973,7 +1861,7 @@ qboolean CanDamage(gentity_t *targ, vec3_t origin)
 	dest[1] += offsetmins[1];
 	dest[2] += offsetmaxs[2];
 	trap_Trace(&tr, origin, vec3_origin, vec3_origin, dest, ENTITYNUM_NONE, MASK_CAN_DAMAGE);
-	if (tr.fraction == 1 || &g_entities[tr.entityNum] == targ)
+	if (tr.fraction == 1.f || &g_entities[tr.entityNum] == targ)
 	{
 		return qtrue;
 	}
@@ -1985,7 +1873,7 @@ qboolean CanDamage(gentity_t *targ, vec3_t origin)
 	dest[1] += offsetmaxs[1];
 	dest[2] += offsetmins[2];
 	trap_Trace(&tr, origin, vec3_origin, vec3_origin, dest, ENTITYNUM_NONE, MASK_CAN_DAMAGE);
-	if (tr.fraction == 1 || &g_entities[tr.entityNum] == targ)
+	if (tr.fraction == 1.f || &g_entities[tr.entityNum] == targ)
 	{
 		return qtrue;
 	}
@@ -1995,7 +1883,7 @@ qboolean CanDamage(gentity_t *targ, vec3_t origin)
 	dest[1] += offsetmins[1];
 	dest[2] += offsetmins[2];
 	trap_Trace(&tr, origin, vec3_origin, vec3_origin, dest, ENTITYNUM_NONE, MASK_CAN_DAMAGE);
-	if (tr.fraction == 1 || &g_entities[tr.entityNum] == targ)
+	if (tr.fraction == 1.f || &g_entities[tr.entityNum] == targ)
 	{
 		return qtrue;
 	}
@@ -2005,17 +1893,17 @@ qboolean CanDamage(gentity_t *targ, vec3_t origin)
 	dest[1] += offsetmaxs[1];
 	dest[2] += offsetmins[2];
 	trap_Trace(&tr, origin, vec3_origin, vec3_origin, dest, ENTITYNUM_NONE, MASK_CAN_DAMAGE);
-	if (tr.fraction == 1 || &g_entities[tr.entityNum] == targ)
+	if (tr.fraction == 1.f || &g_entities[tr.entityNum] == targ)
 	{
 		return qtrue;
 	}
 
 	VectorCopy(midpoint, dest);
 	dest[0] += offsetmins[0];
-	dest[1] += offsetmins[2];
+	dest[1] += offsetmins[1];
 	dest[2] += offsetmins[2];
 	trap_Trace(&tr, origin, vec3_origin, vec3_origin, dest, ENTITYNUM_NONE, MASK_CAN_DAMAGE);
-	if (tr.fraction == 1 || &g_entities[tr.entityNum] == targ)
+	if (tr.fraction == 1.f || &g_entities[tr.entityNum] == targ)
 	{
 		return qtrue;
 	}
@@ -2023,11 +1911,17 @@ qboolean CanDamage(gentity_t *targ, vec3_t origin)
 	return qfalse;
 }
 
-void G_AdjustedDamageVec(gentity_t *ent, vec3_t origin, vec3_t v)
+/**
+ * @brief G_AdjustedDamageVec
+ * @param[in] ent
+ * @param[in] origin
+ * @param[out] vec
+ */
+void G_AdjustedDamageVec(gentity_t *ent, vec3_t origin, vec3_t vec)
 {
 	if (!ent->r.bmodel)
 	{
-		VectorSubtract(ent->r.currentOrigin, origin, v); // simpler centroid check that doesn't have box alignment weirdness
+		VectorSubtract(ent->r.currentOrigin, origin, vec); // simpler centroid check that doesn't have box alignment weirdness
 	}
 	else
 	{
@@ -2037,26 +1931,32 @@ void G_AdjustedDamageVec(gentity_t *ent, vec3_t origin, vec3_t v)
 		{
 			if (origin[i] < ent->r.absmin[i])
 			{
-				v[i] = ent->r.absmin[i] - origin[i];
+				vec[i] = ent->r.absmin[i] - origin[i];
 			}
 			else if (origin[i] > ent->r.absmax[i])
 			{
-				v[i] = origin[i] - ent->r.absmax[i];
+				vec[i] = origin[i] - ent->r.absmax[i];
 			}
 			else
 			{
-				v[i] = 0;
+				vec[i] = 0;
 			}
 		}
 	}
 }
 
-/*
-============
-G_RadiusDamage
-============
-*/
-qboolean G_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *attacker, float damage, float radius, gentity_t *ignore, int mod)
+/**
+ * @brief G_RadiusDamage
+ * @param[in] origin
+ * @param[in] inflictor
+ * @param[in] attacker
+ * @param[in] damage
+ * @param[in] radius
+ * @param[in] ignore
+ * @param[in] mod
+ * @return
+ */
+qboolean G_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *attacker, float damage, float radius, gentity_t *ignore, meansOfDeath_t mod)
 {
 	float     points, dist;
 	gentity_t *ent;
@@ -2119,7 +2019,7 @@ qboolean G_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *attacker
 			continue;
 		}
 
-		points = damage * (1.0 - dist / radius);
+		points = damage * (1.0f - dist / radius);
 
 		if (CanDamage(ent, origin))
 		{
@@ -2142,20 +2042,20 @@ qboolean G_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *attacker
 			// get knocked into the air more
 			dir[2] += 24;
 
-			G_Damage(ent, inflictor, attacker, dir, origin, ROUND_INT(points), flags, mod);
+			G_Damage(ent, inflictor, attacker, dir, origin, round(points), flags, mod);
 		}
 		else
 		{
 			VectorAdd(ent->r.absmin, ent->r.absmax, midpoint);
-			VectorScale(midpoint, 0.5, midpoint);
+			VectorScale(midpoint, 0.5f, midpoint);
 			VectorCopy(midpoint, dest);
 
 			trap_Trace(&tr, origin, vec3_origin, vec3_origin, dest, ENTITYNUM_NONE, MASK_SOLID);
-			if (tr.fraction < 1.0)
+			if (tr.fraction < 1.0f)
 			{
 				VectorSubtract(dest, origin, dest);
 				dist = VectorLength(dest);
-				if (dist < radius * 0.2f)     // closer than 1/4 dist
+				if (dist < radius * 0.2f)     // closer than 1/4 dist (actually 1/5)
 				{
 					if (ent->dmgparent)
 					{
@@ -2173,7 +2073,7 @@ qboolean G_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *attacker
 					}
 					VectorSubtract(ent->r.currentOrigin, origin, dir);
 					dir[2] += 24;
-					G_Damage(ent, inflictor, attacker, dir, origin, ROUND_INT(points * 0.1f), flags, mod);
+					G_Damage(ent, inflictor, attacker, dir, origin, round(points * 0.1f), flags, mod);
 				}
 			}
 		}
@@ -2181,13 +2081,19 @@ qboolean G_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *attacker
 	return hitClient;
 }
 
-/*
-============
-etpro_RadiusDamage
-mutation of G_RadiusDamage which lets us selectively damage only clients or only non clients
-============
-*/
-qboolean etpro_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *attacker, float damage, float radius, gentity_t *ignore, int mod, qboolean clientsonly)
+/**
+ * @brief Mutation of G_RadiusDamage which lets us selectively damage only clients or only non clients
+ * @param[in] origin
+ * @param[in] inflictor
+ * @param[in] attacker
+ * @param[in] damage
+ * @param[in] radius
+ * @param[in] ignore
+ * @param[in] mod
+ * @param[in] clientsonly
+ * @return
+ */
+qboolean etpro_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *attacker, float damage, float radius, gentity_t *ignore, meansOfDeath_t mod, qboolean clientsonly)
 {
 	float     points, dist;
 	gentity_t *ent;
@@ -2261,7 +2167,7 @@ qboolean etpro_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *atta
 			continue;
 		}
 
-		points = damage * (1.0 - dist / radius);
+		points = damage * (1.0f - dist / radius);
 
 		if (CanDamage(ent, origin))
 		{
@@ -2284,16 +2190,16 @@ qboolean etpro_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *atta
 			// get knocked into the air more
 			dir[2] += 24;
 
-			G_Damage(ent, inflictor, attacker, dir, origin, ROUND_INT(points), flags, mod);
+			G_Damage(ent, inflictor, attacker, dir, origin, round(points), flags, mod);
 		}
 		else
 		{
 			VectorAdd(ent->r.absmin, ent->r.absmax, midpoint);
-			VectorScale(midpoint, 0.5, midpoint);
+			VectorScale(midpoint, 0.5f, midpoint);
 			VectorCopy(midpoint, dest);
 
 			trap_Trace(&tr, origin, vec3_origin, vec3_origin, dest, ENTITYNUM_NONE, MASK_SOLID);
-			if (tr.fraction < 1.0)
+			if (tr.fraction < 1.0f)
 			{
 				VectorSubtract(dest, origin, dest);
 				dist = VectorLength(dest);
@@ -2315,7 +2221,7 @@ qboolean etpro_RadiusDamage(vec3_t origin, gentity_t *inflictor, gentity_t *atta
 					}
 					VectorSubtract(ent->r.currentOrigin, origin, dir);
 					dir[2] += 24;
-					G_Damage(ent, inflictor, attacker, dir, origin, ROUND_INT(points * 0.1f), flags, mod);
+					G_Damage(ent, inflictor, attacker, dir, origin, round(points * 0.1f), flags, mod);
 				}
 			}
 		}

@@ -14,9 +14,10 @@ uniform vec3  u_ViewOrigin;
 uniform vec3  u_AmbientColor;
 uniform vec3  u_LightDir;
 uniform vec3  u_LightColor;
-uniform float u_SpecularExponent;
+//uniform float u_SpecularExponent;
 uniform float u_DepthScale;
 uniform vec4  u_PortalPlane;
+uniform float u_LightWrapAround;
 
 varying vec3 var_Position;
 varying vec2 var_TexDiffuse;
@@ -71,8 +72,7 @@ void main()
 
 	// ray intersect in view direction
 
-	mat3 worldToTangentMatrix;
-	worldToTangentMatrix = transpose(tangentToWorldMatrix);
+	mat3 worldToTangentMatrix = transpose(tangentToWorldMatrix);
 
 	// compute view direction in tangent space
 	vec3 Vts = worldToTangentMatrix * (u_ViewOrigin - var_Position.xyz);
@@ -99,13 +99,22 @@ void main()
 	texDiffuse.st  += texOffset;
 	texNormal.st   += texOffset;
 	texSpecular.st += texOffset;
-#endif // USE_PARALLAX_MAPPING
+#endif // end USE_PARALLAX_MAPPING
 
 	// compute normal in world space from normalmap
-	vec3 N = normalize(tangentToWorldMatrix * (2.0 * (texture2D(u_NormalMap, texNormal).xyz - 0.5)));
+	vec3 N = tangentToWorldMatrix * (2.0 * (texture2D(u_NormalMap, texNormal).xyz - 0.5));
+
+#if defined(r_NormalScale)
+	N.z *= r_NormalScale;
+#endif
+
+	N = normalize(N);
 
 	// compute half angle in world space
 	vec3 H = normalize(L + V);
+
+	// compute specular reflection
+	vec3 R =  reflect(-L, N); 
 
 	// compute the specular term
 #if defined(USE_REFLECTIVE_SPECULAR)
@@ -120,6 +129,8 @@ void main()
 	// Blinn-Phong
 	float NH = clamp(dot(N, H), 0, 1);
 	specular *= u_LightColor * pow(NH, r_SpecularExponent2) * r_SpecularScale;
+	// FIXME?
+	//specular *= u_LightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 
 #if 0
 	gl_FragColor = vec4(specular, 1.0);
@@ -132,12 +143,13 @@ void main()
 
 	// simple Blinn-Phong
 	float NH       = clamp(dot(N, H), 0, 1);
-	vec3  specular = texture2D(u_SpecularMap, texSpecular).rgb * u_LightColor * pow(NH, r_SpecularExponent) * r_SpecularScale;
+	//vec3  specular = texture2D(u_SpecularMap, texSpecular).rgb * u_LightColor * pow(NH, r_SpecularExponent) * r_SpecularScale;
+	vec3  specular = texture2D(u_SpecularMap, texSpecular).rgb * u_LightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 
-#endif // USE_REFLECTIVE_SPECULAR
+#endif // end USE_REFLECTIVE_SPECULAR
 
 
-#else // USE_NORMAL_MAPPING
+#else // else USE_NORMAL_MAPPING
 
 	vec3 N;
 
@@ -154,9 +166,7 @@ void main()
 		N = normalize(var_Normal);
 	}
 
-	vec3 specular = vec3(0.0);
-
-#endif // USE_NORMAL_MAPPING
+#endif // end USE_NORMAL_MAPPING
 
 
 	// compute the diffuse term
@@ -182,43 +192,42 @@ void main()
 
 
 // add Rim Lighting to highlight the edges
-#if defined(r_RimLighting)
+#if defined(r_rimLighting)
 	float rim      = 1.0 - clamp(dot(N, V), 0, 1);
-	vec3  emission = r_RimColor.rgb * pow(rim, r_RimExponent);
+	vec3  emission = r_rimColor.rgb * pow(rim, r_rimExponent);
 
 	// gl_FragColor = vec4(emission, 1.0);
 	// return;
-
 #endif
 
 	// compute the light term
 #if defined(r_HalfLambertLighting)
 	// http://developer.valvesoftware.com/wiki/Half_Lambert
 	float NL = dot(N, L) * 0.5 + 0.5;
-	NL *= NL;
 #elif defined(r_WrapAroundLighting)
-	float NL = clamp(dot(N, L) + r_WrapAroundLighting, 0.0, 1.0) / clamp(1.0 + r_WrapAroundLighting, 0.0, 1.0);
+	float NL = clamp(dot(N, L) + u_LightWrapAround, 0.0, 1.0) / clamp(1.0 + u_LightWrapAround, 0.0, 1.0);
 #else
 	float NL = clamp(dot(N, L), 0.0, 1.0);
 #endif
 
-	vec3 light = u_AmbientColor + u_LightColor * NL;
-	clamp(light, 0.0, 1.0);
+ 	vec3 light = (u_AmbientColor + u_LightColor) * NL;
+ 	// FIXME? specular? see https://learnopengl.com/Lighting/Basic-Lighting
+ 	//vec3 light = (u_AmbientColor + u_LightColor + specular) * NL;
+	//clamp(light, 0.0, 1.0);
 
-	// compute final color
-	vec4 color = diffuse;
-	color.rgb *= light;
-	color.rgb += specular;
-#if defined(r_RimLighting)
+    // compute final color
+    vec4 color = diffuse;
+    color.rgb *= light;
+#if defined(USE_NORMAL_MAPPING)
+	color.rgb += specular; // FIXME?
+#endif
+#if defined(r_rimLighting)
 	color.rgb += emission;
 #endif
 
-	// convert normal to [0,1] color space
-	N = N * 0.5 + 0.5;
-
 	gl_FragColor = color;
 
-	// gl_FragColor = vec4(vec3(NL, NL, NL), diffuse.a);
+	//gl_FragColor = vec4(vec3(NL, NL, NL), diffuse.a);
 
 #if 0
 #if defined(USE_PARALLAX_MAPPING)

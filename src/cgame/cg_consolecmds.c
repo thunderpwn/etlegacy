@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -46,6 +46,9 @@ static void CG_Viewpos_f(void)
 	          (int)cg.refdefViewAngles[YAW]);
 }
 
+/**
+ * @brief CG_LimboMenu_f
+ */
 void CG_LimboMenu_f(void)
 {
 	if (cg.showGameView)
@@ -58,15 +61,18 @@ void CG_LimboMenu_f(void)
 	}
 }
 
+/**
+ * @brief CG_StatsDown_f
+ */
 static void CG_StatsDown_f(void)
 {
 	if (!cg.demoPlayback)
 	{
 		if (
 #ifdef FEATURE_MULTIVIEW
-		    cg.mvTotalClients < 1 &&
+			cg.mvTotalClients < 1 &&
 #endif
-		    cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR)
+			cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR)
 		{
 			Pri("You must be a player or following a player to use +stats\n");
 			return;
@@ -87,9 +93,9 @@ static void CG_StatsDown_f(void)
 		{
 			int i =
 #ifdef FEATURE_MULTIVIEW
-			    (cg.mvTotalClients > 0) ? (cg.mvCurrentActive->mvInfo & MV_PID) :
+				(cg.mvTotalClients > 0) ? (cg.mvCurrentActive->mvInfo & MV_PID) :
 #endif
-			    cg.snap->ps.clientNum;
+				cg.snap->ps.clientNum;
 
 			cgs.gamestats.requestTime = cg.time + 2000;
 			trap_SendClientCommand(va("sgstats %d", i));
@@ -97,6 +103,9 @@ static void CG_StatsDown_f(void)
 	}
 }
 
+/**
+ * @brief CG_StatsUp_f
+ */
 static void CG_StatsUp_f(void)
 {
 	if (cgs.gamestats.show == SHOW_ON)
@@ -113,7 +122,10 @@ static void CG_StatsUp_f(void)
 	}
 }
 
-void CG_topshotsDown_f(void)
+/**
+ * @brief CG_topshotsDown_f
+ */
+static void CG_topshotsDown_f(void)
 {
 	if (!cg.demoPlayback)
 	{
@@ -136,7 +148,10 @@ void CG_topshotsDown_f(void)
 	}
 }
 
-void CG_topshotsUp_f(void)
+/**
+ * @brief CG_topshotsUp_f
+ */
+static void CG_topshotsUp_f(void)
 {
 	if (cgs.topshots.show == SHOW_ON)
 	{
@@ -152,7 +167,10 @@ void CG_topshotsUp_f(void)
 	}
 }
 
-void CG_objectivesDown_f(void)
+/**
+ * @brief CG_objectivesDown_f
+ */
+static void CG_objectivesDown_f(void)
 {
 	if (!cg.demoPlayback)
 	{
@@ -168,6 +186,9 @@ void CG_objectivesDown_f(void)
 	}
 }
 
+/**
+ * @brief CG_objectivesUp_f
+ */
 void CG_objectivesUp_f(void)
 {
 	if (cgs.objectives.show == SHOW_ON)
@@ -184,41 +205,30 @@ void CG_objectivesUp_f(void)
 	}
 }
 
+/**
+ * @brief CG_ScoresDown_f
+ */
 void CG_ScoresDown_f(void)
 {
 #ifdef FEATURE_RATING
-	// FIXME:   if (cgs.skillRating)
-	if (!cg.showScores && cg.scoresDownTime + 250 > cg.time && cg.scoreToggleTime < (cg.time - 500))
+	if (cgs.skillRating)
 	{
-		int sb        = cg_scoreboard.integer + 1;
-		int sbAllowed = SCOREBOARD_XP;
-		int i;
-
-		// cycle scoreboard type with a quick tap of +scores
-		if (sb < SCOREBOARD_XP || sb > SCOREBOARD_SR)
+		if (!cg.showScores && cg.scoresDownTime + 250 > cg.time && cg.scoreToggleTime < (cg.time - 500))
 		{
-			sb = SCOREBOARD_XP;
-		}
+			int sb = cg_scoreboard.integer + 1;
 
-		for (i = SCOREBOARD_XP; i <= SCOREBOARD_SR; i++)
-		{
-			if (sb == SCOREBOARD_XP)
+			// cycle scoreboard type with a quick tap of +scores
+			if (sb < SCOREBOARD_XP || sb > SCOREBOARD_SR)
 			{
-				sbAllowed = SCOREBOARD_XP;
-				break;
+				sb = SCOREBOARD_XP;
 			}
-			if (sb == SCOREBOARD_SR && cgs.skillRating)
-			{
-				sbAllowed = SCOREBOARD_SR;
-				break;
-			}
-			sb++;
-		}
-		trap_Cvar_Set("cg_scoreboard", va("%i", sbAllowed));
 
-		cg.scoreToggleTime = cg.time;
+			trap_Cvar_Set("cg_scoreboard", va("%i", sb));
+
+			cg.scoreToggleTime = cg.time;
+		}
+		cg.scoresDownTime = cg.time;
 	}
-	cg.scoresDownTime = cg.time;
 #endif
 
 	if (cg.scoresRequestTime + 2000 < cg.time)
@@ -260,6 +270,9 @@ void CG_ScoresDown_f(void)
 	}
 }
 
+/**
+ * @brief CG_ScoresUp_f
+ */
 void CG_ScoresUp_f(void)
 {
 	if (cg.showScores)
@@ -269,26 +282,31 @@ void CG_ScoresUp_f(void)
 	}
 }
 
+/**
+ * @brief CG_Fade_f
+ */
 static void CG_Fade_f(void)
 {
-	int   r, g, b, a;
-	float duration;
+	int r, g, b, a, duration;
 
 	if (trap_Argc() < 6)
 	{
 		return;
 	}
 
-	r = atof(CG_Argv(1));
-	g = atof(CG_Argv(2));
-	b = atof(CG_Argv(3));
-	a = atof(CG_Argv(4));
+	r = (int)atof(CG_Argv(1));
+	g = (int)atof(CG_Argv(2));
+	b = (int)atof(CG_Argv(3));
+	a = (int)atof(CG_Argv(4));
 
-	duration = atof(CG_Argv(5)) * 1000;
+	duration = (int)(atof(CG_Argv(5)) * 1000);
 
 	CG_Fade(r, g, b, a, cg.time, duration);
 }
 
+/**
+ * @brief CG_QuickMessage_f
+ */
 void CG_QuickMessage_f(void)
 {
 	CG_EventHandling(CGAME_EVENT_NONE, qfalse);
@@ -303,9 +321,12 @@ void CG_QuickMessage_f(void)
 	}
 }
 
+/**
+ * @brief CG_QuickFireteamMessage_f
+ */
 void CG_QuickFireteamMessage_f(void)
 {
-	if (cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR)
+	if (cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR || cgs.clientinfo[cg.clientNum].team == TEAM_FREE)
 	{
 		return;
 	}
@@ -322,6 +343,9 @@ void CG_QuickFireteamMessage_f(void)
 	}
 }
 
+/**
+ * @brief CG_QuickFireteamAdmin_f
+ */
 void CG_QuickFireteamAdmin_f(void)
 {
 	trap_UI_Popup(UIMENU_NONE);
@@ -344,8 +368,16 @@ void CG_QuickFireteamAdmin_f(void)
 	}
 }
 
+/**
+ * @brief CG_QuickFireteams_f
+ */
 static void CG_QuickFireteams_f(void)
 {
+	if (!CG_IsOnFireteam(cg.clientNum))
+	{
+		return;
+	}
+
 	if (cg.showFireteamMenu)
 	{
 		if (cgs.ftMenuMode == 0)
@@ -355,15 +387,17 @@ static void CG_QuickFireteams_f(void)
 		else
 		{
 			cgs.ftMenuMode = 0;
+			CG_Printf("2\n");
 		}
 	}
-	else if (CG_IsOnFireteam(cg.clientNum))
-	{
-		CG_EventHandling(CGAME_EVENT_FIRETEAMMSG, qfalse);
-		cgs.ftMenuMode = 0;
-	}
+
+	CG_EventHandling(CGAME_EVENT_FIRETEAMMSG, qfalse);
+	cgs.ftMenuMode = 0;
 }
 
+/**
+ * @brief CG_FTSayPlayerClass_f
+ */
 static void CG_FTSayPlayerClass_f(void)
 {
 	int        playerType = cgs.clientinfo[cg.clientNum].cls;
@@ -402,6 +436,9 @@ static void CG_FTSayPlayerClass_f(void)
 	trap_SendConsoleCommand(va("cmd vsay_buddy -1 %s %s\n", CG_BuildSelectedFirteamString(), s));
 }
 
+/**
+ * @brief CG_SayPlayerClass_f
+ */
 static void CG_SayPlayerClass_f(void)
 {
 	int        playerType = cgs.clientinfo[cg.clientNum].cls;
@@ -440,6 +477,9 @@ static void CG_SayPlayerClass_f(void)
 	trap_SendConsoleCommand(va("cmd vsay_team %s\n", s));
 }
 
+/**
+ * @brief CG_VoiceChat_f
+ */
 static void CG_VoiceChat_f(void)
 {
 	char chatCmd[64];
@@ -453,6 +493,9 @@ static void CG_VoiceChat_f(void)
 	trap_SendConsoleCommand(va("cmd vsay %s\n", chatCmd));
 }
 
+/**
+ * @brief CG_TeamVoiceChat_f
+ */
 static void CG_TeamVoiceChat_f(void)
 {
 	char chatCmd[64];
@@ -478,6 +521,9 @@ static void CG_TeamVoiceChat_f(void)
 	trap_SendConsoleCommand(va("cmd vsay_team %s\n", chatCmd));
 }
 
+/**
+ * @brief CG_BuddyVoiceChat_f
+ */
 static void CG_BuddyVoiceChat_f(void)
 {
 	char chatCmd[64];
@@ -503,7 +549,10 @@ static void CG_BuddyVoiceChat_f(void)
 	trap_SendConsoleCommand(va("cmd vsay_buddy -1 %s %s\n", CG_BuildSelectedFirteamString(), chatCmd));
 }
 
-// say, team say, etc
+/**
+ * @brief CG_MessageMode_f
+ * @details say, team say, etc
+ */
 static void CG_MessageMode_f(void)
 {
 	char cmd[64];
@@ -522,7 +571,7 @@ static void CG_MessageMode_f(void)
 		trap_Cvar_Set("cg_messageType", "2");
 	}
 	// fireteam say
-	else if (!Q_stricmp(cmd, "messagemode3"))
+	else if (!Q_stricmp(cmd, "messagemode3") && CG_IsOnFireteam(cg.clientNum))
 	{
 		trap_Cvar_Set("cg_messageType", "3");
 	}
@@ -539,6 +588,9 @@ static void CG_MessageMode_f(void)
 	trap_UI_Popup(UIMENU_INGAME_MESSAGEMODE);
 }
 
+/**
+ * @brief CG_MessageSend_f
+ */
 static void CG_MessageSend_f(void)
 {
 	char messageText[256];
@@ -573,6 +625,9 @@ static void CG_MessageSend_f(void)
 	}
 }
 
+/**
+ * @brief CG_SetWeaponCrosshair_f
+ */
 static void CG_SetWeaponCrosshair_f(void)
 {
 	char crosshair[64];
@@ -581,6 +636,9 @@ static void CG_SetWeaponCrosshair_f(void)
 	cg.newCrosshairIndex = atoi(crosshair) + 1;
 }
 
+/**
+ * @brief CG_SelectBuddy_f
+ */
 static void CG_SelectBuddy_f(void)
 {
 	int          pos = atoi(CG_Argv(1));
@@ -654,6 +712,9 @@ static void CG_SelectBuddy_f(void)
 
 extern void CG_AdjustAutomapZoom(int zoomIn);
 
+/**
+ * @brief CG_AutomapZoomIn_f
+ */
 static void CG_AutomapZoomIn_f(void)
 {
 	if (!cgs.autoMapOff)
@@ -662,6 +723,9 @@ static void CG_AutomapZoomIn_f(void)
 	}
 }
 
+/**
+ * @brief CG_AutomapZoomOut_f
+ */
 static void CG_AutomapZoomOut_f(void)
 {
 	if (!cgs.autoMapOff)
@@ -670,14 +734,17 @@ static void CG_AutomapZoomOut_f(void)
 	}
 }
 
+/**
+ * @brief CG_AutomapExpandDown_f
+ */
 static void CG_AutomapExpandDown_f(void)
 {
 	if (!cgs.autoMapExpanded)
 	{
 		cgs.autoMapExpanded = qtrue;
-		if (cg.time - cgs.autoMapExpandTime < 250.f)
+		if (cg.time - cgs.autoMapExpandTime < 250)
 		{
-			cgs.autoMapExpandTime = cg.time - (250.f - (cg.time - cgs.autoMapExpandTime));
+			cgs.autoMapExpandTime = cg.time - (250 - (cg.time - cgs.autoMapExpandTime));
 		}
 		else
 		{
@@ -686,14 +753,17 @@ static void CG_AutomapExpandDown_f(void)
 	}
 }
 
+/**
+ * @brief CG_AutomapExpandUp_f
+ */
 static void CG_AutomapExpandUp_f(void)
 {
 	if (cgs.autoMapExpanded)
 	{
 		cgs.autoMapExpanded = qfalse;
-		if (cg.time - cgs.autoMapExpandTime < 250.f)
+		if (cg.time - cgs.autoMapExpandTime < 250)
 		{
-			cgs.autoMapExpandTime = cg.time - (250.f - (cg.time - cgs.autoMapExpandTime));
+			cgs.autoMapExpandTime = cg.time - (250 - (cg.time - cgs.autoMapExpandTime));
 		}
 		else
 		{
@@ -702,9 +772,12 @@ static void CG_AutomapExpandUp_f(void)
 	}
 }
 
+/**
+ * @brief CG_ToggleAutomap_f
+ */
 static void CG_ToggleAutomap_f(void)
 {
-	cgs.autoMapOff = !cgs.autoMapOff;
+	cgs.autoMapOff = (qboolean) !cgs.autoMapOff;
 }
 
 const char *aMonths[12] =
@@ -713,7 +786,10 @@ const char *aMonths[12] =
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
 
-void CG_currentTime_f(void)
+/**
+ * @brief CG_currentTime_f
+ */
+static void CG_currentTime_f(void)
 {
 	qtime_t ct;
 
@@ -721,19 +797,26 @@ void CG_currentTime_f(void)
 	CG_Printf("[cgnotify]Current time: ^3%02d:%02d:%02d (%02d %s %d)\n", ct.tm_hour, ct.tm_min, ct.tm_sec, ct.tm_mday, aMonths[ct.tm_mon], 1900 + ct.tm_year);
 }
 
-// Dynamically names a demo and sets up the recording
+/**
+ * @brief Dynamically names a demo and sets up the recording
+ */
 void CG_autoRecord_f(void)
 {
 	trap_SendConsoleCommand(va("record %s\n", CG_generateFilename()));
 }
 
-// Dynamically names a screenshot[JPEG]
+/**
+ * @brief Dynamically names a screenshot[JPEG]
+ */
 void CG_autoScreenShot_f(void)
 {
 	trap_SendConsoleCommand(va("screenshot%s %s\n", ((cg_useScreenshotJPEG.integer) ? "JPEG" : ""), CG_generateFilename()));
 }
 
-void CG_vstrDown_f(void)
+/**
+ * @brief CG_vstrDown_f
+ */
+static void CG_vstrDown_f(void)
 {
 	// The engine also passes back the key code and time of the key press
 	if (trap_Argc() == 5)
@@ -746,7 +829,10 @@ void CG_vstrDown_f(void)
 	}
 }
 
-void CG_vstrUp_f(void)
+/**
+ * @brief CG_vstrUp_f
+ */
+static void CG_vstrUp_f(void)
 {
 	// The engine also passes back the key code and time of the key press
 	if (trap_Argc() == 5)
@@ -759,6 +845,9 @@ void CG_vstrUp_f(void)
 	}
 }
 
+/**
+ * @brief CG_keyOn_f
+ */
 void CG_keyOn_f(void)
 {
 	if (!cg.demoPlayback)
@@ -775,6 +864,9 @@ void CG_keyOn_f(void)
 	CG_EventHandling(CGAME_EVENT_DEMO, qtrue);
 }
 
+/**
+ * @brief CG_keyOff_f
+ */
 void CG_keyOff_f(void)
 {
 	if (!cg.demoPlayback)
@@ -784,6 +876,9 @@ void CG_keyOff_f(void)
 	CG_EventHandling(CGAME_EVENT_NONE, qfalse);
 }
 
+/**
+ * @brief CG_dumpStats_f
+ */
 void CG_dumpStats_f(void)
 {
 	if (cgs.dumpStatsTime < cg.time)
@@ -791,17 +886,19 @@ void CG_dumpStats_f(void)
 		cgs.dumpStatsTime = cg.time + 2000;
 		trap_SendClientCommand(
 #ifdef FEATURE_MULTIVIEW
-		    (cg.mvTotalClients < 1) ?
+			(cg.mvTotalClients < 1) ?
 #endif
-		    "weaponstats"
+			"weaponstats"
 #ifdef FEATURE_MULTIVIEW
 			: "statsall"
 #endif
-		    );
+			);
 	}
 }
 
-/* unused
+/*
+ * @brief CG_wStatsDown_f
+ * @note Unused
 void CG_wStatsDown_f(void)
 {
     if (
@@ -830,7 +927,9 @@ void CG_wStatsDown_f(void)
 }
 */
 
-/* unused
+/*
+ * @brief CG_wStatsUp_f
+ * @note unused
 void CG_wStatsUp_f(void)
 {
     cg.showStats = qfalse;
@@ -840,6 +939,9 @@ void CG_wStatsUp_f(void)
 */
 
 #ifdef FEATURE_MULTIVIEW
+/**
+ * @brief CG_toggleSpecHelp_f
+ */
 void CG_toggleSpecHelp_f(void)
 {
 	if (cg.mvTotalClients > 0 && !cg.demoPlayback)
@@ -856,6 +958,9 @@ void CG_toggleSpecHelp_f(void)
 }
 #endif
 
+/**
+ * @brief CG_EditSpeakers_f
+ */
 static void CG_EditSpeakers_f(void)
 {
 	if (cg.editingSpeakers)
@@ -875,6 +980,9 @@ static void CG_EditSpeakers_f(void)
 	}
 }
 
+/**
+ * @brief CG_DumpSpeaker_f
+ */
 static void CG_DumpSpeaker_f(void)
 {
 	/*  char sscrfilename[MAX_QPATH];
@@ -959,7 +1067,7 @@ static void CG_DumpSpeaker_f(void)
 		return;
 	}
 
-	memset(&speaker, 0, sizeof(speaker));
+	Com_Memset(&speaker, 0, sizeof(speaker));
 
 	speaker.volume = 127;
 	speaker.range  = 1250;
@@ -983,6 +1091,9 @@ static void CG_DumpSpeaker_f(void)
 	}
 }
 
+/**
+ * @brief CG_ModifySpeaker_f
+ */
 static void CG_ModifySpeaker_f(void)
 {
 	if (cg.editingSpeakers)
@@ -991,6 +1102,9 @@ static void CG_ModifySpeaker_f(void)
 	}
 }
 
+/**
+ * @brief CG_UndoSpeaker_f
+ */
 static void CG_UndoSpeaker_f(void)
 {
 	if (cg.editingSpeakers)
@@ -999,6 +1113,9 @@ static void CG_UndoSpeaker_f(void)
 	}
 }
 
+/**
+ * @brief CG_ForceTapOut_f
+ */
 void CG_ForceTapOut_f(void)
 {
 	trap_SendClientCommand("forcetapout");
@@ -1009,13 +1126,42 @@ void CG_ForceTapOut_f(void)
  */
 static void CG_CPM_f(void)
 {
-	CG_AddPMItem(PM_MESSAGE, CG_Argv(1), " ", cgs.media.voiceChatShader, 0, 0, NULL);
+	int        iconnumber;
+	const char *iconstring;
+
+	iconstring = CG_Argv(2);
+
+	// catch no cpm icon param
+	if (!iconstring[0])
+	{
+		iconnumber = PM_MESSAGE; // default
+	}
+	else
+	{
+		iconnumber = atoi(iconstring);
+	}
+
+	// only valid icon types
+	if (iconnumber < 0 || iconnumber >= PM_NUM_TYPES)
+	{
+		iconnumber = PM_MESSAGE;
+	}
+
+	// this is custom, don't localize!
+	CG_AddPMItem(PM_MESSAGE, CG_Argv(1), " ", cgs.media.pmImages[iconnumber], 0, 0, NULL);
+}
+
+qboolean resetmaxspeed = qfalse;
+
+static void CG_ResetMaxSpeed_f(void)
+{
+	resetmaxspeed = qtrue;
 }
 
 /**
  * @brief ETPro style enemy spawntimer
  */
-void CG_TimerSet_f(void)
+static void CG_TimerSet_f(void)
 {
 	if (cgs.gamestate != GS_PLAYING)
 	{
@@ -1045,7 +1191,7 @@ void CG_TimerSet_f(void)
 		}
 		else
 		{
-			int msec = (cgs.timelimit * 60000.f) - (cg.time - cgs.levelStartTime);  // 60.f * 1000.f
+			int msec = (int)(cgs.timelimit * 60000.f) - (cg.time - cgs.levelStartTime);  // 60.f * 1000.f
 
 			trap_Cvar_Set("cg_spawnTimer_period", buff);
 			trap_Cvar_Set("cg_spawnTimer_set", va("%d", msec / 1000));
@@ -1060,7 +1206,7 @@ void CG_TimerSet_f(void)
 /**
  * @brief ETPro style timer resetting
  */
-void CG_TimerReset_f(void)
+static void CG_TimerReset_f(void)
 {
 	int msec;
 
@@ -1070,84 +1216,80 @@ void CG_TimerReset_f(void)
 		return;
 	}
 
-	msec = (cgs.timelimit * 60000.f) - (cg.time - cgs.levelStartTime); // 60.f * 1000.f
+	msec = (int)(cgs.timelimit * 60000.f) - (cg.time - cgs.levelStartTime); // 60.f * 1000.f
 	trap_Cvar_Set("cg_spawnTimer_set", va("%d", msec / 1000));
 }
 
+/**
+ * @brief CG_GetSecondaryWeapon
+ * @param[in] weapon
+ * @param[in] team
+ * @param[in] playerclass
+ * @return
+ */
 static int CG_GetSecondaryWeapon(int weapon, team_t team, int playerclass)
 {
-	int outputWeapon;
+	bg_playerclass_t *classInfo;
+	classInfo = BG_GetPlayerClassInfo(team, playerclass);
 
-	if (cgs.clientinfo[cg.clientNum].skill[SK_HEAVY_WEAPONS] >= 4 && playerclass == PC_SOLDIER)
+	int i, lastValidWeaponPos = 0;
+
+	for (i = 0; i < MAX_WEAPS_PER_CLASS; i++)
 	{
-		switch (weapon)
+		if (!classInfo->classSecondaryWeapons[i].weapon)
 		{
-		case 1:
-			outputWeapon = (team == TEAM_AXIS) ? WP_LUGER : WP_COLT;
-			break;
-		case 2:
-			if (cgs.clientinfo[cg.clientNum].skill[SK_LIGHT_WEAPONS] >= 4)
-			{
-				outputWeapon = (team == TEAM_AXIS) ? WP_AKIMBO_LUGER : WP_AKIMBO_COLT;
-			}
-			else
-			{
-				outputWeapon = (team == TEAM_AXIS) ? WP_MP40 : WP_THOMPSON;
-			}
-			break;
-		case 3:
-		default:
-			outputWeapon = (team == TEAM_AXIS) ? WP_MP40 : WP_THOMPSON;
 			break;
 		}
-	}
-	else if (cgs.clientinfo[cg.clientNum].skill[SK_LIGHT_WEAPONS] >= 4)
-	{
-		switch (weapon)
+
+		// is player had the minimum level required to use this weapon
+		if (cgs.clientinfo[cg.clientNum].skill[classInfo->classSecondaryWeapons[i].skill] < classInfo->classSecondaryWeapons[i].minSkillLevel)
 		{
-		case 1:
-			goto single_pistol;
-			break;
-		case 2:
-		default:
-			goto akimbo_pistols;
-			break;
+			continue;
 		}
-	}
-	else
-	{
-		goto single_pistol;
+
+		// if player handling a similar weapon in primary slot, don't show it
+		if (classInfo->classSecondaryWeapons[i].weapon == cgs.ccSelectedPrimaryWeapon)
+		{
+			continue;
+		}
+
+		lastValidWeaponPos = i;
 	}
 
-	return outputWeapon;
+	if (weapon < 0 || weapon > lastValidWeaponPos)
+	{
+		return classInfo->classSecondaryWeapons[lastValidWeaponPos].weapon;
+	}
 
-single_pistol:
-	if (playerclass == PC_COVERTOPS)
-	{
-		outputWeapon = (team == TEAM_AXIS) ? WP_SILENCER : WP_SILENCED_COLT;
-	}
-	else
-	{
-		outputWeapon = (team == TEAM_AXIS) ? WP_LUGER : WP_COLT;
-	}
-	return outputWeapon;
-
-akimbo_pistols:
-	if (playerclass == PC_COVERTOPS)
-	{
-		outputWeapon = (team == TEAM_AXIS) ? WP_AKIMBO_SILENCEDLUGER : WP_AKIMBO_SILENCEDCOLT;
-	}
-	else
-	{
-		outputWeapon = (team == TEAM_AXIS) ? WP_AKIMBO_LUGER : WP_AKIMBO_COLT;
-	}
-	return outputWeapon;
+	return classInfo->classSecondaryWeapons[weapon].weapon;
 }
 
 /**
- * @brief Sends an class setup message. Enables etpro like classscripts
+ * @brief class change menu
  */
-void CG_Class_f(void)
+static void CG_ClassMenu_f(void)
+{
+	if (cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR)
+	{
+		return;
+	}
+
+	CG_EventHandling(CGAME_EVENT_NONE, qfalse);
+
+	if (cg_quickMessageAlt.integer)
+	{
+		trap_UI_Popup(UIMENU_WM_CLASSALT);
+	}
+	else
+	{
+		trap_UI_Popup(UIMENU_WM_CLASS);
+	}
+}
+
+/**
+ * @brief Sends a class setup message. Enables etpro like class scripts
+ */
+static void CG_Class_f(void)
 {
 	char             cls[64];
 	const char       *classtype, *teamstring;
@@ -1173,6 +1315,7 @@ void CG_Class_f(void)
 		return;
 	}
 
+	// TODO: handle missing case ?
 	switch (team)
 	{
 	case TEAM_AXIS:
@@ -1224,21 +1367,21 @@ void CG_Class_f(void)
 		weapon1 = atoi(cls);
 		if (weapon1 <= 0 || weapon1 > MAX_WEAPS_PER_CLASS)
 		{
-			weapon1 = classinfo->classWeapons[0];
+			weapon1 = classinfo->classPrimaryWeapons[0].weapon;
 		}
-		else if (!classinfo->classWeapons[weapon1 - 1])
+		else if (!classinfo->classPrimaryWeapons[weapon1 - 1].weapon)
 		{
 			CG_Printf("Invalid command format for weapon.\n");
 			return;
 		}
 		else
 		{
-			weapon1 = classinfo->classWeapons[weapon1 - 1];
+			weapon1 = classinfo->classPrimaryWeapons[weapon1 - 1].weapon;
 		}
 	}
 	else
 	{
-		weapon1 = classinfo->classWeapons[0];
+		weapon1 = classinfo->classPrimaryWeapons[0].weapon;
 	}
 
 	if (trap_Argc() > 3)
@@ -1253,96 +1396,131 @@ void CG_Class_f(void)
 	}
 
 	// Print out the selected class and weapon info
-	if (cgs.clientinfo[cg.clientNum].skill[SK_HEAVY_WEAPONS] >= 4 && playerclass == PC_SOLDIER && !Q_stricmp(weaponTable[weapon1].desc, weaponTable[weapon2].desc))
+	if (cgs.clientinfo[cg.clientNum].skill[SK_HEAVY_WEAPONS] >= 4 && playerclass == PC_SOLDIER && !Q_stricmp(GetWeaponTableData(weapon1)->desc, GetWeaponTableData(weapon2)->desc))
 	{
-		CG_PriorityCenterPrint(va(CG_TranslateString("You will spawn as an %s %s with a %s."), teamstring, BG_ClassnameForNumber(playerclass), weaponTable[weapon1].desc), 400, cg_fontScaleCP.value, -1);
+		CG_PriorityCenterPrint(va(CG_TranslateString("You will spawn as an %s %s with a %s."), teamstring, BG_ClassnameForNumber(playerclass), GetWeaponTableData(weapon1)->desc), 400, cg_fontScaleCP.value, -1);
+	}
+	else if (GetWeaponTableData(weapon2)->isAkimbo)
+	{
+		CG_PriorityCenterPrint(va(CG_TranslateString("You will spawn as an %s %s with a %s and %s."), teamstring, BG_ClassnameForNumber(playerclass), GetWeaponTableData(weapon1)->desc, GetWeaponTableData(weapon2)->desc), 400, cg_fontScaleCP.value, -1);
 	}
 	else
 	{
-		switch (weapon2)
-		{
-		case WP_AKIMBO_COLT:
-		case WP_AKIMBO_LUGER:
-		case WP_AKIMBO_SILENCEDCOLT:
-		case WP_AKIMBO_SILENCEDLUGER:
-			CG_PriorityCenterPrint(va(CG_TranslateString("You will spawn as an %s %s with a %s and %s."), teamstring, BG_ClassnameForNumber(playerclass), weaponTable[weapon1].desc, weaponTable[weapon2].desc), 400, cg_fontScaleCP.value, -1);
-			break;
-		default:
-			CG_PriorityCenterPrint(va(CG_TranslateString("You will spawn as an %s %s with a %s and a %s."), teamstring, BG_ClassnameForNumber(playerclass), weaponTable[weapon1].desc, weaponTable[weapon2].desc), 400, cg_fontScaleCP.value, -1);
-			break;
-		}
+		CG_PriorityCenterPrint(va(CG_TranslateString("You will spawn as an %s %s with a %s and a %s."), teamstring, BG_ClassnameForNumber(playerclass), GetWeaponTableData(weapon1)->desc, GetWeaponTableData(weapon2)->desc), 400, cg_fontScaleCP.value, -1);
 	}
 	// Send the switch command to the server
 	trap_SendClientCommand(va("team %s %i %i %i\n", classtype, playerclass, weapon1, weapon2));
 }
 
-void CG_ReadHuds_f(void)
+/**
+ * @brief CG_ReadHuds_f
+ */
+static void CG_ReadHuds_f(void)
 {
 	CG_ReadHudScripts();
 }
 
-#if FEATURE_EDV
-void CG_FreecamTurnLeftDown_f(void)
+#ifdef FEATURE_EDV
+/**
+ * @brief CG_FreecamTurnLeftDown_f
+ */
+static void CG_FreecamTurnLeftDown_f(void)
 {
 	cgs.demoCamera.turn |= 0x01;
 }
 
-void CG_FreecamTurnLeftUp_f(void)
+/**
+ * @brief CG_FreecamTurnLeftUp_f
+ */
+static void CG_FreecamTurnLeftUp_f(void)
 {
 	cgs.demoCamera.turn &= ~0x01;
 }
 
-void CG_FreecamTurnRightDown_f(void)
+/**
+ * @brief CG_FreecamTurnRightDown_f
+ */
+static void CG_FreecamTurnRightDown_f(void)
 {
 	cgs.demoCamera.turn |= 0x02;
 }
 
-void CG_FreecamTurnRightUp_f(void)
+/**
+ * @brief CG_FreecamTurnRightUp_f
+ */
+static void CG_FreecamTurnRightUp_f(void)
 {
 	cgs.demoCamera.turn &= ~0x02;
 }
 
-void CG_FreecamTurnDownDown_f(void)
+/**
+ * @brief CG_FreecamTurnDownDown_f
+ */
+static void CG_FreecamTurnDownDown_f(void)
 {
 	cgs.demoCamera.turn |= 0x04;
 }
 
-void CG_FreecamTurnDownUp_f(void)
+/**
+ * @brief CG_FreecamTurnDownUp_f
+ */
+static void CG_FreecamTurnDownUp_f(void)
 {
 	cgs.demoCamera.turn &= ~0x04;
 }
 
-void CG_FreecamTurnUpDown_f(void)
+/**
+ * @brief CG_FreecamTurnUpDown_f
+ */
+static void CG_FreecamTurnUpDown_f(void)
 {
 	cgs.demoCamera.turn |= 0x08;
 }
 
-void CG_FreecamTurnUpUp_f(void)
+/**
+ * @brief CG_FreecamTurnUpUp_f
+ */
+static void CG_FreecamTurnUpUp_f(void)
 {
 	cgs.demoCamera.turn &= ~0x08;
 }
 
-void CG_FreecamRollLeftDown_f(void)
+/**
+ * @brief CG_FreecamRollLeftDown_f
+ */
+static void CG_FreecamRollLeftDown_f(void)
 {
 	cgs.demoCamera.turn |= 0x20;
 }
 
-void CG_FreecamRollLeftUp_f(void)
+/**
+ * @brief CG_FreecamRollLeftUp_f
+ */
+static void CG_FreecamRollLeftUp_f(void)
 {
 	cgs.demoCamera.turn &= ~0x20;
 }
 
-void CG_FreecamRollRightDown_f(void)
+/**
+ * @brief CG_FreecamRollRightDown_f
+ */
+static void CG_FreecamRollRightDown_f(void)
 {
 	cgs.demoCamera.turn |= 0x10;
 }
 
-void CG_FreecamRollRightUp_f(void)
+/**
+ * @brief CG_FreecamRollRightUp_f
+ */
+static void CG_FreecamRollRightUp_f(void)
 {
 	cgs.demoCamera.turn &= ~0x10;
 }
 
-void CG_Freecam_f(void)
+/**
+ * @brief CG_Freecam_f
+ */
+static void CG_Freecam_f(void)
 {
 	char state[MAX_TOKEN_CHARS];
 
@@ -1356,15 +1534,15 @@ void CG_Freecam_f(void)
 
 	if (!Q_stricmp(state, "on"))
 	{
-		cgs.demoCamera.renderingFreeCam = 1;
+		cgs.demoCamera.renderingFreeCam = qtrue;
 	}
 	else if (!Q_stricmp(state, "off"))
 	{
-		cgs.demoCamera.renderingFreeCam = 0;
+		cgs.demoCamera.renderingFreeCam = qfalse;
 	}
 	else
 	{
-		cgs.demoCamera.renderingFreeCam ^= 1;
+		cgs.demoCamera.renderingFreeCam ^= qtrue;
 	}
 
 	CG_Printf("freecam %s\n", cgs.demoCamera.renderingFreeCam ? "ON" : "OFF");
@@ -1389,27 +1567,38 @@ void CG_Freecam_f(void)
 	}
 }
 
-void CG_FreecamGetPos_f(void)
+/**
+ * @brief CG_FreecamGetPos_f
+ */
+static void CG_FreecamGetPos_f(void)
 {
 	if (cg.demoPlayback)
 	{
-		CG_Printf("freecam origin: %.0f %.0f %.0f\n", cgs.demoCamera.camOrigin[0], cgs.demoCamera.camOrigin[1], cgs.demoCamera.camOrigin[2]);
+		CG_Printf("freecam origin: %.0f %.0f %.0f\n", (double)cgs.demoCamera.camOrigin[0], (double)cgs.demoCamera.camOrigin[1], (double)cgs.demoCamera.camOrigin[2]);
 	}
 	else
 	{
-		CG_Printf("freecam origin: %.0f %.0f %.0f\n", cg.refdef_current->vieworg[0], cg.refdef_current->vieworg[1], cg.refdef_current->vieworg[2]);
+		CG_Printf("freecam origin: %.0f %.0f %.0f\n", (double)cg.refdef_current->vieworg[0], (double)cg.refdef_current->vieworg[1], (double)cg.refdef_current->vieworg[2]);
 	}
 }
 
-float etpro_float_Argv(int argnum)
+/**
+ * @brief etpro_float_Argv
+ * @param[in] argnum
+ * @return
+ */
+static float etpro_float_Argv(int argnum)
 {
 	char buffer[MAX_TOKEN_CHARS];
 
 	trap_Argv(argnum, buffer, sizeof(buffer));
-	return atof(buffer);
+	return (float)atof(buffer);
 }
 
-void CG_FreecamSetPos_f(void)
+/**
+ * @brief CG_FreecamSetPos_f
+ */
+static void CG_FreecamSetPos_f(void)
 {
 	int n;
 
@@ -1449,8 +1638,10 @@ void CG_FreecamSetPos_f(void)
 
 }
 
-// noclip in demos
-void CG_NoClip_f(void)
+/**
+ * @brief noclip in demos
+ */
+static void CG_NoClip_f(void)
 {
 	char buffer[MAX_TOKEN_CHARS];
 	char state[MAX_TOKEN_CHARS];
@@ -1473,20 +1664,32 @@ void CG_NoClip_f(void)
 	{
 		if (!Q_stricmp(state, "on"))
 		{
-			cgs.demoCamera.noclip = 1;
+			cgs.demoCamera.noclip = qtrue;
 		}
 		else if (!Q_stricmp(state, "off"))
 		{
-			cgs.demoCamera.noclip = 0;
+			cgs.demoCamera.noclip = qfalse;
 		}
 		else
 		{
-			cgs.demoCamera.noclip ^= 1;
+			cgs.demoCamera.noclip ^= qtrue;
 		}
 		CG_Printf("noclip %s\n", cgs.demoCamera.noclip ? "ON" : "OFF");
 	}
 }
 #endif
+
+static void CG_PrintObjectiveInfo_f(void)
+{
+	int i;
+
+	CG_Printf("^2Objective Info\n");
+
+	for (i = 0; i < MAX_OID_TRIGGERS; i++)
+	{
+		CG_Printf("[%2i] %-26s -> num: %3i - spawnflags: %3i - objflags: %3i\n", i, cgs.oidInfo[i].name, cgs.oidInfo[i].entityNum, cgs.oidInfo[i].spawnflags, cgs.oidInfo[i].objflags);
+	}
+}
 
 static consoleCommand_t commands[] =
 {
@@ -1580,8 +1783,9 @@ static consoleCommand_t commands[] =
 	{ "timerReset",          CG_TimerReset_f           },
 	{ "resetTimer",          CG_TimerReset_f           }, // keep ETPro compatibility
 	{ "class",               CG_Class_f                },
+	{ "classmenu",           CG_ClassMenu_f            },
 	{ "readhuds",            CG_ReadHuds_f             },
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 	{ "+freecam_turnleft",   CG_FreecamTurnLeftDown_f  },
 	{ "-freecam_turnleft",   CG_FreecamTurnLeftUp_f    },
 	{ "+freecam_turnright",  CG_FreecamTurnRightDown_f },
@@ -1602,20 +1806,20 @@ static consoleCommand_t commands[] =
 
 	{ "noclip",              CG_NoClip_f               },
 #endif
+	// objective info list for mappers/scripters (and players? - we might extend it)
+	{ "oinfo",               CG_PrintObjectiveInfo_f   },
+	{ "resetmaxspeed",       CG_ResetMaxSpeed_f        }
 };
 
-/*
-=================
-CG_ConsoleCommand
-
-The string has been tokenized and can be retrieved with
-Cmd_Argc() / Cmd_Argv()
-=================
-*/
+/**
+ * @brief The string has been tokenized and can be retrieved with
+ * Cmd_Argc() / Cmd_Argv()
+ * @return
+ */
 qboolean CG_ConsoleCommand(void)
 {
-	const char *cmd;
-	int        i;
+	const char   *cmd;
+	unsigned int i;
 
 	// don't allow console commands until a snapshot is present
 	if (!cg.snap)
@@ -1643,8 +1847,8 @@ qboolean CG_ConsoleCommand(void)
  */
 void CG_InitConsoleCommands(void)
 {
-	int        i;
-	const char *s;
+	unsigned int i;
+	const char   *s;
 
 	for (i = 0 ; i < sizeof(commands) / sizeof(commands[0]) ; i++)
 	{
@@ -1740,45 +1944,4 @@ void CG_InitConsoleCommands(void)
 	{
 		trap_RemoveCommand("configstrings");
 	}
-}
-
-void CG_parseMapVoteListInfo()
-{
-	int i;
-
-	cgs.dbNumMaps = (trap_Argc() - 2) / 4;
-
-	if (atoi(CG_Argv(1)))
-	{
-		cgs.dbMapMultiVote = qtrue;
-	}
-
-	for (i = 0; i < cgs.dbNumMaps; i++)
-	{
-		Q_strncpyz(cgs.dbMaps[i], CG_Argv((i * 4) + 2),
-		           sizeof(cgs.dbMaps[0]));
-		cgs.dbMapVotes[i]      = 0;
-		cgs.dbMapID[i]         = atoi(CG_Argv((i * 4) + 3));
-		cgs.dbMapLastPlayed[i] = atoi(CG_Argv((i * 4) + 4));
-		cgs.dbMapTotalVotes[i] = atoi(CG_Argv((i * 4) + 5));
-		if (CG_FindArenaInfo(va("scripts/%s.arena", cgs.dbMaps[i]),
-		                     cgs.dbMaps[i], &cgs.arenaData))
-		{
-			Q_strncpyz(cgs.dbMapDispName[i],
-			           cgs.arenaData.longname,
-			           sizeof(cgs.dbMaps[0]));
-		}
-		else
-		{
-			Q_strncpyz(cgs.dbMapDispName[i],
-			           cgs.dbMaps[i],
-			           sizeof(cgs.dbMaps[0]));
-		}
-	}
-
-	CG_LocateArena();
-
-	cgs.dbMapListReceived = qtrue;
-
-	return;
 }

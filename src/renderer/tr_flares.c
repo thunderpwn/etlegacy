@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -30,9 +30,7 @@
  */
 /**
  * @file renderer/tr_flares.c
- *
- * LIGHT FLARES
- * ============
+ * @brief LIGHT FLARES
  *
  * A light flare is an effect that takes place inside the eye when bright light
  * sources are visible.  The size of the flare reletive to the screen is nearly
@@ -61,24 +59,27 @@
 
 #include "tr_local.h"
 
-// flare states maintain visibility over multiple frames for fading
-// layers: view, mirror, menu
+/**
+ * @struct flare_s
+ * @typedef flare_t
+ * @brief Flare states maintain visibility over multiple frames for fading layers: view, mirror, menu
+ */
 typedef struct flare_s
 {
-	struct      flare_s *next;      // for active chain
+	struct flare_s *next;      ///< for active chain
 
 	int addedFrame;
 
-	qboolean inPortal;              // true if in a portal view of the scene
+	qboolean inPortal;              ///< true if in a portal view of the scene
 	int frameSceneNum;
 	void *surface;
 	int fogNum;
 
 	int fadeTime;
 
-	qboolean cgvisible;             // for coronas, the client determines current visibility, but it's still inserted so it will fade out properly
-	qboolean visible;               // state of last test
-	float drawIntensity;            // may be non 0 even if !visible due to fading
+	qboolean cgvisible;             ///< for coronas, the client determines current visibility, but it's still inserted so it will fade out properly
+	qboolean visible;               ///< state of last test
+	float drawIntensity;            ///< may be non 0 even if !visible due to fading
 
 	int windowX, windowY;
 	float eyeZ;
@@ -94,34 +95,36 @@ typedef struct flare_s
 flare_t r_flareStructs[MAX_FLARES];
 flare_t *r_activeFlares, *r_inactiveFlares;
 
-/*
-==================
-R_ClearFlares
-==================
-*/
+/**
+ * @brief R_ClearFlares
+ */
 void R_ClearFlares(void)
 {
 	int i;
 
-	memset(r_flareStructs, 0, sizeof(r_flareStructs));
+	Com_Memset(r_flareStructs, 0, sizeof(r_flareStructs));
 	r_activeFlares   = NULL;
 	r_inactiveFlares = NULL;
 
-	for (i = 0 ; i < MAX_FLARES ; i++)
+	for (i = 0; i < MAX_FLARES; i++)
 	{
 		r_flareStructs[i].next = r_inactiveFlares;
 		r_inactiveFlares       = &r_flareStructs[i];
 	}
 }
 
-/*
-==================
-RB_AddFlare
-
-This is called at surface tesselation time
-==================
-*/
-void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, float scale, vec3_t normal, int id, qboolean cgvisible) // added scale. added id.  added visible
+/**
+ * @brief This is called at surface tesselation time
+ * @param[in] surface
+ * @param[in] fogNum
+ * @param[in] point
+ * @param[in] color
+ * @param[in] scale
+ * @param[in] normal
+ * @param[in] id
+ * @param[in] visible
+ */
+void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, float scale, vec3_t normal, int id, qboolean visible) // added scale. added id.  added visible
 {
 	int     i;
 	flare_t *f;
@@ -139,7 +142,7 @@ void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, float sc
 	//Ren_Print("eye:  %f  %f  %f  %f\n", eye[0], eye[1], eye[2], eye[3]);
 
 	// check to see if the point is completely off screen
-	for (i = 0 ; i < 3 ; i++)
+	for (i = 0; i < 3; i++)
 	{
 		if (clip[i] >= clip[3] || clip[i] <= -clip[3])
 		{
@@ -151,8 +154,8 @@ void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, float sc
 
 	//Ren_Print("window:  %f  %f  %f  \n", window[0], window[1], window[2]);
 
-	if (window[0] < 0 || window[0] >= backEnd.viewParms.viewportWidth
-	    || window[1] < 0 || window[1] >= backEnd.viewParms.viewportHeight)
+	if (window[0] < 0 || window[0] >= backEnd.viewParms.viewportWidth ||
+	    window[1] < 0 || window[1] >= backEnd.viewParms.viewportHeight)
 	{
 		return; // shouldn't happen, since we check the clip[] above, except for FP rounding
 	}
@@ -187,7 +190,7 @@ void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, float sc
 		f->id            = id;
 	}
 
-	f->cgvisible = cgvisible;
+	f->cgvisible = visible;
 
 	if (f->addedFrame != backEnd.viewParms.frameCount - 1)
 	{
@@ -221,11 +224,9 @@ void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, float sc
 	f->eyeZ = eye[2];
 }
 
-/*
-==================
-RB_AddDlightFlares
-==================
-*/
+/**
+ * @brief RB_AddDlightFlares
+ */
 void RB_AddDlightFlares(void)
 {
 	dlight_t *l;
@@ -267,11 +268,9 @@ void RB_AddDlightFlares(void)
 	}
 }
 
-/*
-==============
-RB_AddCoronaFlares
-==============
-*/
+/**
+ * @brief RB_AddCoronaFlares
+ */
 void RB_AddCoronaFlares(void)
 {
 	corona_t *cor;
@@ -322,11 +321,10 @@ FLARE BACK END
 ===============================================================================
 */
 
-/*
-==================
-RB_TestFlare
-==================
-*/
+/**
+ * @brief RB_TestFlare
+ * @param[in,out] f
+ */
 void RB_TestFlare(flare_t *f)
 {
 	//float           depth;
@@ -386,11 +384,10 @@ void RB_TestFlare(flare_t *f)
 	f->drawIntensity = fade;
 }
 
-/*
-==================
-RB_RenderFlare
-==================
-*/
+/**
+ * @brief RB_RenderFlare
+ * @param[in] f
+ */
 void RB_RenderFlare(flare_t *f)
 {
 	float  size;
@@ -408,54 +405,54 @@ void RB_RenderFlare(flare_t *f)
 
 	VectorScale(f->color, tr.identityLight, color);         // mod for alpha blend rather than additive
 
-	iColor[0] = color[0] * 255;
-	iColor[1] = color[1] * 255;
-	iColor[2] = color[2] * 255;
+	iColor[0] = (byte)(color[0] * 255);
+	iColor[1] = (byte)(color[1] * 255);
+	iColor[2] = (byte)(color[2] * 255);
 
-	size = backEnd.viewParms.viewportWidth * ((r_flareSize->value * f->scale) / 640.0 + 8 / -f->eyeZ);
+	size = backEnd.viewParms.viewportWidth * ((r_flareSize->value * f->scale) / 640.0f + 8 / -f->eyeZ);
 
 	RB_BeginSurface(tr.flareShader, f->fogNum);
 
 	// FIXME: use quadstamp?
-	tess.xyz[tess.numVertexes].v[0]          = f->windowX - size;
-	tess.xyz[tess.numVertexes].v[1]          = f->windowY - size;
-	tess.texCoords0[tess.numVertexes].v[0]   = 0;
-	tess.texCoords0[tess.numVertexes].v[1]   = 0;
-	tess.vertexColors[tess.numVertexes].v[0] = iColor[0];
-	tess.vertexColors[tess.numVertexes].v[1] = iColor[1];
-	tess.vertexColors[tess.numVertexes].v[2] = iColor[2];
-	tess.vertexColors[tess.numVertexes].v[3] = f->drawIntensity * 255; // mod for alpha blend rather than additive
+	tess.xyz[tess.numVertexes][0]          = f->windowX - size;
+	tess.xyz[tess.numVertexes][1]          = f->windowY - size;
+	tess.texCoords[tess.numVertexes][0][0] = 0;
+	tess.texCoords[tess.numVertexes][0][1] = 0;
+	tess.vertexColors[tess.numVertexes][0] = (byte)(iColor[0]);
+	tess.vertexColors[tess.numVertexes][1] = (byte)(iColor[1]);
+	tess.vertexColors[tess.numVertexes][2] = (byte)(iColor[2]);
+	tess.vertexColors[tess.numVertexes][3] = (byte)(f->drawIntensity * 255); // mod for alpha blend rather than additive
 	tess.numVertexes++;
 
-	tess.xyz[tess.numVertexes].v[0]          = f->windowX - size;
-	tess.xyz[tess.numVertexes].v[1]          = f->windowY + size;
-	tess.texCoords0[tess.numVertexes].v[0]   = 0;
-	tess.texCoords0[tess.numVertexes].v[1]   = 1;
-	tess.vertexColors[tess.numVertexes].v[0] = iColor[0];
-	tess.vertexColors[tess.numVertexes].v[1] = iColor[1];
-	tess.vertexColors[tess.numVertexes].v[2] = iColor[2];
-	tess.vertexColors[tess.numVertexes].v[3] = f->drawIntensity * 255; // mod for alpha blend rather than additive
+	tess.xyz[tess.numVertexes][0]          = f->windowX - size;
+	tess.xyz[tess.numVertexes][1]          = f->windowY + size;
+	tess.texCoords[tess.numVertexes][0][0] = 0;
+	tess.texCoords[tess.numVertexes][0][1] = 1;
+	tess.vertexColors[tess.numVertexes][0] = (byte)(iColor[0]);
+	tess.vertexColors[tess.numVertexes][1] = (byte)(iColor[1]);
+	tess.vertexColors[tess.numVertexes][2] = (byte)(iColor[2]);
+	tess.vertexColors[tess.numVertexes][3] = (byte)(f->drawIntensity * 255); // mod for alpha blend rather than additive
 	tess.numVertexes++;
 
-	tess.xyz[tess.numVertexes].v[0]          = f->windowX + size;
-	tess.xyz[tess.numVertexes].v[1]          = f->windowY + size;
-	tess.texCoords0[tess.numVertexes].v[0]   = 1;
-	tess.texCoords0[tess.numVertexes].v[1]   = 1;
-	tess.vertexColors[tess.numVertexes].v[0] = iColor[0];
-	tess.vertexColors[tess.numVertexes].v[1] = iColor[1];
-	tess.vertexColors[tess.numVertexes].v[2] = iColor[2];
-	tess.vertexColors[tess.numVertexes].v[3] = f->drawIntensity * 255; // mod for alpha blend rather than additive
+	tess.xyz[tess.numVertexes][0]          = f->windowX + size;
+	tess.xyz[tess.numVertexes][1]          = f->windowY + size;
+	tess.texCoords[tess.numVertexes][0][0] = 1;
+	tess.texCoords[tess.numVertexes][0][1] = 1;
+	tess.vertexColors[tess.numVertexes][0] = (byte)(iColor[0]);
+	tess.vertexColors[tess.numVertexes][1] = (byte)(iColor[1]);
+	tess.vertexColors[tess.numVertexes][2] = (byte)(iColor[2]);
+	tess.vertexColors[tess.numVertexes][3] = (byte)(f->drawIntensity * 255); // mod for alpha blend rather than additive
 	tess.numVertexes++;
 
-	tess.xyz[tess.numVertexes].v[0]          = f->windowX + size;
-	tess.xyz[tess.numVertexes].v[1]          = f->windowY - size;
-	tess.texCoords0[tess.numVertexes].v[0]   = 1;
-	tess.texCoords0[tess.numVertexes].v[1]   = 0;
-	tess.vertexColors[tess.numVertexes].v[0] = iColor[0];
-	tess.vertexColors[tess.numVertexes].v[1] = iColor[1];
-	tess.vertexColors[tess.numVertexes].v[2] = iColor[2];
-	tess.vertexColors[tess.numVertexes].v[3] = f->drawIntensity * 255; // mod for alpha blend rather than additive
-	//tess.vertexColors[tess.numVertexes].v[3] = 255; // mod for alpha blend rather than additive
+	tess.xyz[tess.numVertexes][0]          = f->windowX + size;
+	tess.xyz[tess.numVertexes][1]          = f->windowY - size;
+	tess.texCoords[tess.numVertexes][0][0] = 1;
+	tess.texCoords[tess.numVertexes][0][1] = 0;
+	tess.vertexColors[tess.numVertexes][0] = (byte)(iColor[0]);
+	tess.vertexColors[tess.numVertexes][1] = (byte)(iColor[1]);
+	tess.vertexColors[tess.numVertexes][2] = (byte)(iColor[2]);
+	tess.vertexColors[tess.numVertexes][3] = (byte)(f->drawIntensity * 255); // mod for alpha blend rather than additive
+	//tess.vertexColors[tess.numVertexes][3] = 255; // mod for alpha blend rather than additive
 	tess.numVertexes++;
 
 	tess.indexes[tess.numIndexes++] = 0;
@@ -468,22 +465,18 @@ void RB_RenderFlare(flare_t *f)
 	RB_EndSurface();
 }
 
-/*
-==================
-RB_RenderFlares
-
-Because flares are simulating an occular effect, they should be drawn after
-everything (all views) in the entire frame has been drawn.
-
-Because of the way portals use the depth buffer to mark off areas, the
-needed information would be lost after each view, so we are forced to draw
-flares after each view.
-
-The resulting artifact is that flares in mirrors or portals don't dim properly
-when occluded by something in the main view, and portal flares that should
-extend past the portal edge will be overwritten.
-==================
-*/
+/**
+ * @brief Because flares are simulating an occular effect, they should be drawn after
+ * everything (all views) in the entire frame has been drawn.
+ *
+ * Because of the way portals use the depth buffer to mark off areas, the
+ * needed information would be lost after each view, so we are forced to draw
+ * flares after each view.
+ *
+ * The resulting artifact is that flares in mirrors or portals don't dim properly
+ * when occluded by something in the main view, and portal flares that should
+ * extend past the portal edge will be overwritten.
+ */
 void RB_RenderFlares(void)
 {
 	flare_t  *f;
@@ -515,11 +508,10 @@ void RB_RenderFlares(void)
 
 		// don't draw any here that aren't from this scene / portal
 		f->drawIntensity = 0;
-		if (f->frameSceneNum == backEnd.viewParms.frameSceneNum
-		    && f->inPortal == backEnd.viewParms.isPortal)
+		if (f->frameSceneNum == backEnd.viewParms.frameSceneNum && f->inPortal == backEnd.viewParms.isPortal)
 		{
 			RB_TestFlare(f);
-			if (f->drawIntensity)
+			if (f->drawIntensity != 0.f)
 			{
 				draw = qtrue;
 			}
@@ -538,7 +530,8 @@ void RB_RenderFlares(void)
 
 	if (!draw)
 	{
-		return;     // none visible
+		// none visible
+		return;
 	}
 
 	if (backEnd.viewParms.isPortal)
@@ -557,9 +550,7 @@ void RB_RenderFlares(void)
 
 	for (f = r_activeFlares ; f ; f = f->next)
 	{
-		if (f->frameSceneNum == backEnd.viewParms.frameSceneNum
-		    && f->inPortal == backEnd.viewParms.isPortal
-		    && f->drawIntensity)
+		if (f->frameSceneNum == backEnd.viewParms.frameSceneNum && f->inPortal == backEnd.viewParms.isPortal && f->drawIntensity != 0.f)
 		{
 			RB_RenderFlare(f);
 		}

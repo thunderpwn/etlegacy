@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -106,7 +106,7 @@
 #define FEEDER_SCOREBOARD           0x0b    // team members for team voting
 #define FEEDER_Q3HEADS              0x0c    // model heads
 #define FEEDER_SERVERSTATUS         0x0d    // server status
-#define FEEDER_FINDPLAYER           0x0e    // find player
+#define FEEDER_FINDPLAYER           0x0e    // obsolete/unused
 #define FEEDER_CINEMATICS           0x0f    // cinematics
 #define FEEDER_SAVEGAMES            0x10    // obsolete. savegames
 #define FEEDER_CAMPAIGNS            0x1a    // all unlocked campaigns available
@@ -153,9 +153,9 @@
 #define UI_SHOW_FAVORITESERVERS             0x00000004
 #define UI_SHOW_ANYNONTEAMGAME              0x00000008
 #define UI_SHOW_ANYTEAMGAME                 0x00000010
-#define UI_SHOW_NEWHIGHSCORE                0x00000020
+#define UI_SHOW_NEWHIGHSCORE                0x00000020 // unused in ETL
 #define UI_SHOW_DEMOAVAILABLE               0x00000040
-#define UI_SHOW_NEWBESTTIME                 0x00000080
+#define UI_SHOW_NEWBESTTIME                 0x00000080 // unused in ETL
 #define UI_SHOW_FFA                         0x00000100
 #define UI_SHOW_NOTFFA                      0x00000200
 #define UI_SHOW_NETANYNONTEAMGAME           0x00000400
@@ -408,9 +408,9 @@
 #define CV_SVF_MATCHRESET       16
 #define CV_SVF_MUTESPECS        32
 #define CV_SVF_NEXTMAP          64
-//#define CV_SVF_PUB              128 //This is freed for reuse
-#define CV_SVF_REFEREE          256
-#define CV_SVF_SHUFFLETEAMS     512
+#define CV_SVF_REFEREE          128
+#define CV_SVF_SHUFFLETEAMSXP   256
+#define CV_SVF_SHUFFLETEAMSSR   512
 #define CV_SVF_SWAPTEAMS        1024
 #define CV_SVF_FRIENDLYFIRE     2048
 #define CV_SVF_TIMELIMIT        4096
@@ -423,7 +423,8 @@
 #define	CV_SVF_NEXTCAMPAIGN     524288
 #define	CV_SVF_POLL             1048576
 #define	CV_SVF_MAPRESTART       2097152
-#define CV_SVF_SHUFFLETEAMS_NORESTART 4194304
+#define CV_SVF_SHUFFLETEAMSXP_NORESTART 4194304
+#define CV_SVF_SHUFFLETEAMSSR_NORESTART 8388608
 
 // referee level
 #define RL_NONE                 0

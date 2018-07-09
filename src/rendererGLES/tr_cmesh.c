@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -37,6 +37,12 @@
 
 #include "tr_local.h"
 
+/**
+ * @brief ProjectRadius
+ * @param[in] r
+ * @param[in] location
+ * @return
+ */
 static float ProjectRadius(float r, vec3_t location)
 {
 	float  pr;
@@ -88,20 +94,19 @@ static float ProjectRadius(float r, vec3_t location)
 	return pr;
 }
 
-/*
-=============
-R_CullModel
-=============
-*/
+/**
+ * @brief R_CullModel
+ * @param[in] header
+ * @param[in] ent
+ * @return
+ */
 static int R_CullModel(mdcHeader_t *header, trRefEntity_t *ent)
 {
-	vec3_t     bounds[2];
-	md3Frame_t *oldFrame, *newFrame;
-	int        i;
-
+	vec3_t bounds[2];
+	int    i;
 	// compute frame pointers
-	newFrame = ( md3Frame_t * )(( byte * ) header + header->ofsFrames) + ent->e.frame;
-	oldFrame = ( md3Frame_t * )(( byte * ) header + header->ofsFrames) + ent->e.oldframe;
+	md3Frame_t *newFrame = ( md3Frame_t * )(( byte * ) header + header->ofsFrames) + ent->e.frame;
+	md3Frame_t *oldFrame = ( md3Frame_t * )(( byte * ) header + header->ofsFrames) + ent->e.oldframe;
 
 	// cull bounding sphere ONLY if this is not an upscaled entity
 	if (!ent->e.nonNormalizedAxes)
@@ -179,15 +184,14 @@ static int R_CullModel(mdcHeader_t *header, trRefEntity_t *ent)
 	}
 }
 
-/*
-=================
-R_ComputeLOD
-=================
-*/
+/**
+ * @brief R_ComputeLOD
+ * @param[in] ent
+ * @return
+ */
 static int R_ComputeLOD(trRefEntity_t *ent)
 {
-	md3Frame_t *frame;
-	int        lod;
+	int lod;
 
 	if (tr.currentModel->numLods < 2)
 	{
@@ -196,9 +200,10 @@ static int R_ComputeLOD(trRefEntity_t *ent)
 	}
 	else
 	{
-		float projectedRadius;
-		float radius;
-		float flod;
+		float      projectedRadius;
+		float      radius;
+		float      flod;
+		md3Frame_t *frame;
 
 		// multiple LODs exist, so compute projected bounding sphere
 		// and use that as a criteria for selecting LOD
@@ -224,9 +229,9 @@ static int R_ComputeLOD(trRefEntity_t *ent)
 		//          radius = radius/2.0f;
 		//}
 
-		if ((projectedRadius = ProjectRadius(radius, ent->e.origin)) != 0)
+		if ((projectedRadius = ProjectRadius(radius, ent->e.origin)) != 0.f)
 		{
-			float lodscale = r_lodscale->value;
+			float lodscale = r_lodScale->value;
 
 			if (lodscale > 20)
 			{
@@ -241,7 +246,7 @@ static int R_ComputeLOD(trRefEntity_t *ent)
 		}
 
 		flod *= tr.currentModel->numLods;
-		lod   = ROUND_INT(flod);
+		lod   = round(flod);
 
 		if (lod < 0)
 		{
@@ -253,7 +258,7 @@ static int R_ComputeLOD(trRefEntity_t *ent)
 		}
 	}
 
-	lod += r_lodbias->integer;
+	lod += r_lodBias->integer;
 
 	if (lod >= tr.currentModel->numLods)
 	{
@@ -267,11 +272,12 @@ static int R_ComputeLOD(trRefEntity_t *ent)
 	return lod;
 }
 
-/*
-=================
-R_ComputeFogNum
-=================
-*/
+/**
+ * @brief R_ComputeFogNum
+ * @param[in] header
+ * @param[in] ent
+ * @return
+ */
 static int R_ComputeFogNum(mdcHeader_t *header, trRefEntity_t *ent)
 {
 	int        i, j;
@@ -310,11 +316,10 @@ static int R_ComputeFogNum(mdcHeader_t *header, trRefEntity_t *ent)
 	return 0;
 }
 
-/*
-=================
-R_AddMDCSurfaces
-=================
-*/
+/**
+ * @brief R_AddMDCSurfaces
+ * @param[in,out] ent
+ */
 void R_AddMDCSurfaces(trRefEntity_t *ent)
 {
 	int          i;
@@ -325,10 +330,7 @@ void R_AddMDCSurfaces(trRefEntity_t *ent)
 	int          cull;
 	int          lod;
 	int          fogNum;
-	qboolean     personalModel;
-
-	// don't add third_person objects if not in a portal
-	personalModel = (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal;
+	qboolean     personalModel = (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal; // don't add third_person objects if not in a portal
 
 	if (ent->e.renderfx & RF_WRAP_FRAMES)
 	{
@@ -345,9 +347,9 @@ void R_AddMDCSurfaces(trRefEntity_t *ent)
 	    || (ent->e.oldframe >= tr.currentModel->model.mdc[0]->numFrames)
 	    || (ent->e.oldframe < 0))
 	{
-		ri.Printf(PRINT_DEVELOPER, "R_AddMDCSurfaces: no such frame %d to %d for '%s'\n",
-		          ent->e.oldframe, ent->e.frame,
-		          tr.currentModel->name);
+		Ren_Developer("R_AddMDCSurfaces: no such frame %d to %d for '%s'\n",
+		              ent->e.oldframe, ent->e.frame,
+		              tr.currentModel->name);
 		ent->e.frame    = 0;
 		ent->e.oldframe = 0;
 	}
@@ -407,13 +409,13 @@ void R_AddMDCSurfaces(trRefEntity_t *ent)
 				hash = Com_HashKey(s, strlen(s));
 				for (j = 0 ; j < skin->numSurfaces ; j++)
 				{
-					if (hash != skin->surfaces[j]->hash)
+					if (hash != skin->surfaces[j].hash)
 					{
 						continue;
 					}
-					if (!strcmp(skin->surfaces[j]->name, s))
+					if (!strcmp(skin->surfaces[j].name, s))
 					{
-						shader = skin->surfaces[j]->shader;
+						shader = skin->surfaces[j].shader;
 						break;
 					}
 				}
@@ -425,13 +427,13 @@ void R_AddMDCSurfaces(trRefEntity_t *ent)
 				for (j = 0 ; j < skin->numSurfaces ; j++)
 				{
 					// the names have both been lowercased
-					if (hash != skin->surfaces[j]->hash)
+					if (hash != skin->surfaces[j].hash)
 					{
 						continue;
 					}
-					if (!strcmp(skin->surfaces[j]->name, surface->name))
+					if (!strcmp(skin->surfaces[j].name, surface->name))
 					{
-						shader = skin->surfaces[j]->shader;
+						shader = skin->surfaces[j].shader;
 						break;
 					}
 				}

@@ -1,12 +1,12 @@
+#-----------------------------------------------------------------
+# Platform
+#-----------------------------------------------------------------
+
 # Used to store real system processor when we overwrite CMAKE_SYSTEM_PROCESSOR for cross-compile builds
 set(ETLEGACY_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR})
 
 # has to be set to "", otherwise CMake will pass -rdynamic resulting in a client crash
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
-
-#-----------------------------------------------------------------
-# Platform-specific settings
-#-----------------------------------------------------------------
 
 message(STATUS "System: ${CMAKE_SYSTEM} (${ETLEGACY_SYSTEM_PROCESSOR})")
 
@@ -65,6 +65,9 @@ if(UNIX)
 	elseif(CMAKE_SYSTEM MATCHES "FreeBSD")
 		set(OS_LIBRARIES m pthread)
 		set(LIB_SUFFIX ".mp.fbsd.")
+	elseif(CMAKE_SYSTEM MATCHES "NetBSD")
+		set(OS_LIBRARIES m pthread)
+		set(LIB_SUFFIX ".mp.nbsd.")
 	elseif(APPLE)
 		set(OS_LIBRARIES dl m)
 		set(CMAKE_EXE_LINKER_FLAGS "-lobjc -framework Cocoa -framework IOKit -framework CoreFoundation")
@@ -78,7 +81,7 @@ if(UNIX)
 		set(CMAKE_CXX_FLAGS "-isysroot ${CMAKE_OSX_SYSROOT} ${CMAKE_CXX_FLAGS}")
 
 		if(BUILD_CLIENT)
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework Quartz -framework AudioUnit -framework Carbon -framework CoreAudio -framework ForceFeedback -liconv")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework Quartz -framework AudioToolbox -framework AudioUnit -framework Carbon -framework CoreAudio -framework ForceFeedback -liconv")
 		endif()
 		set(LIB_SUFFIX "_mac")
 		set(CMAKE_SHARED_MODULE_SUFFIX "")
@@ -95,13 +98,21 @@ if(UNIX)
 		endif(SUPPORT_VISIBILITY)
 	endif(NOT MSYS)
 elseif(WIN32)
-	add_definitions(-DWINVER=0x501)
+	add_definitions(-DWINVER=0x601)
 
 	if(WIN64)
 		add_definitions(-DC_ONLY)
 	endif(WIN64)
 
 	set(OS_LIBRARIES wsock32 ws2_32 psapi winmm)
+
+	if(BUNDLED_OPENSSL)
+		list(APPEND OS_LIBRARIES Crypt32)
+	endif()
+	if(BUNDLED_SDL)
+		# Libraries for Win32 native and MinGW required by static SDL2 build
+		list(APPEND OS_LIBRARIES user32 gdi32 winmm imm32 ole32 oleaut32 version uuid)
+	endif()
 	set(LIB_SUFFIX "_mp_")
 	if(MSVC)
 		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /O2")
@@ -124,7 +135,7 @@ elseif(WIN32)
 		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT.lib /NODEFAULTLIB:MSVCRTD.lib")
 		add_definitions(-D_CRT_SECURE_NO_WARNINGS) # Do not show CRT warnings
 	endif(MSVC)
-	if(MINGW)
+	if(MINGW AND NOT DEBUG_BUILD)
 		set(CMAKE_C_LINK_EXECUTABLE "${CMAKE_C_LINK_EXECUTABLE} -static-libgcc")
 		set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -static-libgcc -static-libstdc++")
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libgcc")
@@ -133,7 +144,7 @@ elseif(WIN32)
 		set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_C_FLAGS} -static-libgcc -liconv -s")
 		set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS} -static-libgcc -static-libstdc++ -liconv -s")
 		add_definitions(-D_WIN32_IE=0x0501)
-	endif(MINGW)
+	endif(MINGW AND NOT DEBUG_BUILD)
 endif()
 
 # Get the system architecture

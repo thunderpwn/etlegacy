@@ -10,8 +10,7 @@
 #import <Cocoa/Cocoa.h>
 #import <sys/param.h>
 
-#import "SDL.h"
-#import "SDLMain.h"
+#import "SDL2/SDL.h"
 
 #define SDL_USE_CPS 1
 
@@ -208,7 +207,7 @@ static void CustomApplicationMain( int argc, char **argv )
 
 	temparg = [argc UTF8String];
 	arglen  = strlen( temparg ) + 1;
-	arg     = (char *) malloc( arglen );
+	arg     = (char *) Com_Allocate( arglen );
 
 	if (arg == NULL)
 	{
@@ -219,7 +218,7 @@ static void CustomApplicationMain( int argc, char **argv )
 
 	if (newargv == NULL)
 	{
-		free(arg);
+		Com_Dealloc(arg);
 		return;
 	}
 

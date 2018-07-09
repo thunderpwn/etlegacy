@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -35,7 +35,7 @@
 
 #include "client.h"
 
-char *svc_strings[32] =
+const char *svc_strings[32] =
 {
 	"svc_bad",
 
@@ -49,7 +49,12 @@ char *svc_strings[32] =
 	"svc_EOF"
 };
 
-void SHOWNET(msg_t *msg, char *s)
+/**
+ * @brief SHOWNET
+ * @param[in] msg
+ * @param[in] s
+ */
+void SHOWNET(msg_t *msg, const char *s)
 {
 	if (cl_shownet->integer >= 2)
 	{
@@ -66,6 +71,11 @@ MESSAGE PARSING
 
 int entLastVisible[MAX_CLIENTS];
 
+/**
+ * @brief isEntVisible
+ * @param[in,out] ent
+ * @return
+ */
 qboolean isEntVisible(entityState_t *ent)
 {
 	trace_t tr;
@@ -75,7 +85,7 @@ qboolean isEntVisible(entityState_t *ent)
 
 	VectorCopy(cl.cgameClientLerpOrigin, start);
 	start[2] += (cl.snap.ps.viewheight - 1);
-	if (cl.snap.ps.leanf != 0)
+	if (cl.snap.ps.leanf != 0.f)
 	{
 		vec3_t lright, v3ViewAngles;
 		VectorCopy(cl.snap.ps.viewangles, v3ViewAngles);
@@ -187,6 +197,12 @@ qboolean isEntVisible(entityState_t *ent)
 
 /**
  * @brief Parses deltas from the given base and adds the resulting entity to the current frame
+ *
+ * @param[in] msg
+ * @param[in,out] frame
+ * @param[in] newnum
+ * @param[in,out] old
+ * @param[in] unchanged
  */
 void CL_DeltaEntity(msg_t *msg, clSnapshot_t *frame, int newnum, entityState_t *old, qboolean unchanged)
 {
@@ -232,16 +248,22 @@ void CL_DeltaEntity(msg_t *msg, clSnapshot_t *frame, int newnum, entityState_t *
 	frame->numEntities++;
 }
 
-/*
-==================
-CL_ParsePacketEntities
-==================
-*/
+/**
+ * @brief CL_ParsePacketEntities
+ * @param[in] msg
+ * @param[in] oldframe
+ * @param[out] newframe
+ *
+ * @note oldnum is set to MAX_GENTITIES to ensure newnum
+ * will never be greater than oldnum in case of invalid oldframe or oldindex
+ */
 void CL_ParsePacketEntities(msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *newframe)
 {
-	int           newnum;
-	entityState_t *oldstate = NULL;
-	int           oldindex  = 0, oldnum;
+	entityState_t *oldstate;
+	int           oldindex, newnum, oldnum;
+
+	oldstate = NULL;
+	oldindex = 0;
 
 	newframe->parseEntitiesNum = cl.parseEntitiesNum;
 	newframe->numEntities      = 0;
@@ -250,13 +272,13 @@ void CL_ParsePacketEntities(msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *ne
 
 	if (!oldframe)
 	{
-		oldnum = 99999;
+		oldnum = MAX_GENTITIES;
 	}
 	else
 	{
 		if (oldindex >= oldframe->numEntities)
 		{
-			oldnum = 99999;
+			oldnum = MAX_GENTITIES;
 		}
 		else
 		{
@@ -271,7 +293,7 @@ void CL_ParsePacketEntities(msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *ne
 		// read the entity index number
 		newnum = MSG_ReadBits(msg, GENTITYNUM_BITS);
 
-		if (newnum == (MAX_GENTITIES - 1))
+		if (newnum >= (MAX_GENTITIES - 1))
 		{
 			break;
 		}
@@ -292,9 +314,9 @@ void CL_ParsePacketEntities(msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *ne
 
 			oldindex++;
 
-			if (oldindex >= oldframe->numEntities)
+			if (!oldframe || oldindex >= oldframe->numEntities)
 			{
-				oldnum = 99999;
+				oldnum = MAX_GENTITIES;
 			}
 			else
 			{
@@ -303,6 +325,7 @@ void CL_ParsePacketEntities(msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *ne
 				oldnum = oldstate->number;
 			}
 		}
+
 		if (oldnum == newnum)
 		{
 			// delta from previous state
@@ -316,7 +339,7 @@ void CL_ParsePacketEntities(msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *ne
 
 			if (oldindex >= oldframe->numEntities)
 			{
-				oldnum = 99999;
+				oldnum = MAX_GENTITIES;
 			}
 			else
 			{
@@ -324,10 +347,8 @@ void CL_ParsePacketEntities(msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *ne
 				    (oldframe->parseEntitiesNum + oldindex) & (MAX_PARSE_ENTITIES - 1)];
 				oldnum = oldstate->number;
 			}
-			continue;
 		}
-
-		if (oldnum > newnum)
+		else if (oldnum > newnum)
 		{
 			// delta from baseline
 			if (cl_shownet->integer == 3)
@@ -335,13 +356,11 @@ void CL_ParsePacketEntities(msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *ne
 				Com_Printf("%3i:  baseline: %i\n", msg->readcount, newnum);
 			}
 			CL_DeltaEntity(msg, newframe, newnum, &cl.entityBaselines[newnum], qfalse);
-			continue;
 		}
-
 	}
 
 	// any remaining entities in the old frame are copied over
-	while (oldnum != 99999)
+	while (oldnum != MAX_GENTITIES)
 	{
 		// one or more entities from the old packet are unchanged
 		if (cl_shownet->integer == 3)
@@ -354,7 +373,7 @@ void CL_ParsePacketEntities(msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *ne
 
 		if (oldindex >= oldframe->numEntities)
 		{
-			oldnum = 99999;
+			oldnum = MAX_GENTITIES;
 		}
 		else
 		{
@@ -373,6 +392,8 @@ void CL_ParsePacketEntities(msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *ne
  * @brief If the snapshot is parsed properly, it will be copied to
  * cl.snap and saved in cl.snapshots[].  If the snapshot is invalid
  * for any reason, no changes to the state will be made at all.
+ *
+ * @param[in] msg
  */
 void CL_ParseSnapshot(msg_t *msg)
 {
@@ -389,7 +410,7 @@ void CL_ParseSnapshot(msg_t *msg)
 
 	// read in the new snapshot to a temporary buffer
 	// we will only copy to cl.snap if it is valid
-	memset(&newSnap, 0, sizeof(newSnap));
+	Com_Memset(&newSnap, 0, sizeof(newSnap));
 
 	// we will have read any new server commands in this
 	// message before we got to svc_snapshot
@@ -566,11 +587,12 @@ void CL_ParseSnapshot(msg_t *msg)
 int cl_connectedToPureServer;
 int cl_connectedToCheatServer;
 
+void CL_PurgeCache(void);
+
 /**
  * @brief The systeminfo configstring has been changed, so parse new information out of it.
  * This will happen at every gamestate, and possibly during gameplay.
  */
-void CL_PurgeCache(void);
 void CL_SystemInfoChanged(void)
 {
 	char       *systemInfo = cl.gameState.stringData + cl.gameState.stringOffsets[CS_SYSTEMINFO];
@@ -583,7 +605,7 @@ void CL_SystemInfoChanged(void)
 	// in some cases, outdated cp commands might get sent with this news serverId
 	cl.serverId = atoi(Info_ValueForKey(systemInfo, "sv_serverid"));
 
-	memset(&entLastVisible, 0, sizeof(entLastVisible));
+	Com_Memset(&entLastVisible, 0, sizeof(entLastVisible));
 
 	// don't set any vars when playing a demo
 	if (clc.demoplaying)
@@ -623,7 +645,7 @@ void CL_SystemInfoChanged(void)
 		// ehw!
 		if (!Q_stricmp(key, "fs_game"))
 		{
-			if (FS_CheckDirTraversal(value))
+			if (FS_InvalidGameDir(value))
 			{
 				Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_game value %s\n", value);
 				continue;
@@ -661,7 +683,7 @@ void CL_SystemInfoChanged(void)
 
 	// big hack to clear the image cache on a pure change
 	//cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" );
-	if (Cvar_VariableValue("sv_pure"))
+	if (Cvar_VariableValue("sv_pure") != 0.f)
 	{
 		if (!cl_connectedToPureServer && cls.state <= CA_CONNECTED)
 		{
@@ -679,11 +701,10 @@ void CL_SystemInfoChanged(void)
 	}
 }
 
-/*
-==================
-CL_ParseGamestate
-==================
-*/
+/**
+ * @brief CL_ParseGamestate
+ * @param[in] msg
+ */
 void CL_ParseGamestate(msg_t *msg)
 {
 	int           i;
@@ -733,7 +754,7 @@ void CL_ParseGamestate(msg_t *msg)
 
 			// append it to the gameState string buffer
 			cl.gameState.stringOffsets[i] = cl.gameState.dataCount;
-			memcpy(cl.gameState.stringData + cl.gameState.dataCount, s, len + 1);
+			Com_Memcpy(cl.gameState.stringData + cl.gameState.dataCount, s, len + 1);
 			cl.gameState.dataCount += len + 1;
 		}
 		else if (cmd == svc_baseline)
@@ -743,7 +764,7 @@ void CL_ParseGamestate(msg_t *msg)
 			{
 				Com_Error(ERR_DROP, "Baseline number out of range: %i", newnum);
 			}
-			memset(&nullstate, 0, sizeof(nullstate));
+			Com_Memset(&nullstate, 0, sizeof(nullstate));
 			es = &cl.entityBaselines[newnum];
 			MSG_ReadDeltaEntity(msg, &nullstate, es, newnum);
 		}
@@ -782,6 +803,8 @@ void CL_ParseGamestate(msg_t *msg)
 
 /**
  * @brief A download message has been received from the server
+ *
+ * @param[in] msg
  */
 void CL_ParseDownload(msg_t *msg)
 {
@@ -821,16 +844,17 @@ void CL_ParseDownload(msg_t *msg)
 				Cbuf_ExecuteText(EXEC_APPEND, "quit\n");
 				CL_AddReliableCommand("wwwdl bbl8r");   // not sure if that's the right msg
 				cls.download.bWWWDlAborting = qtrue;
+				Com_Printf("Disconnecting from game to download file '%s' (fallback URL)\n", cls.download.downloadName);
 				return;
 			}
 			Cvar_SetValue("cl_downloadSize", cls.download.downloadSize);
-			Com_DPrintf("Server redirected download: %s\n", cls.download.downloadName);
+			Com_Printf("Server redirected download: %s\n", cls.download.downloadName);
 			cls.download.bWWWDl = qtrue; // activate wwwdl client loop
 			CL_AddReliableCommand("wwwdl ack");
 			// make sure the server is not trying to redirect us again on a bad checksum
 			if (strstr(cls.download.badChecksumList, va("@%s", cls.download.originalDownloadName)))
 			{
-				Com_Printf("refusing redirect to %s by server (bad checksum)\n", cls.download.downloadName);
+				Com_Printf("Refusing redirect to %s by server (bad checksum)\n", cls.download.downloadName);
 				CL_AddReliableCommand("wwwdl fail");
 				cls.download.bWWWDlAborting = qtrue;
 				return;
@@ -854,6 +878,7 @@ void CL_ParseDownload(msg_t *msg)
 			{
 				CL_AddReliableCommand("wwwdl bbl8r");
 				cls.download.bWWWDlDisconnected = qtrue;
+				Com_Printf("Disconnecting from game to download file '%s'\n", cls.download.downloadName);
 			}
 			return;
 		}
@@ -878,7 +903,6 @@ void CL_ParseDownload(msg_t *msg)
 		if (cls.download.downloadSize < 0)
 		{
 			Com_Error(ERR_DROP, "%s", MSG_ReadString(msg));
-			return;
 		}
 	}
 
@@ -886,14 +910,13 @@ void CL_ParseDownload(msg_t *msg)
 	if (size < 0 || size > sizeof(data))
 	{
 		Com_Error(ERR_DROP, "CL_ParseDownload: Invalid size %d for download chunk.", size);
-		return;
 	}
 
 	MSG_ReadData(msg, data, size);
 
 	if (cls.download.downloadBlock != block)
 	{
-		Com_DPrintf("CL_ParseDownload: Expected block %d, got %d\n", cls.download.downloadBlock, block);
+		Com_Printf("CL_ParseDownload: Expected block %d, got %d\n", cls.download.downloadBlock, block);
 		return;
 	}
 
@@ -913,7 +936,12 @@ void CL_ParseDownload(msg_t *msg)
 
 	if (size)
 	{
-		FS_Write(data, size, cls.download.download);
+		if (FS_Write(data, size, cls.download.download) == 0)
+		{
+			Com_Printf("CL_ParseDownload: Can't write download to disk\n");
+			// FIXME: close file and clean up
+			//Com_Error(ERR_DROP, "CL_ParseDownload: Can't write download to disk");
+		}
 	}
 
 	CL_AddReliableCommand(va("nextdl %d", cls.download.downloadBlock));
@@ -950,14 +978,12 @@ void CL_ParseDownload(msg_t *msg)
 	}
 }
 
-/*
-=====================
-CL_ParseCommandString
-
-Command strings are just saved off until cgame asks for them
-when it transitions a snapshot
-=====================
-*/
+/**
+ * @brief Command strings are just saved off until cgame asks for them
+ * when it transitions a snapshot
+ *
+ * @param[in] msg
+ */
 void CL_ParseCommandString(msg_t *msg)
 {
 	char *s;
@@ -978,11 +1004,10 @@ void CL_ParseCommandString(msg_t *msg)
 	Q_strncpyz(clc.serverCommands[index], s, sizeof(clc.serverCommands[index]));
 }
 
-/*
-=====================
-CL_ParseBinaryMessage
-=====================
-*/
+/**
+ * @brief CL_ParseBinaryMessage
+ * @param[in] msg
+ */
 void CL_ParseBinaryMessage(msg_t *msg)
 {
 	int size;
@@ -998,11 +1023,10 @@ void CL_ParseBinaryMessage(msg_t *msg)
 	CL_CGameBinaryMessageReceived(&msg->data[msg->readcount], size, cl.snap.serverTime);
 }
 
-/*
-=====================
-CL_ParseServerMessage
-=====================
-*/
+/**
+ * @brief CL_ParseServerMessage
+ * @param[in] msg
+ */
 void CL_ParseServerMessage(msg_t *msg)
 {
 	int cmd;
@@ -1032,7 +1056,6 @@ void CL_ParseServerMessage(msg_t *msg)
 		if (msg->readcount > msg->cursize)
 		{
 			Com_Error(ERR_DROP, "CL_ParseServerMessage: read past end of server message");
-			break;
 		}
 
 		cmd = MSG_ReadByte(msg);
@@ -1067,7 +1090,6 @@ void CL_ParseServerMessage(msg_t *msg)
 		{
 		default:
 			Com_Error(ERR_DROP, "CL_ParseServerMessage: Illegible server message %d", cmd);
-			break;
 		case svc_nop:
 			break;
 		case svc_serverCommand:

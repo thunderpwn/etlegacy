@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -60,6 +60,9 @@ int r_firstSceneDecalProjector;
 int r_numDecalProjectors;
 int r_firstSceneDecal;
 
+/**
+ * @brief R_InitNextFrame
+ */
 void R_InitNextFrame(void)
 {
 	backEndData->commands.used = 0;
@@ -69,6 +72,9 @@ void R_InitNextFrame(void)
 
 	r_numLights       = 0;
 	r_firstSceneLight = 0;
+
+	r_numcoronas      = 0;
+	r_firstSceneCorona = 0;
 
 	r_numEntities      = 0;
 	r_firstSceneEntity = 0;
@@ -87,14 +93,13 @@ void R_InitNextFrame(void)
 	r_firstSceneDecal          = 0;
 }
 
-/*
-====================
-RE_ClearScene
-====================
-*/
+/**
+ * @brief RE_ClearScene
+ */
 void RE_ClearScene(void)
 {
 	r_firstSceneLight  = r_numLights;
+	r_firstSceneCorona = r_numcoronas;
 	r_firstSceneEntity = r_numEntities;
 	r_firstScenePoly   = r_numPolys;
 }
@@ -105,13 +110,9 @@ DISCRETE POLYS
 ===========================================================================
 */
 
-/*
-=====================
-R_AddPolygonSurfaces
-
-Adds all the scene's polys into this view's drawsurf list
-=====================
-*/
+/**
+ * @brief Adds all the scene's polys into this view's drawsurf list
+ */
 void R_AddPolygonSurfaces(void)
 {
 	int       i;
@@ -132,13 +133,9 @@ void R_AddPolygonSurfaces(void)
 	}
 }
 
-/*
-=====================
-R_AddPolygonSurfaces
-
-Adds all the scene's polys into this view's drawsurf list
-=====================
-*/
+/**
+ * @brief Adds all the scene's polys into this view's drawsurf list
+ */
 void R_AddPolygonBufferSurfaces(void)
 {
 	int             i;
@@ -156,11 +153,13 @@ void R_AddPolygonBufferSurfaces(void)
 	}
 }
 
-/*
-=====================
-R_AddPolysToScene
-=====================
-*/
+/**
+ * @brief R_AddPolysToScene
+ * @param[in] hShader
+ * @param[in] numVerts
+ * @param[in] verts
+ * @param[in] numPolys
+ */
 static void R_AddPolysToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts, int numPolys)
 {
 	srfPoly_t *poly;
@@ -187,7 +186,7 @@ static void R_AddPolysToScene(qhandle_t hShader, int numVerts, const polyVert_t 
 
 	for (j = 0; j < numPolys; j++)
 	{
-		if (r_numPolyVerts + numVerts >= r_maxpolyverts->integer || r_numPolys >= r_maxpolys->integer)
+		if (r_numPolyVerts + numVerts >= r_maxPolyVerts->integer || r_numPolys >= r_maxPolys->integer)
 		{
 			/*
 			   NOTE TTimo this was initially a PRINT_WARNING
@@ -252,31 +251,33 @@ static void R_AddPolysToScene(qhandle_t hShader, int numVerts, const polyVert_t 
 	}
 }
 
-/*
-=====================
-RE_AddPolyToScene
-=====================
-*/
+/**
+ * @brief RE_AddPolyToScene
+ * @param[in] hShader
+ * @param[in] numVerts
+ * @param[in] verts
+ */
 void RE_AddPolyToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts)
 {
 	R_AddPolysToScene(hShader, numVerts, verts, 1);
 }
 
-/*
-=====================
-RE_AddPolysToScene
-=====================
-*/
+/**
+ * @brief RE_AddPolysToScene
+ * @param[in] hShader
+ * @param[in] numVerts
+ * @param[in] verts
+ * @param[in] numPolys
+ */
 void RE_AddPolysToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts, int numPolys)
 {
 	R_AddPolysToScene(hShader, numVerts, verts, numPolys);
 }
 
-/*
-=====================
-RE_AddPolyBufferToScene
-=====================
-*/
+/**
+ * @brief RE_AddPolyBufferToScene
+ * @param[in] pPolyBuffer
+ */
 void RE_AddPolyBufferToScene(polyBuffer_t *pPolyBuffer)
 {
 	srfPolyBuffer_t *pPolySurf;
@@ -328,11 +329,10 @@ void RE_AddPolyBufferToScene(polyBuffer_t *pPolyBuffer)
 
 //=================================================================================
 
-/*
-=====================
-RE_AddRefEntityToScene
-=====================
-*/
+/**
+ * @brief RE_AddRefEntityToScene
+ * @param[in] ent
+ */
 void RE_AddRefEntityToScene(const refEntity_t *ent)
 {
 	if (!tr.registered)
@@ -372,14 +372,14 @@ void RE_AddRefEntityToScene(const refEntity_t *ent)
 	r_numEntities++;
 }
 
-/*
-=====================
-RE_AddRefLightToScene
-=====================
-*/
-void RE_AddRefLightToScene(const refLight_t *l)
+#if defined(USE_REFLIGHT)
+/**
+ * @brief RE_AddRefLightToScene
+ * @param[in] l
+ */
+void RE_AddRefLightToScene(const refLight_t *light)
 {
-	trRefLight_t *light;
+	trRefLight_t *trlight;
 
 	if (!tr.registered)
 	{
@@ -392,46 +392,45 @@ void RE_AddRefLightToScene(const refLight_t *l)
 		return;
 	}
 
-	if (l->radius[0] <= 0 && !VectorLength(l->radius) && !VectorLength(l->projTarget))
+	if (light->radius[0] <= 0 && VectorLength(light->radius) == 0.f && VectorLength(light->projTarget) == 0.f)
 	{
 		return;
 	}
 
-	if ((unsigned)l->rlType >= RL_MAX_REF_LIGHT_TYPE)
+	if ((unsigned)light->rlType >= RL_MAX_REF_LIGHT_TYPE)
 	{
-		Ren_Drop("RE_AddRefLightToScene: bad rlType %i", l->rlType);
+		Ren_Drop("RE_AddRefLightToScene: bad rlType %i", light->rlType);
 	}
 
-	light = &backEndData->lights[r_numLights++];
-	Com_Memcpy(&light->l, l, sizeof(light->l));
+	trlight = &backEndData->lights[r_numLights++];
+	Com_Memcpy(&trlight->l, light, sizeof(trlight->l));
 
-	light->isStatic = qfalse;
-	light->additive = qtrue;
+	trlight->isStatic = qfalse;
+	trlight->additive = qtrue;
 
-	if (light->l.scale <= 0)
+	if (trlight->l.scale <= 0)
 	{
-		light->l.scale = r_lightScale->value;
+		trlight->l.scale = r_lightScale->value;
 	}
 
 	if (!HDR_ENABLED())
 	{
-		if (light->l.scale >= r_lightScale->value)
+		if (trlight->l.scale >= r_lightScale->value)
 		{
-			light->l.scale = r_lightScale->value;
+			trlight->l.scale = r_lightScale->value;
 		}
 	}
 
-	if (!r_dynamicLightCastShadows->integer && !light->l.inverseShadows)
+	if (!r_dynamicLightShadows->integer && !trlight->l.inverseShadows)
 	{
-		light->l.noShadows = qtrue;
+		trlight->l.noShadows = qtrue;
 	}
 }
+#endif
 
-/*
-=====================
-R_AddWorldLightsToScene
-=====================
-*/
+/**
+ * @brief R_AddWorldLightsToScene
+ */
 static void R_AddWorldLightsToScene()
 {
 	int          i;
@@ -474,13 +473,17 @@ static void R_AddWorldLightsToScene()
 	}
 }
 
-/*
-=====================
-RE_AddDynamicLightToScene
-
-modified dlight system to support seperate radius and intensity
-=====================
-*/
+/**
+ * @brief modified dlight system to support seperate radius and intensity
+ * @param[in] org
+ * @param[in] radius
+ * @param[in] intensity
+ * @param[in] r
+ * @param[in] g
+ * @param[in] b
+ * @param hShader - unused
+ * @param flags   - unused
+ */
 void RE_AddDynamicLightToScene(const vec3_t org, float radius, float intensity, float r, float g, float b, qhandle_t hShader, int flags)
 {
 	trRefLight_t *light;
@@ -528,7 +531,7 @@ void RE_AddDynamicLightToScene(const vec3_t org, float radius, float intensity, 
 	light->l.color[1] = g;
 	light->l.color[2] = b;
 
-	light->l.noShadows      = r_dynamicLightCastShadows->integer ? qfalse : qtrue;
+	light->l.noShadows      = r_dynamicLightShadows->integer ? qfalse : qtrue;
 	light->l.inverseShadows = qfalse;
 
 	light->isStatic = qfalse;
@@ -543,11 +546,16 @@ void RE_AddDynamicLightToScene(const vec3_t org, float radius, float intensity, 
 #endif
 }
 
-/*
-==============
-RE_AddCoronaToScene
-==============
-*/
+/**
+ * @brief RE_AddCoronaToScene
+ * @param[in] org
+ * @param[in] r
+ * @param[in] g
+ * @param[in] b
+ * @param[in] scale
+ * @param[in] id
+ * @param[in] visible
+ */
 void RE_AddCoronaToScene(const vec3_t org, float r, float g, float b, float scale, int id, qboolean visible)
 {
 	corona_t *cor;
@@ -556,9 +564,15 @@ void RE_AddCoronaToScene(const vec3_t org, float r, float g, float b, float scal
 	{
 		return;
 	}
+
+	if (!visible)
+	{
+		return;
+	}
+
 	if (r_numcoronas >= MAX_CORONAS)
 	{
-		Ren_Developer("WARNING RE_AddCoronaToScene: Dropping corona, reached MAX_CORONAS\n"); // changed to developer print - occures on some maps (radar)
+		Ren_Developer("WARNING RE_AddCoronaToScene: Dropping corona, reached MAX_CORONAS\n");
 		return;
 	}
 
@@ -572,17 +586,15 @@ void RE_AddCoronaToScene(const vec3_t org, float r, float g, float b, float scal
 	cor->visible  = visible;
 }
 
-/*
-@@@@@@@@@@@@@@@@@@@@@
-RE_RenderScene
-
-Draw a 3D view into a part of the window, then return
-to 2D drawing.
-
-Rendering a scene may require multiple views to be rendered
-to handle mirrors,
-@@@@@@@@@@@@@@@@@@@@@
-*/
+/**
+ * @brief Draw a 3D view into a part of the window, then return
+ * to 2D drawing.
+ *
+ * Rendering a scene may require multiple views to be rendered
+ * to handle mirrors.
+ *
+ * @param[in] fd
+ */
 void RE_RenderScene(const refdef_t *fd)
 {
 	viewParms_t parms;
@@ -594,7 +606,7 @@ void RE_RenderScene(const refdef_t *fd)
 	}
 	Ren_LogComment("====== RE_RenderScene =====\n");
 
-	if (r_norefresh->integer)
+	if (r_noreFresh->integer)
 	{
 		return;
 	}
@@ -623,17 +635,15 @@ void RE_RenderScene(const refdef_t *fd)
 	tr.refdef.time    = fd->time;
 	tr.refdef.rdflags = fd->rdflags;
 
-	/*
 	if(fd->rdflags & RDF_SKYBOXPORTAL)
 	{
-	    Ren_Print("skyboxportal = 1\n");
+	    tr.world->hasSkyboxPortal = qtrue; // see int skyboxportal var tr_scene.c/r1
 	}
-	*/
 
 	// copy the areamask data over and note if it has changed, which
 	// will force a reset of the visible leafs even if the view hasn't moved
 	tr.refdef.areamaskModified = qfalse;
-	if (!(tr.refdef.rdflags & RDF_NOWORLDMODEL) && !((tr.refdef.rdflags & RDF_SKYBOXPORTAL) && tr.world->numSkyNodes > 0))
+	if (!(tr.refdef.rdflags & RDF_NOWORLDMODEL) && !((tr.refdef.rdflags & RDF_SKYBOXPORTAL) && tr.world && tr.world->numSkyNodes > 0))
 	{
 		int areaDiff;
 		int i;
@@ -656,7 +666,7 @@ void RE_RenderScene(const refdef_t *fd)
 	R_AddWorldLightsToScene();
 
 	// derived info
-	tr.refdef.floatTime = tr.refdef.time * 0.001f;
+	tr.refdef.floatTime = tr.refdef.time * 0.001;
 
 	tr.refdef.numDrawSurfs = r_firstSceneDrawSurf;
 	tr.refdef.drawSurfs    = backEndData->drawSurfs;
@@ -738,8 +748,6 @@ void RE_RenderScene(const refdef_t *fd)
 
 	parms.fovX = tr.refdef.fov_x;
 	parms.fovY = tr.refdef.fov_y;
-
-	parms.stereoFrame = tr.refdef.stereoFrame;
 
 	VectorCopy(fd->vieworg, parms.orientation.origin);
 	VectorCopy(fd->viewaxis[0], parms.orientation.axis[0]);

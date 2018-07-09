@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -34,21 +34,14 @@
 
 #include "g_local.h"
 
-const char *systemMessages[SM_NUM_SYS_MSGS] =
-{
-	"SYS_NeedMedic",
-	"SYS_NeedEngineer",
-	"SYS_NeedLT",
-	"SYS_NeedCovertOps",
-	"SYS_MenDown",
-	"SYS_ObjCaptured",
-	"SYS_ObjLost",
-	"SYS_ObjDestroyed",
-	"SYS_ConstructComplete",
-	"SYS_ConstructFailed",
-	"SYS_Destroyed",
-};
 
+/**
+ * @brief G_NeedEngineers
+ * @param[in] team
+ * @return
+ *
+ * @note Unused
+ */
 qboolean G_NeedEngineers(int team)
 {
 	int       i;
@@ -87,13 +80,18 @@ qboolean G_NeedEngineers(int team)
 	return qfalse;
 }
 
+/**
+ * @brief G_GetSysMessageNumber
+ * @param[in] sysMsg
+ * @return
+ */
 int G_GetSysMessageNumber(const char *sysMsg)
 {
 	int i;
 
 	for (i = 0; i < SM_NUM_SYS_MSGS; i++)
 	{
-		if (!Q_stricmp(systemMessages[i], sysMsg))
+		if (!Q_stricmp(HQMessages[i].codeString, sysMsg))
 		{
 			return i;
 		}
@@ -102,6 +100,11 @@ int G_GetSysMessageNumber(const char *sysMsg)
 	return -1;
 }
 
+/**
+ * @brief G_SendSystemMessage
+ * @param[in] message
+ * @param[in] team
+ */
 void G_SendSystemMessage(sysMsg_t message, int team)
 {
 	gentity_t *other;
@@ -110,7 +113,7 @@ void G_SendSystemMessage(sysMsg_t message, int team)
 
 	time = team == TEAM_AXIS ? &level.lastSystemMsgTime[0] : &level.lastSystemMsgTime[1];
 
-	if (*time && (level.time - *time) < 15000)
+	if (*time && (level.time - *time) < 15000) // cvar?
 	{
 		return;
 	}
@@ -131,11 +134,13 @@ void G_SendSystemMessage(sysMsg_t message, int team)
 			continue;
 		}
 
-		trap_SendServerCommand(other - g_entities, va("vschat 0 %d 3 %s 0 0 0", (int)(other - g_entities), systemMessages[message]));
+		trap_SendServerCommand((int)(other-g_entities), va("vschat %i %i", (int)(other-g_entities), message));
 	}
 }
 
-/* unused
+/*
+ * @brief G_CheckForNeededClasses
+ * @note Unused
 void G_CheckForNeededClasses(void)
 {
     qboolean   playerClasses[NUM_PLAYER_CLASSES - 1][2];
@@ -144,8 +149,8 @@ void G_CheckForNeededClasses(void)
     gentity_t  *ent;
     static int lastcheck;
 
-    memset(playerClasses, 0, sizeof(playerClasses));
-    memset(teamCounts, 0, sizeof(teamCounts));
+    Com_Memset(playerClasses, 0, sizeof(playerClasses));
+    Com_Memset(teamCounts, 0, sizeof(teamCounts));
 
     if (lastcheck && (level.time - lastcheck) < 60000)
     {
@@ -249,15 +254,17 @@ void G_CheckForNeededClasses(void)
 }
 */
 
-/* unused
+/*
+ * @brief G_CheckMenDown
+ * @note Unused
 void G_CheckMenDown(void)
 {
     int       alive[2], dead[2];
     gentity_t *ent;
     int       i, team;
 
-    memset(dead, 0, sizeof(dead));
-    memset(alive, 0, sizeof(alive));
+    Com_Memset(dead, 0, sizeof(dead));
+    Com_Memset(alive, 0, sizeof(alive));
 
     for (i = 0, ent = g_entities; i < level.maxclients; i++, ent++)
     {

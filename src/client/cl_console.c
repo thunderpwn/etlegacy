@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -47,7 +47,7 @@ console_t con;
 cvar_t *con_openspeed;
 cvar_t *con_autoclear;
 
-vec4_t console_highlightcolor = { 0.5, 0.5, 0.2, 0.45 };
+vec4_t console_highlightcolor = { 0.5f, 0.5f, 0.2f, 0.45f };
 
 /**
  * @brief Toggle console
@@ -75,12 +75,12 @@ void Con_ToggleConsole_f(void)
 		cls.keyCatchers |= KEYCATCH_CONSOLE;
 
 		// short console
-		if (keys[K_CTRL].down)
+		if (keys[K_LCTRL].down || keys[K_RCTRL].down)
 		{
-			con.desiredFrac = (4.0 * SMALLCHAR_HEIGHT) / cls.glconfig.vidHeight;
+			con.desiredFrac = (4.0f * SMALLCHAR_HEIGHT) / cls.glconfig.vidHeight;
 		}
 		// full console
-		else if (keys[K_ALT].down)
+		else if (keys[K_LALT].down || keys[K_RALT].down)
 		{
 			con.desiredFrac = 1.0f;
 		}
@@ -118,7 +118,7 @@ void Con_Dump_f(void)
 	int          l, x, i;
 	unsigned int *line;
 	fileHandle_t f;
-	int          bufferlen;
+	size_t       bufferlen;
 	char         *buffer;
 	char         filename[MAX_QPATH];
 
@@ -130,6 +130,12 @@ void Con_Dump_f(void)
 
 	Q_strncpyz(filename, Cmd_Argv(1), sizeof(filename));
 	COM_DefaultExtension(filename, sizeof(filename), ".txt");
+
+	if (!COM_CompareExtension(filename, ".txt"))
+	{
+		Com_Printf("Con_Dump_f: Only the '.txt' extension is supported by this command!\n");
+		return;
+	}
 
 	f = FS_FOpenFileWrite(filename);
 	if (!f)
@@ -156,7 +162,7 @@ void Con_Dump_f(void)
 	}
 
 #ifdef _WIN32
-	bufferlen = con.linewidth + 3 * sizeof(char);
+	bufferlen = con.linewidth + 3 * (int)sizeof(char);
 #else
 	bufferlen = con.linewidth + 2 * sizeof(char);
 #endif
@@ -186,7 +192,7 @@ void Con_Dump_f(void)
 #else
 		Q_strcat(buffer, bufferlen, "\n");
 #endif
-		FS_Write(buffer, strlen(buffer), f);
+		(void) FS_Write(buffer, strlen(buffer), f);
 	}
 
 	Hunk_FreeTempMemory(buffer);
@@ -198,9 +204,9 @@ void Con_Dump_f(void)
  */
 void Con_CheckResize(void)
 {
-	int             i, width;
-	MAC_STATIC int  tbuf[CON_TEXTSIZE];
-	MAC_STATIC byte tbuff[CON_TEXTSIZE];
+	int  i, width;
+	int  tbuf[CON_TEXTSIZE];
+	byte tbuff[CON_TEXTSIZE];
 
 	// wasn't allowing for larger consoles
 	// width = (SCREEN_WIDTH / SMALLCHAR_WIDTH) - 2;
@@ -245,8 +251,8 @@ void Con_CheckResize(void)
 			numchars = con.linewidth;
 		}
 
-		memcpy(tbuf, con.text, CON_TEXTSIZE * sizeof(int));
-		memcpy(tbuff, con.textColor, CON_TEXTSIZE * sizeof(byte));
+		Com_Memcpy(tbuf, con.text, CON_TEXTSIZE * sizeof(int));
+		Com_Memcpy(tbuff, con.textColor, CON_TEXTSIZE * sizeof(byte));
 		for (i = 0; i < CON_TEXTSIZE; i++)
 		{
 			con.text[i]      = ' ';
@@ -274,6 +280,8 @@ void Con_CheckResize(void)
 
 /**
  * @brief Complete file text name
+ * @param args - unused
+ * @param[in] argNum
  */
 void Cmd_CompleteTxtName(char *args, int argNum)
 {
@@ -301,10 +309,9 @@ void Con_Init(void)
 		historyEditLines[i].widthInChars = g_console_field_width;
 	}
 
-	Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f);
-	Cmd_AddCommand("clear", Con_Clear_f);
-	Cmd_AddCommand("condump", Con_Dump_f);
-	Cmd_SetCommandCompletionFunc("condump", Cmd_CompleteTxtName);
+	Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f, "Toogles the console.");
+	Cmd_AddCommand("clear", Con_Clear_f, "Clears console content.");
+	Cmd_AddCommand("condump", Con_Dump_f, "Dumps console content to disk.", Cmd_CompleteTxtName);
 }
 
 /**
@@ -348,8 +355,11 @@ void Con_Linefeed(void)
 #if defined(_WIN32) && !defined(LEGACY_DEBUG)
 #pragma optimize( "g", off ) // msvc totally screws this function up with optimize on
 #endif
+
 /**
  * @brief Handles cursor positioning, line wrapping, etc
+ *
+ * @param[in] txt
  */
 void CL_ConsolePrint(char *txt)
 {
@@ -511,6 +521,9 @@ void Con_DrawInput(void)
 
 /**
  * @brief Draw scrollbar
+ * @param[in] length
+ * @param[in] x
+ * @param[in] y
  */
 void Con_DrawScrollbar(int length, float x, float y)
 {
@@ -542,6 +555,7 @@ void Con_DrawScrollbar(int length, float x, float y)
 
 /**
  * @brief Draws the console with the solid background
+ * @param[in] frac
  */
 void Con_DrawSolidConsole(float frac)
 {
@@ -577,7 +591,17 @@ void Con_DrawSolidConsole(float frac)
 	}
 	else
 	{
-		SCR_DrawPic(0, 0, SCREEN_WIDTH, y, cls.consoleShader);
+		// adjust console background shader for widescreens
+		if (cls.glconfig.windowAspect > RATIO43)
+		{
+			int z = 0.25 * (cls.glconfig.vidWidth - (cls.glconfig.vidHeight * RATIO43));
+
+			SCR_DrawPic(-z, 0, SCREEN_WIDTH + z, y, cls.consoleShader);
+		}
+		else
+		{
+			SCR_DrawPic(0, 0, SCREEN_WIDTH, y, cls.consoleShader);
+		}
 
 		/*
 		// draw the logo
@@ -687,8 +711,8 @@ void Con_DrawSolidConsole(float frac)
 void Con_DrawConsole(void)
 {
 	// render console only if opened but also if disconnected
-	if (!con.displayFrac && !(cls.state == CA_DISCONNECTED &&
-	                          !(cls.keyCatchers & (KEYCATCH_UI | KEYCATCH_CGAME))))
+	if (con.displayFrac == 0.f && !(cls.state == CA_DISCONNECTED &&
+	                                !(cls.keyCatchers & (KEYCATCH_UI | KEYCATCH_CGAME))))
 	{
 		return;
 	}
@@ -718,7 +742,7 @@ void Con_RunConsole(void)
 	// scroll towards the destination height
 	if (con.finalFrac < con.displayFrac)
 	{
-		con.displayFrac -= con_openspeed->value * cls.realFrametime * 0.001;
+		con.displayFrac -= con_openspeed->value * cls.realFrametime * 0.001f;
 
 		if (con.finalFrac > con.displayFrac)
 		{
@@ -727,7 +751,7 @@ void Con_RunConsole(void)
 	}
 	else if (con.finalFrac > con.displayFrac)
 	{
-		con.displayFrac += con_openspeed->value * cls.realFrametime * 0.001;
+		con.displayFrac += con_openspeed->value * cls.realFrametime * 0.001f;
 
 		if (con.finalFrac < con.displayFrac)
 		{
@@ -739,7 +763,7 @@ void Con_RunConsole(void)
 	if (con.displayFrac > 0)
 	{
 		const float scrolldiff   = MAX(0.5f, abs(con.bottomDisplayedLine - con.scrollIndex));
-		int         nudgingValue = con_openspeed->value * cls.realFrametime * 0.005 * scrolldiff;
+		int         nudgingValue = con_openspeed->value * cls.realFrametime * 0.005f * scrolldiff;
 
 		// nudge might turn out to be 0 so just bump it to 1 so we actually move towards our goal
 		if (nudgingValue <= 0)

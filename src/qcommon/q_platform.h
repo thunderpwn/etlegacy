@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -212,7 +212,7 @@
 #elif defined __sparc__
 #define ARCH_STRING "sparc"
 #elif defined __arm__
-#define ARCH_STRING "arm"
+#define ARCH_STRING "arm" // __ARM_ARCH_'V'__ FIXME: add ARM version to the ARCH_STRING
 #elif defined __cris__
 #define ARCH_STRING "cris"
 #elif defined __hppa__

@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -41,8 +41,13 @@ GROWLISTS
 ============================================================================
 */
 
-// malloc / free all in one place for debugging
+// Com_Allocate / free all in one place for debugging
 
+/**
+ * @brief Com_InitGrowList
+ * @param[out] list
+ * @param[in] maxElements
+ */
 void Com_InitGrowList(growList_t *list, int maxElements)
 {
 	list->maxElements     = maxElements;
@@ -50,12 +55,23 @@ void Com_InitGrowList(growList_t *list, int maxElements)
 	list->elements        = (void **)Com_Allocate(list->maxElements * sizeof(void *));
 }
 
+/**
+ * @brief Com_DestroyGrowList
+ * @param[in,out] list
+ */
 void Com_DestroyGrowList(growList_t *list)
 {
 	Com_Dealloc(list->elements);
-	memset(list, 0, sizeof(*list));
+
+	Com_Memset(list, 0, sizeof(*list));
 }
 
+/**
+ * @brief Com_AddToGrowList
+ * @param[in,out] list
+ * @param[in] data
+ * @return
+ */
 int Com_AddToGrowList(growList_t *list, void *data)
 {
 	void **old;
@@ -83,7 +99,8 @@ int Com_AddToGrowList(growList_t *list, void *data)
 
 	list->maxElements *= 2;
 
-	//Com_DPrintf("Resizing growlist to %i maxElements\n", list->maxElements);
+	// whenever we are seeing this we might increase affected growlist
+	Com_DPrintf("Resizing growlist to %i maxElements\n", list->maxElements);
 
 	list->elements = (void **)Com_Allocate(list->maxElements * sizeof(void *));
 
@@ -99,15 +116,30 @@ int Com_AddToGrowList(growList_t *list, void *data)
 	return Com_AddToGrowList(list, data);
 }
 
+/**
+ * @brief Com_GrowListElement
+ * @param[in] list
+ * @param[in] index
+ * @return
+ */
 void *Com_GrowListElement(const growList_t *list, int index)
 {
 	if (index < 0 || index >= list->currentElements)
 	{
 		Ren_Drop("Com_GrowListElement: %i out of range of %i", index, list->currentElements);
 	}
+
 	return list->elements[index];
 }
 
+/**
+ * @brief Com_IndexForGrowListElement
+ * @param[in] list
+ * @param[in] element
+ * @return
+ *
+ * @note Unused
+ */
 int Com_IndexForGrowListElement(const growList_t *list, const void *element)
 {
 	int i;
@@ -119,5 +151,6 @@ int Com_IndexForGrowListElement(const growList_t *list, const void *element)
 			return i;
 		}
 	}
+
 	return -1;
 }

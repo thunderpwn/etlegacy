@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -31,60 +31,64 @@
  */
 /**
  * @file renderer2/tr_flares.c
+ * @brief LIGHT FLARES
+ *
+ * A light flare is an effect that takes place inside the eye when bright light
+ * sources are visible.  The size of the flare reletive to the screen is nearly
+ * constant, irrespective of distance, but the intensity should be proportional
+ * to the projected area of the light source.
+ *
+ * A surface that has been flagged as having a light flare will calculate the
+ * depth buffer value that it's midpoint should have when the surface is added.
+ *
+ * After all opaque surfaces have been rendered, the depth buffer is read back
+ * for each flare in view.  If the point has not been obscured by a closer
+ * surface, the flare should be drawn.
+ *
+ * Surfaces that have a repeated texture should never be flagged as flaring,
+ * because there will only be a single flare added at the midpoint of the
+ * polygon.
+ *
+ * To prevent abrupt popping, the intensity of the flare is interpolated up and
+ * down as it changes visibility.  This involves scene to scene state, unlike
+ * almost all other aspects of the renderer, and is complicated by the fact that
+ * a single frame may have multiple scenes.
+ *
+ * RB_RenderFlares() will be called once per view (twice in a mirrored scene,
+ * potentially up to five or more times in a frame with 3D status bar icons).
  */
 
 #include "tr_local.h"
 
-/*
-=============================================================================
-LIGHT FLARES
-
-A light flare is an effect that takes place inside the eye when bright light
-sources are visible.  The size of the flare reletive to the screen is nearly
-constant, irrespective of distance, but the intensity should be proportional to the
-projected area of the light source.
-
-A surface that has been flagged as having a light flare will calculate the depth
-buffer value that it's midpoint should have when the surface is added.
-
-After all opaque surfaces have been rendered, the depth buffer is read back for
-each flare in view.  If the point has not been obscured by a closer surface, the
-flare should be drawn.
-
-Surfaces that have a repeated texture should never be flagged as flaring, because
-there will only be a single flare added at the midpoint of the polygon.
-
-To prevent abrupt popping, the intensity of the flare is interpolated up and
-down as it changes visibility.  This involves scene to scene state, unlike almost
-all other aspects of the renderer, and is complicated by the fact that a single
-frame may have multiple scenes.
-
-RB_RenderFlares() will be called once per view (twice in a mirrored scene, potentially
-up to five or more times in a frame with 3D status bar icons).
-=============================================================================
-*/
-
-// flare states maintain visibility over multiple frames for fading layers: view, mirror, menu
+/**
+ * @struct flare_s
+ * @typedef flare_t
+ * @brief Flare states maintain visibility over multiple frames for fading
+ * layers: view, mirror, menu
+ */
 typedef struct flare_s
 {
-	struct flare_s *next;       // for active chain
+	struct flare_s *next;           ///< for active chain
 
 	int addedFrame;
 
-	qboolean inPortal;          // true if in a portal view of the scene
+	qboolean inPortal;              ///< true if in a portal view of the scene
 	int frameSceneNum;
 	void *surface;
 	int fogNum;
 
 	int fadeTime;
 
-	qboolean visible;           // state of last test
-	float drawIntensity;            // may be non 0 even if !visible due to fading
+	qboolean cgvisible;             ///< for coronas, the client determines current visibility, but it's still inserted so it will fade out properly
+	qboolean visible;               ///< state of last test
+	float drawIntensity;            ///< may be non 0 even if !visible due to fading
 
 	int windowX, windowY;
 	float eyeZ;
 
 	vec3_t color;
+
+	qboolean isCorona;
 } flare_t;
 
 #define         MAX_FLARES 128
@@ -94,6 +98,9 @@ flare_t *r_activeFlares, *r_inactiveFlares;
 
 int flareCoeff;
 
+/**
+ * @brief R_ClearFlares
+ */
 void R_ClearFlares(void)
 {
 	int i;
@@ -109,14 +116,16 @@ void R_ClearFlares(void)
 	}
 }
 
-/*
-==================
-RB_AddFlare
-
-This is called at surface tesselation time
-==================
-*/
-void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, vec3_t normal)
+/**
+ * @brief This is called at surface tesselation time
+ * @param[in] surface
+ * @param[in] fogNum
+ * @param[in] point
+ * @param[in] color
+ * @param[in] normal
+ * @param[in] visible
+ */
+void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, vec3_t normal, qboolean visible, qboolean isCorona)
 {
 	int     i;
 	flare_t *f; // *oldest;
@@ -146,9 +155,9 @@ void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, vec3_t n
 	if (window[0] < 0 || window[0] >= backEnd.viewParms.viewportWidth ||
 	    window[1] < 0 || window[1] >= backEnd.viewParms.viewportHeight)
 	{
-		return;                 // shouldn't happen, since we check the clip[] above, except for FP rounding
-
+		return; // shouldn't happen, since we check the clip[] above, except for FP rounding
 	}
+
 	// see if a flare with a matching surface, scene, and view exists
 	//oldest = r_flareStructs;
 	for (f = r_activeFlares; f; f = f->next)
@@ -178,7 +187,10 @@ void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, vec3_t n
 		f->frameSceneNum = backEnd.viewParms.frameSceneNum;
 		f->inPortal      = backEnd.viewParms.isPortal;
 		f->addedFrame    = -1;
+		f->isCorona      = isCorona;
 	}
+
+	f->cgvisible = visible;
 
 	if (f->addedFrame != backEnd.viewParms.frameCount - 1)
 	{
@@ -191,16 +203,15 @@ void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, vec3_t n
 
 	VectorCopy(color, f->color);
 
-	d2 = 0.0;
 	d2 = -eye[2];
 	if (d2 > distBias)
 	{
-		if (d2 > (distBias * 2.0))
+		if (d2 > (distBias * 2.0f))
 		{
-			d2 = (distBias * 2.0);
+			d2 = (distBias * 2.0f);
 		}
 		d2 -= distBias;
-		d2  = 1.0 - (d2 * (1.0 / distBias));
+		d2  = 1.0f - (d2 * (1.0f / distBias));
 		d2 *= distLerp;
 	}
 	else
@@ -215,7 +226,7 @@ void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, vec3_t n
 		VectorSubtract(backEnd.viewParms.orientation.origin, point, local);
 		VectorNormalize(local);
 		d1  = DotProduct(local, normal);
-		d1 *= (1.0 - distLerp);
+		d1 *= (1.0f - distLerp);
 		d1 += d2;
 	}
 
@@ -228,11 +239,9 @@ void RB_AddFlare(void *surface, int fogNum, vec3_t point, vec3_t color, vec3_t n
 	f->eyeZ = eye[2];
 }
 
-/*
-==================
-RB_AddLightFlares
-==================
-*/
+/**
+ * @brief RB_AddLightFlares
+ */
 void RB_AddLightFlares(void)
 {
 	int          i, j, k;
@@ -244,8 +253,8 @@ void RB_AddLightFlares(void)
 		return;
 	}
 
-	l   = backEnd.refdef.lights;
-	fog = tr.world->fogs;
+	l = backEnd.refdef.lights;
+	//fog = tr.world->fogs;
 
 	for (i = 0; i < backEnd.refdef.numLights; i++, l++)
 	{
@@ -276,7 +285,55 @@ void RB_AddLightFlares(void)
 			j = 0;
 		}
 
-		RB_AddFlare((void *)l, j, l->l.origin, l->l.color, NULL);
+		RB_AddFlare((void *)l, j, l->l.origin, l->l.color, NULL, qtrue, qfalse);
+	}
+}
+
+/**
+ * @brief RB_AddCoronaFlares
+ */
+void RB_AddCoronaFlares(void)
+{
+	corona_t *cor;
+	int      i, j, k;
+	fog_t    *fog;
+
+	if (r_flares->integer != 1 && r_flares->integer != 3)
+	{
+		return;
+	}
+
+	if (!tr.world) // possible currently at the player model selection menu
+	{
+		return;
+	}
+
+	cor = backEnd.refdef.coronas;
+
+	for (i = 0 ; i < backEnd.refdef.num_coronas ; i++, cor++)
+	{
+		// find which fog volume the corona is in
+		for (j = 1 ; j < tr.world->numFogs ; j++)
+		{
+			fog = &tr.world->fogs[j];
+			for (k = 0 ; k < 3 ; k++)
+			{
+				if (cor->origin[k] < fog->bounds[0][k] || cor->origin[k] > fog->bounds[1][k])
+				{
+					break;
+				}
+			}
+			if (k == 3)
+			{
+				break;
+			}
+		}
+		if (j == tr.world->numFogs)
+		{
+			j = 0;
+		}
+		//RB_AddFlare((void *)cor, j, cor->origin, cor->color, cor->scale, NULL, cor->id, cor->visible);
+		RB_AddFlare((void *)cor, j, cor->origin, cor->color, NULL, cor->visible, qtrue); // cor->scale -> eye
 	}
 }
 
@@ -286,11 +343,10 @@ FLARE BACK END
 ===============================================================================
 */
 
-/*
-==================
-RB_TestFlare
-==================
-*/
+/**
+ * @brief RB_TestFlare
+ * @param[in,out] f
+ */
 void RB_TestFlare(flare_t *f)
 {
 	float    depth;
@@ -299,6 +355,8 @@ void RB_TestFlare(flare_t *f)
 	float    screenZ;
 
 	backEnd.pc.c_flareTests++;
+
+	//visible = f->cgvisible;
 
 	// doing a readpixels is as good as doing a glFinish(), so
 	// don't bother with another sync
@@ -343,59 +401,63 @@ void RB_TestFlare(flare_t *f)
 	f->drawIntensity = fade;
 }
 
-/*
-==================
-RB_RenderFlare
-==================
-*/
+/**
+ * @brief RB_RenderFlare
+ * @param[in] f
+ */
 void RB_RenderFlare(flare_t *f)
 {
-	float  size;
+	float size, distance, intensity, factor;
 	vec3_t color;
+	int	iColor[3];
 
 	backEnd.pc.c_flareRenders++;
 
-#if 1
-	VectorScale(colorWhite, f->drawIntensity, color);
-
-	size = backEnd.viewParms.viewportWidth * (r_flareSize->value / 640.0f + 8 / -f->eyeZ);
-#else
-	/*
-	   As flare sizes stay nearly constant with increasing distance we must decrease the intensity
-	   to achieve a reasonable visual result. The intensity is ~ (size^2 / distance^2) which can be
-	   got by considering the ratio of  (flaresurface on screen) : (Surface of sphere defined by flare origin and distance from flare)
-	   An important requirement is: intensity <= 1 for all distances.
-
-	   The formula used here to compute the intensity is as follows:
-	   intensity = flareCoeff * size^2 / (distance + size*sqrt(flareCoeff))^2.
-	   As you can see, the intensity will have a max. of 1 when the distance is 0.
-
-	   The coefficient flareCoeff will determine the falloff speed with increasing distance.
-	 */
-	float distance, intensity, factor;
-
-	// We don't want too big values anyways when dividing by distance
-	if (f->eyeZ > -1.0f)
+	if (f->isCorona) // corona case
 	{
-		distance = 1.0f;
+		VectorScale(colorWhite, f->drawIntensity, color);
+		iColor[0] = color[0];
+		iColor[1] = color[1];
+		iColor[2] = color[2];
+
+		size = backEnd.viewParms.viewportWidth * (r_flareSize->value / 640.0f + 8 / -f->eyeZ);
 	}
 	else
 	{
-		distance = -f->eyeZ;
+		/*
+		   As flare sizes stay nearly constant with increasing distance we must decrease the intensity
+		   to achieve a reasonable visual result. The intensity is ~ (size^2 / distance^2) which can be
+		   got by considering the ratio of  (flaresurface on screen) : (Surface of sphere defined by flare origin and distance from flare)
+		   An important requirement is: intensity <= 1 for all distances.
+
+		   The formula used here to compute the intensity is as follows:
+		   intensity = flareCoeff * size^2 / (distance + size*sqrt(flareCoeff))^2.
+		   As you can see, the intensity will have a max. of 1 when the distance is 0.
+
+		   The coefficient flareCoeff will determine the falloff speed with increasing distance.
+		 */
+
+		// We don't want too big values anyways when dividing by distance
+		if (f->eyeZ > -1.0f)
+		{
+			distance = 1.0f;
+		}
+		else
+		{
+			distance = -f->eyeZ;
+		}
+
+		// calculate the flare size
+		size = backEnd.viewParms.viewportWidth * (r_flareSize->value / 640.0f + 8 / distance);
+
+		factor    = distance + size * sqrt(flareCoeff);
+		intensity = flareCoeff * size * size / (factor * factor);
+
+		VectorScale(f->color, f->drawIntensity * intensity, color);
+		iColor[0] = color[0] * 255;
+		iColor[1] = color[1] * 255;
+		iColor[2] = color[2] * 255;
 	}
-
-	// calculate the flare size
-	size = backEnd.viewParms.viewportWidth * (r_flareSize->value / 640.0f + 8 / distance);
-
-	factor    = distance + size * sqrt(flareCoeff);
-	intensity = flareCoeff * size * size / (factor * factor);
-
-	VectorScale(f->color, f->drawIntensity * intensity, color);
-	iColor[0] = color[0] * 255;
-	iColor[1] = color[1] * 255;
-	iColor[2] = color[2] * 255;
-#endif
-
 	Tess_Begin(Tess_StageIteratorGeneric, NULL, tr.flareShader, NULL, qfalse, qfalse, -1, f->fogNum);
 
 	// FIXME: use quadstamp?
@@ -407,9 +469,9 @@ void RB_RenderFlare(flare_t *f)
 	tess.texCoords[tess.numVertexes][1] = 0;
 	tess.texCoords[tess.numVertexes][2] = 0;
 	tess.texCoords[tess.numVertexes][3] = 1;
-	tess.colors[tess.numVertexes][0]    = color[0];
-	tess.colors[tess.numVertexes][1]    = color[1];
-	tess.colors[tess.numVertexes][2]    = color[2];
+	tess.colors[tess.numVertexes][0]    = iColor[0];
+	tess.colors[tess.numVertexes][1]    = iColor[1];
+	tess.colors[tess.numVertexes][2]    = iColor[2];
 	tess.colors[tess.numVertexes][3]    = 1;
 	tess.numVertexes++;
 
@@ -421,9 +483,9 @@ void RB_RenderFlare(flare_t *f)
 	tess.texCoords[tess.numVertexes][1] = 1;
 	tess.texCoords[tess.numVertexes][2] = 0;
 	tess.texCoords[tess.numVertexes][3] = 1;
-	tess.colors[tess.numVertexes][0]    = color[0];
-	tess.colors[tess.numVertexes][1]    = color[1];
-	tess.colors[tess.numVertexes][2]    = color[2];
+	tess.colors[tess.numVertexes][0]    = iColor[0];
+	tess.colors[tess.numVertexes][1]    = iColor[1];
+	tess.colors[tess.numVertexes][2]    = iColor[2];
 	tess.colors[tess.numVertexes][3]    = 1;
 	tess.numVertexes++;
 
@@ -435,9 +497,9 @@ void RB_RenderFlare(flare_t *f)
 	tess.texCoords[tess.numVertexes][1] = 1;
 	tess.texCoords[tess.numVertexes][2] = 0;
 	tess.texCoords[tess.numVertexes][3] = 1;
-	tess.colors[tess.numVertexes][0]    = color[0];
-	tess.colors[tess.numVertexes][1]    = color[1];
-	tess.colors[tess.numVertexes][2]    = color[2];
+	tess.colors[tess.numVertexes][0]    = iColor[0];
+	tess.colors[tess.numVertexes][1]    = iColor[1];
+	tess.colors[tess.numVertexes][2]    = iColor[2];
 	tess.colors[tess.numVertexes][3]    = 1;
 	tess.numVertexes++;
 
@@ -449,9 +511,9 @@ void RB_RenderFlare(flare_t *f)
 	tess.texCoords[tess.numVertexes][1] = 0;
 	tess.texCoords[tess.numVertexes][2] = 0;
 	tess.texCoords[tess.numVertexes][3] = 1;
-	tess.colors[tess.numVertexes][0]    = color[0];
-	tess.colors[tess.numVertexes][1]    = color[1];
-	tess.colors[tess.numVertexes][2]    = color[2];
+	tess.colors[tess.numVertexes][0]    = iColor[0];
+	tess.colors[tess.numVertexes][1]    = iColor[1];
+	tess.colors[tess.numVertexes][2]    = iColor[2];
 	tess.colors[tess.numVertexes][3]    = 1;
 	tess.numVertexes++;
 
@@ -465,22 +527,18 @@ void RB_RenderFlare(flare_t *f)
 	Tess_End();
 }
 
-/*
-==================
-RB_RenderFlares
-
-Because flares are simulating an occular effect, they should be drawn after
-everything (all views) in the entire frame has been drawn.
-
-Because of the way portals use the depth buffer to mark off areas, the
-needed information would be lost after each view, so we are forced to draw
-flares after each view.
-
-The resulting artifact is that flares in mirrors or portals don't dim properly
-when occluded by something in the main view, and portal flares that should
-extend past the portal edge will be overwritten.
-==================
-*/
+/**
+ * @brief Because flares are simulating an occular effect, they should be drawn after
+ * everything (all views) in the entire frame has been drawn.
+ *
+ * Because of the way portals use the depth buffer to mark off areas, the
+ * needed information would be lost after each view, so we are forced to draw
+ * flares after each view.
+ *
+ * The resulting artifact is that flares in mirrors or portals don't dim properly
+ * when occluded by something in the main view, and portal flares that should
+ * extend past the portal edge will be overwritten.
+ */
 void RB_RenderFlares(void)
 {
 	flare_t  *f;
@@ -492,6 +550,20 @@ void RB_RenderFlares(void)
 		return;
 	}
 
+	if (r_flareCoeff->modified)
+	{
+		if (r_flareCoeff->value == 0.0f)
+		{
+			flareCoeff = atof("150");
+		}
+		else
+		{
+			flareCoeff = r_flareCoeff->value;
+		}
+
+		r_flareCoeff->modified = qfalse;
+	}
+
 	// reset currentEntity to world so that any previously referenced entities don't have influence
 	// on the rendering of these flares (i.e. RF_ renderer flags).
 	backEnd.currentEntity = &tr.worldEntity;
@@ -501,6 +573,7 @@ void RB_RenderFlares(void)
 	if (tr.world != NULL)
 	{
 		RB_AddLightFlares();
+		RB_AddCoronaFlares();
 	}
 
 	// perform z buffer readback on each flare in this view
@@ -523,7 +596,7 @@ void RB_RenderFlares(void)
 		{
 			RB_TestFlare(f);
 
-			if (f->drawIntensity)
+			if (f->drawIntensity != 0.f)
 			{
 				draw = qtrue;
 			}
@@ -558,7 +631,7 @@ void RB_RenderFlares(void)
 
 	for (f = r_activeFlares; f; f = f->next)
 	{
-		if (f->frameSceneNum == backEnd.viewParms.frameSceneNum && f->inPortal == backEnd.viewParms.isPortal && f->drawIntensity)
+		if (f->frameSceneNum == backEnd.viewParms.frameSceneNum && f->inPortal == backEnd.viewParms.isPortal && f->drawIntensity != 0.f)
 		{
 			RB_RenderFlare(f);
 		}

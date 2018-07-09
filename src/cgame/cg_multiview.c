@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -36,7 +36,6 @@
 #ifdef FEATURE_MULTIVIEW
 
 #include "cg_local.h"
-#include "../ui/ui_shared.h"
 #include "../game/bg_local.h"
 
 void CG_CalcVrect(void);
@@ -48,7 +47,9 @@ extern vec4_t HUD_Border;
 extern vec4_t HUD_Background;
 extern vec4_t HUD_Text;
 
-// Explicit server command to add a view to the client's snapshot
+/**
+ * @brief Explicit server command to add a view to the client's snapshot
+ */
 void CG_mvNew_f(void)
 {
 	if (!cgs.mvAllowed)
@@ -76,7 +77,9 @@ void CG_mvNew_f(void)
 	}
 }
 
-// Explicit server command to remove a view from the client's snapshot
+/**
+ * @brief Explicit server command to remove a view from the client's snapshot
+ */
 void CG_mvDelete_f(void)
 {
 	if (!cgs.mvAllowed)
@@ -117,7 +120,9 @@ void CG_mvDelete_f(void)
 	}
 }
 
-// Swap highlighted window with main view
+/**
+ * @brief Swap highlighted window with main view
+ */
 void CG_mvSwapViews_f(void)
 {
 	if (!cgs.mvAllowed)
@@ -132,7 +137,9 @@ void CG_mvSwapViews_f(void)
 	}
 }
 
-// Shut down a window view for a particular MV client
+/**
+ * @brief Shut down a window view for a particular MV client
+ */
 void CG_mvHideView_f(void)
 {
 	if (!cgs.mvAllowed)
@@ -149,7 +156,9 @@ void CG_mvHideView_f(void)
 	CG_mvFree(cg.mvCurrentActive->mvInfo & MV_PID);
 }
 
-// Activate a window view for a particular MV client
+/**
+ * @brief Activate a window view for a particular MV client
+ */
 void CG_mvShowView_f(void)
 {
 	int i;
@@ -174,7 +183,9 @@ void CG_mvShowView_f(void)
 	}
 }
 
-// Toggle a view window on/off
+/**
+ * @brief Toggle a view window on/off
+ */
 void CG_mvToggleView_f(void)
 {
 	int i;
@@ -203,7 +214,9 @@ void CG_mvToggleView_f(void)
 	}
 }
 
-// Toggle all views
+/**
+ * @brief Toggle all views
+ */
 void CG_mvToggleAll_f(void)
 {
 	if (!cgs.mvAllowed)
@@ -225,7 +238,10 @@ void CG_mvToggleAll_f(void)
 
 // Multiview Primitives
 
-// Create a new view window
+/**
+ * @brief Create a new view window
+ * @param[in] pID
+ */
 void CG_mvCreate(int pID)
 {
 	cg_window_t *w;
@@ -265,7 +281,10 @@ void CG_mvCreate(int pID)
 	cg.mv_cnt++;
 }
 
-// Delete a view window
+/**
+ * @brief Delete a view window
+ * @param pID
+ */
 void CG_mvFree(int pID)
 {
 	cg_window_t *w;
@@ -281,6 +300,11 @@ void CG_mvFree(int pID)
 	}
 }
 
+/**
+ * @brief CG_mvClientLocate
+ * @param[in] pID
+ * @return
+ */
 cg_window_t *CG_mvClientLocate(int pID)
 {
 	int                i;
@@ -299,7 +323,10 @@ cg_window_t *CG_mvClientLocate(int pID)
 	return NULL;
 }
 
-// Swap a window-view with the main view
+/**
+ * @brief Swap a window-view with the main view
+ * @param[in,out] av
+ */
 void CG_mvMainviewSwap(cg_window_t *av)
 {
 	int swap_pID = (cg.mvCurrentMainview->mvInfo & MV_PID);
@@ -310,7 +337,9 @@ void CG_mvMainviewSwap(cg_window_t *av)
 	CG_mvOverlayUpdate();
 }
 
-// Track our list of merged clients
+/**
+ * @brief Track our list of merged clients
+ */
 void CG_mvProcessClientList(void)
 {
 	int i, bit, newList = cg.snap->ps.powerups[PW_MVCLIENTLIST];
@@ -343,7 +372,10 @@ void CG_mvProcessClientList(void)
 	CG_mvOverlayUpdate();
 }
 
-// Give handle to the current selected MV window
+/**
+ * @brief Give handle to the current selected MV window
+ * @return
+ */
 cg_window_t *CG_mvCurrent(void)
 {
 	int                i;
@@ -362,7 +394,10 @@ cg_window_t *CG_mvCurrent(void)
 	return NULL;
 }
 
-// Give handle to any MV window that isnt the mainview
+/**
+ * @brief Give handle to any MV window that isnt the mainview
+ * @return
+ */
 cg_window_t *CG_mvFindNonMainview(void)
 {
 	int                i;
@@ -398,7 +433,10 @@ cg_window_t *CG_mvFindNonMainview(void)
 
 // Rendering/Display Management
 
-// Update all info for a merged client
+/**
+ * @brief Update all info for a merged client
+ * @param[in] pID
+ */
 void CG_mvUpdateClientInfo(int pID)
 {
 	if (pID >= 0 && pID < MAX_MVCLIENTS && (cg.mvClientList & (1 << pID)))
@@ -435,10 +473,10 @@ void CG_mvUpdateClientInfo(int pID)
 		if (ci->weaponState != ci->weaponState_last)
 		{
 			ci->weaponState_last = ci->weaponState;
-			ci->grenadeTimeStart = (ci->weaponState == WSTATE_FIRE && (weap == WP_GRENADE_LAUNCHER || weap == WP_GRENADE_PINEAPPLE)) ? 4000 + cg.time : 0;
+			ci->grenadeTimeStart = (ci->weaponState == WSTATE_FIRE && GetWeaponTableData(weap)->isGrenade) ? 4000 + cg.time : 0;
 		}
 
-		if (ci->weaponState == WSTATE_FIRE && (weap == WP_GRENADE_LAUNCHER || weap == WP_GRENADE_PINEAPPLE))
+		if (ci->weaponState == WSTATE_FIRE && GetWeaponTableData(weap)->isGrenade)
 		{
 			ci->grenadeTimeLeft = ci->grenadeTimeStart - cg.time;
 			if (ci->grenadeTimeLeft < 0)
@@ -453,7 +491,10 @@ void CG_mvUpdateClientInfo(int pID)
 	}
 }
 
-// Updates for main view
+/**
+ * @brief Updates for main view
+ * @param[in,out] ps
+ */
 void CG_mvTransitionPlayerState(playerState_t *ps)
 {
 	int          x, mult, pID = (cg.mvCurrentMainview->mvInfo & MV_PID);
@@ -508,8 +549,8 @@ void CG_mvTransitionPlayerState(playerState_t *ps)
 	ps->grenadeTimeLeft = ci->grenadeTimeLeft;
 
 	// Safe as we've already pull data before clobbering
-	ps->ammo[BG_FindAmmoForWeapon(ps->weapon)]     = ci->ammo;
-	ps->ammoclip[BG_FindClipForWeapon(ps->weapon)] = ci->ammoclip;
+	ps->ammo[GetWeaponTableData(ps->weapon)->ammoIndex]     = ci->ammo;
+	ps->ammoclip[GetWeaponTableData(ps->weapon)->clipIndex] = ci->ammoclip;
 
 	ps->persistant[PERS_SCORE] = ci->score;
 	ps->persistant[PERS_TEAM]  = ci->team;
@@ -520,7 +561,10 @@ void CG_mvTransitionPlayerState(playerState_t *ps)
 
 void CG_OffsetThirdPersonView(void);
 
-// Draw the client view window
+/**
+ * @brief Draw the client view window
+ * @param[in,out] sw
+ */
 void CG_mvDraw(cg_window_t *sw)
 {
 	int       pID = (sw->mvInfo & MV_PID);
@@ -531,8 +575,8 @@ void CG_mvDraw(cg_window_t *sw)
 	float     s     = 1.0f;
 	centity_t *cent = &cg_entities[pID];
 
-	memset(&refdef, 0, sizeof(refdef_t));
-	memcpy(refdef.areamask, cg.snap->areamask, sizeof(refdef.areamask));
+	Com_Memset(&refdef, 0, sizeof(refdef_t));
+	Com_Memcpy(refdef.areamask, cg.snap->areamask, sizeof(refdef.areamask));
 
 	CG_mvUpdateClientInfo(pID);
 	cg.snap->ps.clientNum = pID;
@@ -633,7 +677,7 @@ void CG_mvDraw(cg_window_t *sw)
 	refdef.height = rd_h;
 
 	refdef.fov_x = (cgs.clientinfo[pID].health > 0 &&
-	                (/*cent->currentState.weapon == WP_SNIPERRIFLE ||*/   // ARNOUT: this needs updating?
+	                (/*cent->currentState.weapon == WP_SNIPERRIFLE ||*/   // WARNING: WARNOUT: this needs updating?
 	                    (cent->currentState.eFlags & EF_ZOOMING))) ?
 	               cg_zoomDefaultSniper.value :
 	               (cgs.clientinfo[pID].fCrewgun) ?
@@ -650,7 +694,7 @@ void CG_mvDraw(cg_window_t *sw)
 	VectorCopy(cent->lerpOrigin, refdef.vieworg);
 	VectorCopy(cent->lerpAngles, cg.refdefViewAngles);
 
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 	// only copy mainview origin/angles freecam
 	VectorCopy(refdef.vieworg, cgs.demoCamera.camOrigin);
 	VectorCopy(cg.refdefViewAngles, cgs.demoCamera.camAngle);
@@ -692,7 +736,7 @@ void CG_mvDraw(cg_window_t *sw)
 
 	if (sw == cg.mvCurrentMainview)
 	{
-		CG_DrawActive(STEREO_CENTER);
+		CG_DrawActive();
 		if (cg.mvCurrentActive == cg.mvCurrentMainview)
 		{
 			trap_S_Respatialize(cg.clientNum, refdef.vieworg, refdef.viewaxis, qfalse);
@@ -704,7 +748,7 @@ void CG_mvDraw(cg_window_t *sw)
 		return;
 	}
 
-	memcpy(refdef.areamask, cg.snap->areamask, sizeof(refdef.areamask));
+	Com_Memcpy(refdef.areamask, cg.snap->areamask, sizeof(refdef.areamask));
 	refdef.time = cg.time;
 	trap_SetClientLerpOrigin(refdef.vieworg[0], refdef.vieworg[1], refdef.vieworg[2]);
 
@@ -727,7 +771,17 @@ void CG_mvDraw(cg_window_t *sw)
 	cg.snap->ps.clientNum = base_pID;
 }
 
-// Simpler overlay for windows
+/**
+ * @brief Simpler overlay for windows
+ * @param[in] pID
+ * @param[in] b_x
+ * @param[in] b_y
+ * @param[in] b_w
+ * @param[in] b_h
+ * @param[in] s
+ * @param[in] wState
+ * @param[in] fSelected
+ */
 void CG_mvWindowOverlay(int pID, float b_x, float b_y, float b_w, float b_h, float s, int wState, qboolean fSelected)
 {
 	int          w, x;
@@ -846,9 +900,9 @@ void CG_mvWindowOverlay(int pID, float b_x, float b_y, float b_w, float b_h, flo
 		{
 			t = 2047 - t;
 		}
-		memcpy(&borderColor, *noSelectBorder, sizeof(vec4_t));
+		Com_Memcpy(&borderColor, *noSelectBorder, sizeof(vec4_t));
 		scale = ((float)t / 1137.38f) + 0.5f;
-		if (scale <= 1.0)
+		if (scale <= 1.0f)
 		{
 			borderColor[0] *= scale;
 			borderColor[1] *= scale;
@@ -857,9 +911,9 @@ void CG_mvWindowOverlay(int pID, float b_x, float b_y, float b_w, float b_h, flo
 		else
 		{
 			scale         -= 1.0;
-			borderColor[0] = (borderColor[0] + scale > 1.0) ? 1.0 : borderColor[0] + scale;
-			borderColor[1] = (borderColor[1] + scale > 1.0) ? 1.0 : borderColor[1] + scale;
-			borderColor[2] = (borderColor[2] + scale > 1.0) ? 1.0 : borderColor[2] + scale;
+			borderColor[0] = (borderColor[0] + scale > 1.0f) ? 1.0 : borderColor[0] + scale;
+			borderColor[1] = (borderColor[1] + scale > 1.0f) ? 1.0 : borderColor[1] + scale;
+			borderColor[2] = (borderColor[2] + scale > 1.0f) ? 1.0 : borderColor[2] + scale;
 		}
 		CG_DrawRect(b_x - 1, b_y - 1, b_w + 2, b_h + 2, 2, borderColor);
 	}
@@ -871,7 +925,7 @@ void CG_mvWindowOverlay(int pID, float b_x, float b_y, float b_w, float b_h, flo
 
 // MV Text Overlay Handling
 
-char *strClassHighlights[] =
+const char *strClassHighlights[] =
 {
 	S_COLOR_RED, S_COLOR_MDRED,         // Soldier
 	S_COLOR_WHITE, S_COLOR_MDGREY,      // Medic
@@ -880,7 +934,12 @@ char *strClassHighlights[] =
 	S_COLOR_YELLOW, S_COLOR_MDYELLOW    // CovertOps
 };
 
-// Update a particular client's info
+//
+/**
+ * @brief Update a particular client's info
+ * @param[in] pID
+ * @param[in] index
+ */
 void CG_mvOverlayClientUpdate(int pID, int index)
 {
 	cg_window_t *w;
@@ -891,24 +950,28 @@ void CG_mvOverlayClientUpdate(int pID, int index)
 	cg.mvOverlay[index].w       = w;
 	if (w != NULL)
 	{
-		strcpy(cg.mvOverlay[index].info, va("%s%s%2d",
-		                                    strClassHighlights[cg.mvOverlay[index].classID * 2],
-		                                    (w == cg.mvCurrentMainview) ? "*" : "",
-		                                    pID)
+		Q_strncpyz(cg.mvOverlay[index].info, va("%s%s%2d",
+		                                        strClassHighlights[cg.mvOverlay[index].classID * 2],
+		                                        (w == cg.mvCurrentMainview) ? "*" : "",
+		                                        pID),
+		                                        sizeof(cg.mvOverlay[0].info)
 		       );
 	}
 	else
 	{
-		strcpy(cg.mvOverlay[index].info, va("%s%2d",
-		                                    strClassHighlights[(cg.mvOverlay[index].classID * 2) + 1],
-		                                    pID)
+		Q_strncpyz(cg.mvOverlay[index].info, va("%s%2d",
+		                                        strClassHighlights[(cg.mvOverlay[index].classID * 2) + 1],
+		                                        pID),
+		                                        sizeof(cg.mvOverlay[0].info)
 		       );
 	}
 
 	cg.mvOverlay[index].width = CG_Text_Width_Ext(cg.mvOverlay[index].info, cg_fontScaleSP.value, 0, &cgs.media.limboFont2);
 }
 
-// Update info on all clients received for display/cursor interaction
+/**
+ * @brief Update info on all clients received for display/cursor interaction
+ */
 void CG_mvOverlayUpdate(void)
 {
 	int i, cnt;
@@ -922,7 +985,11 @@ void CG_mvOverlayUpdate(void)
 	}
 }
 
-// See if we have the client in our snapshot
+/**
+ * @brief See if we have the client in our snapshot
+ * @param pID
+ * @return
+ */
 qboolean CG_mvMergedClientLocate(int pID)
 {
 	int i;
@@ -938,7 +1005,9 @@ qboolean CG_mvMergedClientLocate(int pID)
 	return qfalse;
 }
 
-// Display available client info
+/**
+ * @brief Display available client info
+ */
 void CG_mvOverlayDisplay(void)
 {
 	float       fontScale = cg_fontScaleSP.value;
@@ -953,7 +1022,7 @@ void CG_mvOverlayDisplay(void)
 
 	xOffset = 32;
 	x       = MVINFO_RIGHT - xOffset;
-	y       = MVINFO_TOP + (charHeight * 2.0f);
+	y       = MVINFO_TOP + (charHeight * 2);
 
 	for (j = TEAM_AXIS; j <= TEAM_ALLIES; j++)
 	{
@@ -1024,12 +1093,19 @@ void CG_mvOverlayDisplay(void)
 			y += charHeight * 2.0f;
 		}
 		x += xOffset;
-		y  = MVINFO_TOP + (charHeight * 2.0f);
+		y  = MVINFO_TOP + (charHeight * 2);
 	}
 }
 
 // Wolf-specific utilities
 
+/**
+ * @brief CG_mvZoomSniper
+ * @param[in] x
+ * @param[in] y
+ * @param[in] w
+ * @param[in] h
+ */
 void CG_mvZoomSniper(float x, float y, float w, float h)
 {
 	float ws = w / 640;
@@ -1052,6 +1128,13 @@ void CG_mvZoomSniper(float x, float y, float w, float h)
 	CG_FillRect(x + 380.0f * ws, y + 239.0f * hs, 177.0f * ws, 2.0f, colorBlack);     // right
 }
 
+/**
+ * @brief CG_mvZoomBinoc
+ * @param[in] x
+ * @param[in] y
+ * @param[in] w
+ * @param[in] h
+ */
 void CG_mvZoomBinoc(float x, float y, float w, float h)
 {
 	float ws = w / 640;
@@ -1076,10 +1159,14 @@ void CG_mvZoomBinoc(float x, float y, float w, float h)
 
 extern void CG_toggleSpecHelp_f(void);
 
-void CG_mv_KeyHandling(int _key, qboolean down)
+/**
+ * @brief CG_mv_KeyHandling
+ * @param[in] _key
+ * @param[in] down
+ */
+void CG_mv_KeyHandling(int key, qboolean down)
 {
 	int milli = trap_Milliseconds();
-	int key   = _key;
 	// Avoid active console keypress issues
 	if (!down && !cgs.fKeyPressed[key])
 	{
@@ -1122,8 +1209,12 @@ void CG_mv_KeyHandling(int _key, qboolean down)
 		}
 		return;
 	// Window controls
-	case K_SHIFT:
-	case K_CTRL:
+	//case K_SHIFT:
+	case K_LCTRL:
+	case K_RCTRL:
+	case K_LSHIFT:
+	case K_RSHIFT:
+	//case K_CTRL:
 	case K_MOUSE4:
 		cgs.fResize = down;
 		return;

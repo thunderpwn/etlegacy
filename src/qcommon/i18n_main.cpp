@@ -6,7 +6,7 @@
  * Copyright (C) 2012 Unvanquished Developers
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -91,7 +91,10 @@ public:
 
 		setg(end, end, end);
 
-		FS_FOpenFileRead(filename.c_str(), &fileHandle, qfalse);
+		if (FS_FOpenFileRead(filename.c_str(), &fileHandle, qfalse) <= 0)
+		{
+			Com_Printf("Warning: can't open or read file '%s' \n", filename.c_str());
+		}
 	}
 
 	~QInputbuf()
@@ -197,7 +200,7 @@ void I18N_Init(void)
 	std::set<tinygettext::Language> languages;
 	std::set<tinygettext::Language> languages_mod;
 
-	cl_lang      = Cvar_Get("cl_lang", "en", CVAR_ARCHIVE);
+	cl_lang      = Cvar_Get("cl_lang", "en", CVAR_ARCHIVE | CVAR_LATCH);
 	cl_langDebug = Cvar_Get("cl_langDebug", "0", CVAR_ARCHIVE);
 
 	tinygettext::Log::set_log_error_callback(&Tinygettext_Error);
@@ -249,6 +252,7 @@ void I18N_Init(void)
 
 /**
  * @brief Loads a localization file
+ * @param[in] language
  */
 void I18N_SetLanguage(const char *language)
 {
@@ -278,8 +282,9 @@ void I18N_SetLanguage(const char *language)
  * attempt to read them from the po file at each call and would endlessly
  * spam the console with warnings if the requested translation did not exist.
  *
- * @param msgid original string in English
- * @param dict dictionary to use (client / mod)
+ * @param[in] msgid original string in English
+ * @param[in] dict dictionary to use (client / mod)
+ *
  * @return translated string or English text if dictionary was not found
  */
 static const char *_I18N_Translate(const char *msgid, tinygettext::DictionaryManager &dict)
@@ -311,11 +316,21 @@ static const char *_I18N_Translate(const char *msgid, tinygettext::DictionaryMan
 	return strings.find(msgid)->second.c_str();
 }
 
+/**
+ * @brief I18N_Translate
+ * @param[in] msgid
+ * @return
+ */
 const char *I18N_Translate(const char *msgid)
 {
 	return _I18N_Translate(msgid, dictionary);
 }
 
+/**
+ * @brief I18N_TranslateMod
+ * @param[in] msgid
+ * @return
+ */
 const char *I18N_TranslateMod(const char *msgid)
 {
 	if (doTranslateMod)
@@ -332,8 +347,9 @@ const char *I18N_TranslateMod(const char *msgid)
 
 /**
  * @brief A dumb function which saves missing strings for the current language and mod
- * passed to it
- * @param msgid original text
+ * passed to it.
+ *
+ * @param[in] msgid original text
  */
 static void TranslationMissing(const char *msgid)
 {
@@ -349,11 +365,19 @@ static void TranslationMissing(const char *msgid)
  * Logging functions which override the default ones from Tinygettext
  */
 
+/**
+ * @brief Tinygettext_Error
+ * @param[in] str
+ */
 static void Tinygettext_Error(const std::string& str)
 {
 	Com_Printf("^1%s^7", str.c_str());
 }
 
+/**
+ * @brief Tinygettext_Warning
+ * @param[in] str
+ */
 static void Tinygettext_Warning(const std::string& str)
 {
 	if (cl_langDebug->integer)
@@ -362,6 +386,10 @@ static void Tinygettext_Warning(const std::string& str)
 	}
 }
 
+/**
+ * @brief Tinygettext_Info
+ * @param[in] str
+ */
 static void Tinygettext_Info(const std::string& str)
 {
 	if (cl_langDebug->integer)

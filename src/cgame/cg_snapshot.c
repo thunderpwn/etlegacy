@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -38,11 +38,10 @@
 // minor optimization - we only want to reset ents that were valid in the last frame
 static qboolean oldValid[MAX_GENTITIES];
 
-/*
-==================
-CG_ResetEntity
-==================
-*/
+/**
+ * @brief CG_ResetEntity
+ * @param[out] cent
+ */
 static void CG_ResetEntity(centity_t *cent)
 {
 	// if an event is set, assume it is new enough to use
@@ -80,13 +79,10 @@ static void CG_ResetEntity(centity_t *cent)
 	cent->akimboFire = qfalse;
 }
 
-/*
-===============
-CG_TransitionEntity
-
-cent->nextState is moved to cent->currentState and events are fired
-===============
-*/
+/**
+ * @brief cent->nextState is moved to cent->currentState and events are fired
+ * @param[in,out] cent
+ */
 static void CG_TransitionEntity(centity_t *cent)
 {
 	// update the fireDir if it's on fire
@@ -107,9 +103,9 @@ static void CG_TransitionEntity(centity_t *cent)
 			newDir[2] = 1;
 		}
 		// now move towards the newDir
-		adjust = 0.3;
+		adjust = 0.3f;
 		VectorMA(cent->fireRiseDir, adjust, newDir, cent->fireRiseDir);
-		if (VectorNormalize(cent->fireRiseDir) <= 0.1)
+		if (VectorNormalize(cent->fireRiseDir) <= 0.1f)
 		{
 			VectorCopy(newDir, cent->fireRiseDir);
 		}
@@ -131,17 +127,14 @@ static void CG_TransitionEntity(centity_t *cent)
 	CG_CheckEvents(cent);
 }
 
-/*
-==================
-CG_SetInitialSnapshot
-
-This will only happen on the very first snapshot, or
-on tourney restarts.  All other times will use
-CG_TransitionSnapshot instead.
-
-FIXME: Also called by map_restart?
-==================
-*/
+/**
+ * @brief This will only happen on the very first snapshot, or
+ * on tourney restarts.  All other times will use
+ * CG_TransitionSnapshot instead.
+ * @param snap
+ * @todo FIXME: Also called by map_restart?
+ *              No, isn't. Is this required?
+ */
 void CG_SetInitialSnapshot(snapshot_t *snap)
 {
 	int           i;
@@ -150,8 +143,6 @@ void CG_SetInitialSnapshot(snapshot_t *snap)
 	char          buff[16];
 
 	cg.snap = snap;
-
-	//  trap_S_ClearSounds( qtrue );
 
 	BG_PlayerStateToEntityState(&snap->ps, &cg_entities[snap->ps.clientNum].currentState, cg.time, qfalse);
 
@@ -169,8 +160,8 @@ void CG_SetInitialSnapshot(snapshot_t *snap)
 		state = &cg.snap->entities[i];
 		cent  = &cg_entities[state->number];
 
-		memcpy(&cent->currentState, state, sizeof(entityState_t));
-		//cent->currentState = *state;
+		Com_Memcpy(&cent->currentState, state, sizeof(entityState_t));
+
 		cent->interpolate  = qfalse;
 		cent->currentValid = qtrue;
 
@@ -230,23 +221,17 @@ void CG_SetInitialSnapshot(snapshot_t *snap)
 	// update client XP for spectator frames
 	if (cg.snap->ps.clientNum == cg.clientNum)    // sanity check
 	{
-		int cXP = (32768 * cg.snap->ps.stats[STAT_XP_OVERFLOW]) + cg.snap->ps.stats[STAT_XP];
-
-		if (cg.xp < cXP)
+		if (cg.xp < cg.snap->ps.stats[STAT_XP])
 		{
 			cg.xpChangeTime = cg.time;
 		}
-		cg.xp = cXP;
+		cg.xp = cg.snap->ps.stats[STAT_XP];
 	}
 }
 
-/*
-===================
-CG_TransitionSnapshot
-
-The transition point from snap to nextSnap has passed
-===================
-*/
+/**
+ * @brief The transition point from snap to nextSnap has passed
+ */
 static void CG_TransitionSnapshot(void)
 {
 	centity_t  *cent;
@@ -266,14 +251,12 @@ static void CG_TransitionSnapshot(void)
 	CG_ExecuteNewServerCommands(cg.nextSnap->serverCommandSequence);
 
 	// if we had a map_restart, set everthing with initial
-
-	if (!(cg.snap) || !(cg.nextSnap))
-	{
-		return;
-	}
+	//if (cg.mapRestart)
+	//{
+	//}
 
 	// I hate doing things like this for enums.  Oh well.
-	memset(&oldValid, 0, sizeof(oldValid));
+	Com_Memset(&oldValid, 0, sizeof(oldValid));
 
 	// clear the currentValid flag for all entities in the existing snapshot
 	for (i = 0 ; i < cg.snap->numEntities ; i++)
@@ -297,13 +280,11 @@ static void CG_TransitionSnapshot(void)
 
 	if (cg.snap->ps.clientNum == cg.clientNum)
 	{
-		int cXP = (32768 * cg.snap->ps.stats[STAT_XP_OVERFLOW]) + cg.snap->ps.stats[STAT_XP];
-
-		if (cg.xp < cXP)
+		if (cg.xp < cg.snap->ps.stats[STAT_XP])
 		{
 			cg.xpChangeTime = cg.time;
 		}
-		cg.xp = cXP;
+		cg.xp = cg.snap->ps.stats[STAT_XP];
 	}
 
 	BG_PlayerStateToEntityState(&cg.snap->ps, &cg_entities[cg.snap->ps.clientNum].currentState, cg.time, qfalse);
@@ -322,7 +303,7 @@ static void CG_TransitionSnapshot(void)
 			CG_ResetEntity(&cg_entities[id]);
 		}
 
-#if FEATURE_MULTIVIEW
+#ifdef FEATURE_MULTIVIEW
 		if (cg.mvTotalClients > 0 && CG_mvMergedClientLocate(id))
 		{
 			CG_mvUpdateClientInfo(id);
@@ -330,7 +311,7 @@ static void CG_TransitionSnapshot(void)
 #endif
 	}
 
-#if FEATURE_MULTIVIEW
+#ifdef FEATURE_MULTIVIEW
 	if (cg.mvTotalClients > 0)
 	{
 		CG_mvTransitionPlayerState(&cg.snap->ps);
@@ -365,13 +346,10 @@ static void CG_TransitionSnapshot(void)
 	}
 }
 
-/*
-===================
-CG_SetNextSnap
-
-A new snapshot has just been read in from the client system.
-===================
-*/
+/**
+ * @brief A new snapshot has just been read in from the client system.
+ * @param[in] snap
+ */
 static void CG_SetNextSnap(snapshot_t *snap)
 {
 	int           num;
@@ -389,7 +367,7 @@ static void CG_SetNextSnap(snapshot_t *snap)
 		es   = &snap->entities[num];
 		cent = &cg_entities[es->number];
 
-		memcpy(&cent->nextState, es, sizeof(entityState_t));
+		Com_Memcpy(&cent->nextState, es, sizeof(entityState_t));
 		//cent->nextState = *es;
 
 		// if this frame is a teleport, or the entity wasn't in the
@@ -431,16 +409,15 @@ static void CG_SetNextSnap(snapshot_t *snap)
 	CG_BuildSolidList();
 }
 
-/*
-========================
-CG_ReadNextSnapshot
-
-This is the only place new snapshots are requested
-This may increment cgs.processedSnapshotNum multiple
-times if the client system fails to return a
-valid snapshot.
-========================
-*/
+/**
+ * @brief This is the only place new snapshots are requested
+ *
+ * @details This may increment cgs.processedSnapshotNum multiple
+ * times if the client system fails to return a
+ * valid snapshot.
+ *
+ * @return
+ */
 static snapshot_t *CG_ReadNextSnapshot(void)
 {
 	qboolean   r;
@@ -513,25 +490,22 @@ static snapshot_t *CG_ReadNextSnapshot(void)
 	return NULL;
 }
 
-/*
-============
-CG_ProcessSnapshots
-
-We are trying to set up a renderable view, so determine
-what the simulated time is, and try to get snapshots
-both before and after that time if available.
-
-If we don't have a valid cg.snap after exiting this function,
-then a 3D game view cannot be rendered.  This should only happen
-right after the initial connection.  After cg.snap has been valid
-once, it will never turn invalid.
-
-Even if cg.snap is valid, cg.nextSnap may not be, if the snapshot
-hasn't arrived yet (it becomes an extrapolating situation instead
-of an interpolating one)
-
-============
-*/
+/**
+ * @brief CG_ProcessSnapshots
+ * @details
+ * We are trying to set up a renderable view, so determine
+ * what the simulated time is, and try to get snapshots
+ * both before and after that time if available.
+ *
+ * If we don't have a valid cg.snap after exiting this function,
+ * then a 3D game view cannot be rendered.  This should only happen
+ * right after the initial connection.  After cg.snap has been valid
+ * once, it will never turn invalid.
+ *
+ * Even if cg.snap is valid, cg.nextSnap may not be, if the snapshot
+ * hasn't arrived yet (it becomes an extrapolating situation instead
+ * of an interpolating one)
+ */
 void CG_ProcessSnapshots(void)
 {
 	snapshot_t *snap;

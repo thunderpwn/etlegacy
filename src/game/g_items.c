@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -59,24 +59,24 @@
 
 /**
  * @brief Add the specified ammount of ammo into the clip.
- * @param ps which player
- * @param weapon to add ammo for
- * @param ammomove amount to add. 0 means fill the clip if possible
- * @param outOfReserve amount to be added out of reserve
+ * @param[in,out] ps which player
+ * @param[in] weapon to add ammo for
+ * @param[in] ammomove amount to add. 0 means fill the clip if possible
+ * @param[in] outOfReserve amount to be added out of reserve
  * @return qboolean whether ammo was added to the clip.
  */
-int AddToClip(playerState_t *ps, int weapon, int ammomove, int outOfReserve)
+int AddToClip(playerState_t *ps, weapon_t weapon, int ammomove, int outOfReserve)
 {
-	int inclip, maxclip;
-	int ammoweap = BG_FindAmmoForWeapon(weapon);
+	int      inclip, maxclip;
+	weapon_t ammoweap = GetWeaponTableData(weapon)->ammoIndex;
 
-	if (weapon < WP_LUGER || weapon >= WP_NUM_WEAPONS)
+	if (!IS_VALID_WEAPON(weapon))
 	{
 		return qfalse;
 	}
 
-	inclip  = ps->ammoclip[BG_FindClipForWeapon(weapon)];
-	maxclip = GetAmmoTableData(weapon)->maxclip;
+	inclip  = ps->ammoclip[GetWeaponTableData(weapon)->clipIndex];
+	maxclip = GetWeaponTableData(weapon)->maxClip;
 
 	if (!ammomove)     // amount to add to the clip not specified
 	{
@@ -102,49 +102,41 @@ int AddToClip(playerState_t *ps, int weapon, int ammomove, int outOfReserve)
 		{
 			ps->ammo[ammoweap] -= ammomove;
 		}
-		ps->ammoclip[BG_FindClipForWeapon(weapon)] += ammomove;
+		ps->ammoclip[GetWeaponTableData(weapon)->clipIndex] += ammomove;
 		return qtrue;
 	}
 	return qfalse;
 }
 
+
 /**
-* @brief Push reserve ammo into available space in the clip.
-*/
-void Fill_Clip(playerState_t *ps, int weapon)
+ * @brief Push reserve ammo into available space in the clip.
+ * @param[in] ps
+ * @param[in] weapon
+ */
+void Fill_Clip(playerState_t *ps, weapon_t weapon)
 {
 	AddToClip(ps, weapon, 0, qtrue);
 }
 
 /**
-* @brief Add ammo.
-* @return whether any ammo was added
-*/
-int Add_Ammo(gentity_t *ent, int weapon, int count, qboolean fillClip)
+ * @brief Add ammo.
+ * @param[in,out] ent
+ * @param[in] weapon
+ * @param[in] count
+ * @param[in] fillClip
+ * @return whether any ammo was added
+ */
+int Add_Ammo(gentity_t *ent, weapon_t weapon, int count, qboolean fillClip)
 {
-	int ammoweap      = BG_FindAmmoForWeapon(weapon);
-	int maxammo       = BG_MaxAmmoForWeapon(ammoweap, ent->client->sess.skill);
-	int originalCount = ent->client->ps.ammo[ammoweap];
+	weapon_t ammoweap      = GetWeaponTableData(weapon)->ammoIndex;
+	int      maxammo       = BG_MaxAmmoForWeapon(ammoweap, ent->client->sess.skill);
+	int      originalCount = ent->client->ps.ammo[ammoweap];
 
-	if (ammoweap == WP_GRENADE_LAUNCHER)             // make sure if he picks up a grenade that he get's the "launcher" too
+	if (GetWeaponTableData(ammoweap)->isGrenade || ammoweap == WP_DYNAMITE || ammoweap == WP_SATCHEL_DET) // make sure if he picks it up that he get's the "launcher" too
 	{
-		COM_BitSet(ent->client->ps.weapons, WP_GRENADE_LAUNCHER);
-		fillClip = qtrue;   // grenades always filter into the "clip"
-	}
-	else if (ammoweap == WP_GRENADE_PINEAPPLE)
-	{
-		COM_BitSet(ent->client->ps.weapons, WP_GRENADE_PINEAPPLE);
-		fillClip = qtrue;   // grenades always filter into the "clip"
-	}
-	else if (ammoweap == WP_DYNAMITE)
-	{
-		COM_BitSet(ent->client->ps.weapons, WP_DYNAMITE);
-		fillClip = qtrue;
-	}
-	else if (ammoweap == WP_SATCHEL_DET)
-	{
-		COM_BitSet(ent->client->ps.weapons, WP_SATCHEL_DET);
-		fillClip = qtrue;
+		COM_BitSet(ent->client->ps.weapons, ammoweap);
+		fillClip = qtrue;   // always filter into the "clip"
 	}
 
 	if (fillClip)
@@ -152,7 +144,7 @@ int Add_Ammo(gentity_t *ent, int weapon, int count, qboolean fillClip)
 		Fill_Clip(&ent->client->ps, weapon);
 	}
 
-	if (ammoweap == WP_PANZERFAUST || ammoweap == WP_BAZOOKA || ammoweap == WP_FLAMETHROWER)
+	if (GetWeaponTableData(ammoweap)->isPanzer || ammoweap == WP_FLAMETHROWER)
 	{
 		ent->client->ps.ammoclip[ammoweap] += count;
 
@@ -180,22 +172,24 @@ int Add_Ammo(gentity_t *ent, int weapon, int count, qboolean fillClip)
 }
 
 /**
-* @brief Add the specified number of clips of magic ammo
-* @return whether any ammo was actually added
-*/
+ * @brief Add the specified number of clips of magic ammo
+ * @param[in] receiver
+ * @param[in] numOfClips
+ * @return whether any ammo was actually added
+ */
 qboolean AddMagicAmmo(gentity_t *receiver, int numOfClips)
 {
 	return BG_AddMagicAmmo(&receiver->client->ps, receiver->client->sess.skill, receiver->client->sess.sessionTeam, numOfClips);
 }
 
 /**
-* @brief Get the primary weapon of the client.
-* @return the primary weapon of the client
-*/
+ * @brief Get the primary weapon of the client.
+ * @param[in] client
+ * @return the primary weapon of the client
+ */
 weapon_t G_GetPrimaryWeaponForClient(gclient_t *client)
 {
-	int              i;
-	bg_playerclass_t *classInfo;
+	int i, team;
 
 	if (client->sess.sessionTeam != TEAM_ALLIES && client->sess.sessionTeam != TEAM_AXIS)
 	{
@@ -206,36 +200,27 @@ weapon_t G_GetPrimaryWeaponForClient(gclient_t *client)
 	{
 		return WP_THOMPSON;
 	}
+
 	if (COM_BitCheck(client->ps.weapons, WP_MP40))
 	{
 		return WP_MP40;
 	}
 
-	classInfo = &bg_allies_playerclasses[client->sess.playerType];
-	for (i = 0; i < MAX_WEAPS_PER_CLASS; i++)
+	for (team = TEAM_AXIS; team <= TEAM_ALLIES; team++)
 	{
-		if (classInfo->classWeapons[i] == WP_MP40 || classInfo->classWeapons[i] == WP_THOMPSON)
-		{
-			continue;
-		}
+		bg_playerclass_t *classInfo = GetPlayerClassesData(team, client->sess.playerType);
 
-		if (COM_BitCheck(client->ps.weapons, classInfo->classWeapons[i]))
+		for (i = 0; i < MAX_WEAPS_PER_CLASS; i++)
 		{
-			return classInfo->classWeapons[i];
-		}
-	}
+			if (GetWeaponTableData(classInfo->classPrimaryWeapons[i].weapon)->isSMG)
+			{
+				continue;
+			}
 
-	classInfo = &bg_axis_playerclasses[client->sess.playerType];
-	for (i = 0; i < MAX_WEAPS_PER_CLASS; i++)
-	{
-		if (classInfo->classWeapons[i] == WP_MP40 || classInfo->classWeapons[i] == WP_THOMPSON)
-		{
-			continue;
-		}
-
-		if (COM_BitCheck(client->ps.weapons, classInfo->classWeapons[i]))
-		{
-			return classInfo->classWeapons[i];
+			if (COM_BitCheck(client->ps.weapons, classInfo->classPrimaryWeapons[i].weapon))
+			{
+				return classInfo->classPrimaryWeapons[i].weapon;
+			}
 		}
 	}
 
@@ -243,13 +228,71 @@ weapon_t G_GetPrimaryWeaponForClient(gclient_t *client)
 }
 
 /**
-* @brief Get the primary weapon of the client.
-* @return the primary weapon of the soldier client
-*/
+ * @brief G_GetSecondaryWeaponForClient
+ * @param[in] client
+ * @param primary - unused
+ * @return
+ *
+ * @note Unused
+ */
+weapon_t G_GetSecondaryWeaponForClient(gclient_t *client, weapon_t primary)
+{
+	weapon_t secondary = WP_NONE;
+
+	// early out if not on a team
+	if (client->sess.sessionTeam != TEAM_ALLIES && client->sess.sessionTeam != TEAM_AXIS)
+	{
+		return WP_NONE;
+	}
+
+	// Record our secondary weapon (usually a pistol sidearm)
+	// Colts
+	if (COM_BitCheck(client->ps.weapons, WP_AKIMBO_SILENCEDCOLT))
+	{
+		secondary = WP_AKIMBO_SILENCEDCOLT;
+	}
+	else if (COM_BitCheck(client->ps.weapons, WP_AKIMBO_COLT))
+	{
+		secondary = WP_AKIMBO_COLT;
+	}
+	else if (COM_BitCheck(client->ps.weapons, WP_SILENCED_COLT))
+	{
+		secondary = WP_SILENCED_COLT;
+	}
+	else if (COM_BitCheck(client->ps.weapons, WP_COLT))
+	{
+		secondary = WP_COLT;
+	}
+	// Lugers
+	else if (COM_BitCheck(client->ps.weapons, WP_AKIMBO_SILENCEDLUGER))
+	{
+		secondary = WP_AKIMBO_SILENCEDLUGER;
+	}
+	else if (COM_BitCheck(client->ps.weapons, WP_AKIMBO_LUGER))
+	{
+		secondary = WP_AKIMBO_LUGER;
+	}
+	else if (COM_BitCheck(client->ps.weapons, WP_SILENCER))
+	{
+		secondary = WP_SILENCER;
+	}
+	else if (COM_BitCheck(client->ps.weapons, WP_LUGER))
+	{
+		secondary = WP_LUGER;
+	}
+
+	return secondary;
+}
+
+/**
+ * @brief Get the primary weapon of the client.
+ * @param[in] weapon
+ * @param[in] client
+ * @return the primary weapon of the soldier client
+ */
 weapon_t G_GetPrimaryWeaponForClientSoldier(weapon_t weapon, gclient_t *client)
 {
-	int              i;
-	bg_playerclass_t *classInfo;
+	int i, team;
 
 	if (client->sess.sessionTeam != TEAM_ALLIES && client->sess.sessionTeam != TEAM_AXIS)
 	{
@@ -269,38 +312,27 @@ weapon_t G_GetPrimaryWeaponForClientSoldier(weapon_t weapon, gclient_t *client)
 		{
 			return WP_MP40;
 		}
-		else if (COM_BitCheck(client->ps.weapons, WP_THOMPSON) && weapon == WP_MP40)
+
+		if (COM_BitCheck(client->ps.weapons, WP_THOMPSON) && weapon == WP_MP40)
 		{
 			return WP_THOMPSON;
 		}
-		else
+
+		for (team = TEAM_AXIS; team <= TEAM_ALLIES; team++)
 		{
 			// if weapons are SMS & HW, return HW if picking up HW
-			classInfo = &bg_allies_playerclasses[client->sess.playerType];
+			bg_playerclass_t *classInfo = GetPlayerClassesData(team, client->sess.playerType);
+
 			for (i = 0; i < MAX_WEAPS_PER_CLASS; i++)
 			{
-				if (classInfo->classWeapons[i] == WP_MP40 || classInfo->classWeapons[i] == WP_THOMPSON)
+				if (GetWeaponTableData(classInfo->classPrimaryWeapons[i].weapon)->isSMG)
 				{
 					continue;
 				}
 
-				if (COM_BitCheck(client->ps.weapons, classInfo->classWeapons[i]))
+				if (COM_BitCheck(client->ps.weapons, classInfo->classPrimaryWeapons[i].weapon))
 				{
-					return classInfo->classWeapons[i];
-				}
-			}
-
-			classInfo = &bg_axis_playerclasses[client->sess.playerType];
-			for (i = 0; i < MAX_WEAPS_PER_CLASS; i++)
-			{
-				if (classInfo->classWeapons[i] == WP_MP40 || classInfo->classWeapons[i] == WP_THOMPSON)
-				{
-					continue;
-				}
-
-				if (COM_BitCheck(client->ps.weapons, classInfo->classWeapons[i]))
-				{
-					return classInfo->classWeapons[i];
+					return classInfo->classPrimaryWeapons[i].weapon;
 				}
 			}
 		}
@@ -322,8 +354,10 @@ weapon_t G_GetPrimaryWeaponForClientSoldier(weapon_t weapon, gclient_t *client)
 }
 
 /**
-* @brief Drop weapon.
-*/
+ * @brief Drop Weapon
+ * @param[in] ent
+ * @param[in] weapon
+ */
 void G_DropWeapon(gentity_t *ent, weapon_t weapon)
 {
 	vec3_t    angles, velocity, org, offset, mins, maxs;
@@ -367,37 +401,14 @@ void G_DropWeapon(gentity_t *ent, weapon_t weapon)
 	ent2 = LaunchItem(item, org, velocity, client->ps.clientNum);
 	COM_BitClear(client->ps.weapons, weapon);
 
-	switch (weapon)
+	if (GetWeaponTableData(weapon)->weapAlts != WP_NONE)
 	{
-	case WP_KAR98:
-		COM_BitClear(client->ps.weapons, WP_GPG40);
-		break;
-	case WP_CARBINE:
-		COM_BitClear(client->ps.weapons, WP_M7);
-		break;
-	case WP_FG42:
-		COM_BitClear(client->ps.weapons, WP_FG42SCOPE);
-		break;
-	case WP_K43:
-		COM_BitClear(client->ps.weapons, WP_K43_SCOPE);
-		break;
-	case WP_GARAND:
-		COM_BitClear(client->ps.weapons, WP_GARAND_SCOPE);
-		break;
-	case WP_MORTAR:
-		COM_BitClear(client->ps.weapons, WP_MORTAR_SET);
-		break;
-	case WP_MORTAR2:
-		COM_BitClear(client->ps.weapons, WP_MORTAR2_SET);
-		break;
-	case WP_MOBILE_MG42:
-		COM_BitClear(client->ps.weapons, WP_MOBILE_MG42_SET);
-		break;
-	case WP_MOBILE_BROWNING:
-		COM_BitClear(client->ps.weapons, WP_MOBILE_BROWNING_SET);
-		break;
-	default:
-		break;
+		weapon_t weapAlts = GetWeaponTableData(weapon)->weapAlts;
+
+		if (GetWeaponTableData(weapAlts)->isRiflenade || GetWeaponTableData(weapAlts)->isScoped || GetWeaponTableData(weapAlts)->isSetWeapon)
+		{
+			COM_BitClear(client->ps.weapons, weapAlts);
+		}
 	}
 
 	// Clear out empty weapon, change to next best weapon
@@ -408,18 +419,18 @@ void G_DropWeapon(gentity_t *ent, weapon_t weapon)
 		client->ps.weapon = 0;
 	}
 
-	if (IS_MORTAR_WEAPON_SET(weapon))
+	if (GetWeaponTableData(weapon)->isMortarSet)
 	{
-		ent2->count = client->ps.ammo[BG_FindAmmoForWeapon(weapon)] + client->ps.ammoclip[BG_FindClipForWeapon(weapon)];
+		ent2->count = client->ps.ammo[GetWeaponTableData(weapon)->ammoIndex] + client->ps.ammoclip[GetWeaponTableData(weapon)->clipIndex];
 	}
 	else
 	{
-		ent2->count = client->ps.ammoclip[BG_FindClipForWeapon(weapon)];
+		ent2->count = client->ps.ammoclip[GetWeaponTableData(weapon)->clipIndex];
 	}
 
 	if (weapon == WP_KAR98 || weapon == WP_CARBINE)
 	{
-		ent2->delay = client->ps.ammo[BG_FindAmmoForWeapon(weaponTable[weapon].weapAlts)];
+		ent2->delay = client->ps.ammo[GetWeaponTableData(GetWeaponTableData(weapon)->weapAlts)->ammoIndex];
 	}
 	else
 	{
@@ -427,7 +438,7 @@ void G_DropWeapon(gentity_t *ent, weapon_t weapon)
 	}
 
 	//  ent2->item->quantity = client->ps.ammoclip[BG_FindClipForWeapon(weapon)]; // um, modifying an item is not a good idea
-	client->ps.ammoclip[BG_FindClipForWeapon(weapon)] = 0;
+	client->ps.ammoclip[GetWeaponTableData(weapon)->clipIndex] = 0;
 
 #ifdef FEATURE_OMNIBOT
 	Bot_Event_RemoveWeapon(client->ps.clientNum, Bot_WeaponGameToBot(weapon));
@@ -435,76 +446,46 @@ void G_DropWeapon(gentity_t *ent, weapon_t weapon)
 }
 
 /**
-* @brief Check if a weapon can be picked up.
-*/
+ * @brief Check if a weapon can be picked up.
+ * @param[in] weapon
+ * @param[in] ent
+ * @return
+ */
 qboolean G_CanPickupWeapon(weapon_t weapon, gentity_t *ent)
 {
-	if (ent->client->sess.sessionTeam == TEAM_AXIS)
+	// prevent picking up while reloading
+	if (ent->client->ps.weaponstate == WEAPON_RELOADING)
 	{
-		switch (weapon)
-		{
-		case WP_THOMPSON:
-			weapon = WP_MP40;
-			break;
-		case WP_CARBINE:
-			weapon = WP_KAR98;
-			break;
-		case WP_GARAND:
-			weapon = WP_K43;
-			break;
-		case WP_MOBILE_BROWNING:
-			weapon = WP_MOBILE_MG42;
-			break;
-		case WP_MORTAR:
-			weapon = WP_MORTAR2;
-			break;
-		case WP_BAZOOKA:
-			weapon = WP_PANZERFAUST;
-			break;
-		default:
-			break;
-		}
+		return qfalse;
 	}
-	else if (ent->client->sess.sessionTeam == TEAM_ALLIES)
+
+	// prevent picking up when overheating
+	if (ent->client->ps.weaponTime > 0)
 	{
-		switch (weapon)
-		{
-		case WP_MP40:
-			weapon = WP_THOMPSON;
-			break;
-		case WP_KAR98:
-			weapon = WP_CARBINE;
-			break;
-		case WP_K43:
-			weapon = WP_GARAND;
-			break;
-		case WP_MOBILE_MG42:
-			weapon = WP_MOBILE_BROWNING;
-			break;
-		case WP_MORTAR2:
-			weapon = WP_MORTAR;
-			break;
-		case WP_PANZERFAUST:
-			weapon = WP_BAZOOKA;
-			break;
-		default:
-			break;
-		}
+		return qfalse;
+	}
+
+	// get an equivalent weapon if the cleint team is different of the weapon team, if not keep the current
+	if (ent->client->sess.sessionTeam != GetWeaponTableData(weapon)->team && GetWeaponTableData(weapon)->weapEquiv)
+	{
+		weapon = GetWeaponTableData(weapon)->weapEquiv;
 	}
 
 	return BG_WeaponIsPrimaryForClassAndTeam(ent->client->sess.playerType, ent->client->sess.sessionTeam, weapon);
 }
-
 /**
-* @brief Pick a weapon up.
-*/
+ * @brief Pick a weapon up.
+ * @param[in,out] ent
+ * @param[in,out] other
+ * @return
+ */
 int Pickup_Weapon(gentity_t *ent, gentity_t *other)
 {
 	int      quantity;
 	qboolean alreadyHave = qfalse;
 
 	// magic ammo for any two-handed weapon
-	if (ent->item->giTag == WP_AMMO)
+	if (ent->item->giWeapon == WP_AMMO)
 	{
 		AddMagicAmmo(other, ent->count);
 		if (ent->parent && ent->parent->client)
@@ -512,20 +493,11 @@ int Pickup_Weapon(gentity_t *ent, gentity_t *other)
 			other->client->pers.lastammo_client = ent->parent->s.clientNum;
 		}
 
-		// if LT isn't giving ammo to self or another LT or the enemy, give him some props
-		if (other->client->ps.stats[STAT_PLAYER_CLASS] != PC_FIELDOPS)
+		// if field ops isn't giving ammo to self or the enemy, give him some props
+		if (ent->parent && (ent->parent->client != other->client))
 		{
 			if (ent->parent && ent->parent->client && other->client->sess.sessionTeam == ent->parent->client->sess.sessionTeam)
 			{
-				if (!(ent->parent->client->PCSpecialPickedUpCount % LT_SPECIAL_PICKUP_MOD))
-				{
-					AddScore(ent->parent, WOLF_AMMO_UP);
-					if (ent->parent && ent->parent->client)
-					{
-						G_LogPrintf("Ammo_Pack: %d %d\n", (int)(ent->parent - g_entities), (int)(other - g_entities));
-					}
-				}
-				ent->parent->client->PCSpecialPickedUpCount++;
 				G_AddSkillPoints(ent->parent, SK_SIGNALS, 1.f);
 				G_DebugAddSkillPoints(ent->parent, SK_SIGNALS, 1.f, "ammo pack picked up");
 
@@ -536,7 +508,6 @@ int Pickup_Weapon(gentity_t *ent, gentity_t *other)
 					Bot_Event_RecievedAmmo(other - g_entities, ent->parent);
 				}
 #endif
-
 				// extracted code originally here into AddMagicAmmo
 				// add 1 clip of magic ammo for any two-handed weapon
 			}
@@ -547,17 +518,17 @@ int Pickup_Weapon(gentity_t *ent, gentity_t *other)
 	quantity = ent->count;
 
 	// check if player already had the weapon
-	alreadyHave = COM_BitCheck(other->client->ps.weapons, ent->item->giTag);
+	alreadyHave = COM_BitCheck(other->client->ps.weapons, ent->item->giWeapon);
 
 	// prevents drop/pickup weapon "quick reload" exploit
 	if (alreadyHave)
 	{
-		Add_Ammo(other, ent->item->giTag, quantity, qfalse);
+		Add_Ammo(other, ent->item->giWeapon, quantity, qfalse);
 
 		// secondary weapon ammo
-		if (ent->delay)
+		if (ent->delay != 0.f)
 		{
-			Add_Ammo(other, weaponTable[ent->item->giTag].weapAlts, ent->delay, qfalse);
+			Add_Ammo(other, GetWeaponTableData(ent->item->giWeapon)->weapAlts, ent->delay, qfalse);
 		}
 	}
 	else
@@ -568,19 +539,19 @@ int Pickup_Weapon(gentity_t *ent, gentity_t *other)
 		}
 
 		// don't pick up when MG or mortar is set
-		if (IS_MORTAR_WEAPON_SET(other->client->ps.weapon) || IS_MG_WEAPON_SET(other->client->ps.weapon))
+		if (GetWeaponTableData(other->client->ps.weapon)->isSetWeapon)
 		{
 			return 0;
 		}
 
 		// see if we can pick it up
-		if (G_CanPickupWeapon(ent->item->giTag, other))
+		if (G_CanPickupWeapon(ent->item->giWeapon, other))
 		{
 			weapon_t primaryWeapon;
 
 			if (other->client->sess.playerType == PC_SOLDIER && other->client->sess.skill[SK_HEAVY_WEAPONS] >= 4)
 			{
-				primaryWeapon = G_GetPrimaryWeaponForClientSoldier(ent->item->giTag, other->client);
+				primaryWeapon = G_GetPrimaryWeaponForClientSoldier(ent->item->giWeapon, other->client);
 			}
 			else
 			{
@@ -597,63 +568,40 @@ int Pickup_Weapon(gentity_t *ent, gentity_t *other)
 				other->client->dropWeaponTime = level.time;
 
 				// add the weapon
-				COM_BitSet(other->client->ps.weapons, ent->item->giTag);
+				COM_BitSet(other->client->ps.weapons, ent->item->giWeapon);
 
 				// fixup mauser/sniper issues
-				switch (ent->item->giTag)
+				if (GetWeaponTableData(ent->item->giWeapon)->weapAlts != WP_NONE)
 				{
-				case WP_FG42:
-					COM_BitSet(other->client->ps.weapons, WP_FG42SCOPE);
-					break;
-				case  WP_GARAND:
-					COM_BitSet(other->client->ps.weapons, WP_GARAND_SCOPE);
-					break;
-				case  WP_K43:
-					COM_BitSet(other->client->ps.weapons, WP_K43_SCOPE);
-					break;
-				case  WP_MORTAR:
-					COM_BitSet(other->client->ps.weapons, WP_MORTAR_SET);
-					break;
-				case  WP_MORTAR2:
-					COM_BitSet(other->client->ps.weapons, WP_MORTAR2_SET);
-					break;
-				case  WP_MOBILE_MG42:
-					COM_BitSet(other->client->ps.weapons, WP_MOBILE_MG42_SET);
-					break;
-				case WP_MOBILE_BROWNING:
-					COM_BitSet(other->client->ps.weapons, WP_MOBILE_BROWNING_SET);
-					break;
-				case  WP_CARBINE:
-					COM_BitSet(other->client->ps.weapons, WP_M7);
-					break;
-				case WP_KAR98:
-					COM_BitSet(other->client->ps.weapons, WP_GPG40);
-					break;
-				default:
-					break;
+					weapon_t weapAlts = GetWeaponTableData(ent->item->giWeapon)->weapAlts;
+
+					if (GetWeaponTableData(weapAlts)->isRiflenade || GetWeaponTableData(weapAlts)->isScoped || GetWeaponTableData(weapAlts)->isSetWeapon)
+					{
+						COM_BitSet(other->client->ps.weapons, weapAlts);
+					}
 				}
 
-				other->client->ps.ammoclip[BG_FindClipForWeapon(ent->item->giTag)] = 0;
-				other->client->ps.ammo[BG_FindAmmoForWeapon(ent->item->giTag)]     = 0;
+				other->client->ps.ammoclip[GetWeaponTableData(ent->item->giWeapon)->clipIndex] = 0;
+				other->client->ps.ammo[GetWeaponTableData(ent->item->giWeapon)->ammoIndex]     = 0;
 
-				if (ent->item->giTag == WP_MORTAR || ent->item->giTag == WP_MORTAR2)
+				if (GetWeaponTableData(ent->item->giWeapon)->isMortar)
 				{
-					other->client->ps.ammo[BG_FindClipForWeapon(ent->item->giTag)] = quantity;
+					other->client->ps.ammo[GetWeaponTableData(ent->item->giWeapon)->clipIndex] = quantity;
 
 					// secondary weapon ammo
-					if (ent->delay)
+					if (ent->delay != 0.f)
 					{
-						Add_Ammo(other, weaponTable[ent->item->giTag].weapAlts, ent->delay, qfalse);
+						Add_Ammo(other, GetWeaponTableData(ent->item->giWeapon)->weapAlts, ent->delay, qfalse);
 					}
 				}
 				else
 				{
-					other->client->ps.ammoclip[BG_FindClipForWeapon(ent->item->giTag)] = quantity;
+					other->client->ps.ammoclip[GetWeaponTableData(ent->item->giWeapon)->clipIndex] = quantity;
 
 					// secondary weapon ammo
-					if (ent->delay)
+					if (ent->delay != 0.f)
 					{
-						other->client->ps.ammo[weaponTable[ent->item->giTag].weapAlts] = ent->delay;
+						other->client->ps.ammo[GetWeaponTableData(ent->item->giWeapon)->weapAlts] = ent->delay;
 					}
 				}
 			}
@@ -665,15 +613,18 @@ int Pickup_Weapon(gentity_t *ent, gentity_t *other)
 	}
 
 #ifdef FEATURE_OMNIBOT
-	Bot_Event_AddWeapon(other->client->ps.clientNum, Bot_WeaponGameToBot(ent->item->giTag));
+	Bot_Event_AddWeapon(other->client->ps.clientNum, Bot_WeaponGameToBot(ent->item->giWeapon));
 #endif
 
 	return RESPAWN_NEVER;
 }
 
 /**
-* @brief Pick health.
-*/
+ * @brief Pick health.
+ * @param[in,out] ent
+ * @param[in,out] other
+ * @return
+ */
 int Pickup_Health(gentity_t *ent, gentity_t *other)
 {
 	int max;
@@ -683,20 +634,11 @@ int Pickup_Health(gentity_t *ent, gentity_t *other)
 		other->client->pers.lasthealth_client = ent->parent->s.clientNum;
 	}
 
-	// if medic isn't giving ammo to self or another medic or the enemy, give him some props
-	if (other->client->ps.stats[STAT_PLAYER_CLASS] != PC_MEDIC)
+	// if medic isn't giving ammo to self or the enemy, give him some props
+	if (ent->parent && ent->parent->client && ent->parent->client != other->client && other->client->sess.sessionTeam == ent->parent->client->sess.sessionTeam)
 	{
-		if (ent->parent && ent->parent->client && other->client->sess.sessionTeam == ent->parent->client->sess.sessionTeam)
-		{
-			if (!(ent->parent->client->PCSpecialPickedUpCount % MEDIC_SPECIAL_PICKUP_MOD))
-			{
-				AddScore(ent->parent, WOLF_HEALTH_UP);
-				G_LogPrintf("Health_Pack: %d %d\n", (int)(ent->parent - g_entities), (int)(other - g_entities));
-			}
-			G_AddSkillPoints(ent->parent, SK_FIRST_AID, 1.f);
-			G_DebugAddSkillPoints(ent->parent, SK_FIRST_AID, 1.f, "health pack picked up");
-			ent->parent->client->PCSpecialPickedUpCount++;
-		}
+		G_AddSkillPoints(ent->parent, SK_FIRST_AID, 1.f);
+		G_DebugAddSkillPoints(ent->parent, SK_FIRST_AID, 1.f, "health pack picked up");
 	}
 
 	max = other->client->ps.stats[STAT_MAX_HEALTH];
@@ -724,8 +666,9 @@ int Pickup_Health(gentity_t *ent, gentity_t *other)
 }
 
 /**
-* @brief Respawn item.
-*/
+ * @brief Respawn item.
+ * @param[in,out] ent
+ */
 void RespawnItem(gentity_t *ent)
 {
 	// randomly select from teamed entities
@@ -760,12 +703,17 @@ void RespawnItem(gentity_t *ent)
 }
 
 /**
-* @brief Auto action when touching an item.
-*
-* PICKUP_ACTIVATE  (0), he will pick up items only when using +activate
-* PICKUP_TOUCH     (1), he will pickup items when touched
-* PICKUP_FORCE     (2), he will pickup the next item when touched (and reset to PICKUP_ACTIVATE when done)
-*/
+ * @brief Auto action when touching an item.
+ *
+ * PICKUP_ACTIVATE  (0), he will pick up items only when using +activate
+ * PICKUP_TOUCH     (1), he will pickup items when touched
+ * PICKUP_FORCE     (2), he will pickup the next item when touched (and reset to PICKUP_ACTIVATE when done)
+ *
+ * @param[in,out] ent
+ * @param[in,out] other
+ * @param[in] trace
+ *
+ */
 void Touch_Item_Auto(gentity_t *ent, gentity_t *other, trace_t *trace)
 {
 	if (other->client->pers.autoActivate == PICKUP_ACTIVATE)
@@ -775,9 +723,9 @@ void Touch_Item_Auto(gentity_t *ent, gentity_t *other, trace_t *trace)
 
 	if (!ent->active && ent->item->giType == IT_WEAPON)
 	{
-		if (ent->item->giTag != WP_AMMO)
+		if (ent->item->giWeapon != WP_AMMO)
 		{
-			if (!COM_BitCheck(other->client->ps.weapons, ent->item->giTag))
+			if (!COM_BitCheck(other->client->ps.weapons, ent->item->giWeapon))
 			{
 				return; // force activate only
 			}
@@ -794,8 +742,11 @@ void Touch_Item_Auto(gentity_t *ent, gentity_t *other, trace_t *trace)
 }
 
 /**
-* @brief Action when touching an item.
-*/
+ * @brief Action when touching an item.
+ * @param[in,out] ent
+ * @param[in] other
+ * @param trace - unused
+ */
 void Touch_Item(gentity_t *ent, gentity_t *other, trace_t *trace)
 {
 	int respawn;
@@ -925,8 +876,13 @@ void Touch_Item(gentity_t *ent, gentity_t *other, trace_t *trace)
 }
 
 /**
-* @brief Spawns an item and tosses it forward.
-*/
+ * @brief Spawns an item and tosses it forward.
+ * @param[in] item
+ * @param[in] origin
+ * @param[in] velocity
+ * @param[in] ownerNum
+ * @return
+ */
 gentity_t *LaunchItem(gitem_t *item, vec3_t origin, vec3_t velocity, int ownerNum)
 {
 	gentity_t *dropped = G_Spawn();
@@ -985,14 +941,15 @@ gentity_t *LaunchItem(gitem_t *item, vec3_t origin, vec3_t velocity, int ownerNu
 	{
 		gentity_t *flag = &g_entities[g_entities[ownerNum].client->flagParent];
 
-		dropped->s.otherEntityNum = g_entities[ownerNum].client->flagParent;    // store the entitynum of our original flag spawner
-		dropped->s.density        = 1;
-		dropped->think            = Team_DroppedFlagThink;
-		dropped->nextthink        = level.time + 30000;
+		dropped->s.otherEntityNum               = g_entities[ownerNum].client->flagParent;    // store the entitynum of our original flag spawner
+		g_entities[ownerNum].client->flagParent = 0;
+		dropped->s.density                      = 1;
+		dropped->think                          = Team_DroppedFlagThink;
+		dropped->nextthink                      = level.time + 30000;
 
 		if (level.gameManager)
 		{
-			G_Script_ScriptEvent(level.gameManager, "trigger", flag->item->giTag == PW_REDFLAG ? "allied_object_dropped" : "axis_object_dropped");
+			G_Script_ScriptEvent(level.gameManager, "trigger", flag->item->giPowerUp == PW_REDFLAG ? "allied_object_dropped" : "axis_object_dropped");
 		}
 		G_Script_ScriptEvent(flag, "trigger", "dropped");
 	}
@@ -1010,8 +967,13 @@ gentity_t *LaunchItem(gitem_t *item, vec3_t origin, vec3_t velocity, int ownerNu
 }
 
 /**
-* @brief Spawns an item and tosses it forward.
-*/
+ * @brief Spawns an item and tosses it forward.
+ * @param[in] ent
+ * @param[in] item
+ * @param[in] angle
+ * @param[in] novelocity
+ * @return
+ */
 gentity_t *Drop_Item(gentity_t *ent, gitem_t *item, float angle, qboolean novelocity)
 {
 	vec3_t velocity;
@@ -1036,17 +998,22 @@ gentity_t *Drop_Item(gentity_t *ent, gitem_t *item, float angle, qboolean novelo
 }
 
 /**
-* @brief Respawn the item.
-*/
+ * @brief Respawn the item.
+ * @param[in] ent
+ * @param other - unused
+ * @param activator - unused
+ */
 void Use_Item(gentity_t *ent, gentity_t *other, gentity_t *activator)
 {
 	RespawnItem(ent);
 }
 
 /**
-* @brief Traces down to find where an item should rest, instead of letting them
-*        free fall from their spawn points.
-*/
+ * @brief Traces down to find where an item should rest, instead of letting them
+ *        free fall from their spawn points.
+ *
+ * @param[in,out] ent
+ */
 void FinishSpawningItem(gentity_t *ent)
 {
 	trace_t tr;
@@ -1153,8 +1120,10 @@ void FinishSpawningItem(gentity_t *ent)
 }
 
 /**
-* @brief Sets the clipping size and plants the object on the floor.
-*/
+ * @brief Sets the clipping size and plants the object on the floor.
+ * @param[in,out] ent
+ * @param[in] item
+ */
 void G_SpawnItem(gentity_t *ent, gitem_t *item)
 {
 	char *noise;
@@ -1192,8 +1161,10 @@ void G_SpawnItem(gentity_t *ent, gitem_t *item)
 }
 
 /**
-* @brief Bounce an item.
-*/
+ * @brief Bounce an item.
+ * @param[in,out] ent
+ * @param[in,out] trace
+ */
 void G_BounceItem(gentity_t *ent, trace_t *trace)
 {
 	vec3_t velocity;
@@ -1214,7 +1185,7 @@ void G_BounceItem(gentity_t *ent, trace_t *trace)
 	{
 		vectoangles(trace->plane.normal, ent->s.angles);
 		ent->s.angles[0] += 90;
-		if (ent->s.angles[0] > 0.0 && ent->s.angles[0] < 50.0)
+		if (ent->s.angles[0] > 0.0f && ent->s.angles[0] < 50.0f)
 		{
 			// align items on inclined ground
 			G_SetAngle(ent, ent->s.angles);
@@ -1222,7 +1193,7 @@ void G_BounceItem(gentity_t *ent, trace_t *trace)
 		}
 		else
 		{
-			trace->endpos[2] += 1.0;    // make sure it is off ground
+			trace->endpos[2] += 1.0f;    // make sure it is off ground
 		}
 		SnapVector(trace->endpos);
 		G_SetOrigin(ent, trace->endpos);
@@ -1236,8 +1207,10 @@ void G_BounceItem(gentity_t *ent, trace_t *trace)
 }
 
 /**
-* @brief Run item prop.
-*/
+ * @brief Run item prop.
+ * @param[in,out] ent
+ * @param[in] origin
+ */
 void G_RunItemProp(gentity_t *ent, vec3_t origin)
 {
 	gentity_t *traceEnt;
@@ -1265,7 +1238,7 @@ void G_RunItemProp(gentity_t *ent, vec3_t origin)
 	if (owner->client && trace.startsolid && traceEnt != owner && traceEnt != ent /* && !traceEnt->active*/)
 	{
 		ent->takedamage = qfalse;
-		ent->die(ent, ent, NULL, 10, 0);
+		ent->die(ent, ent, NULL, 10, MOD_UNKNOWN);
 		Prop_Break_Sound(ent);
 
 		return;
@@ -1281,8 +1254,9 @@ void G_RunItemProp(gentity_t *ent, vec3_t origin)
 }
 
 /**
-* @brief Run item.
-*/
+ * @brief Run item.
+ * @param[in,out] ent
+ */
 void G_RunItem(gentity_t *ent)
 {
 	vec3_t  origin;
@@ -1345,7 +1319,7 @@ void G_RunItem(gentity_t *ent)
 	// check think function
 	G_RunThink(ent);
 
-	if (tr.fraction == 1)
+	if (tr.fraction == 1.f)
 	{
 		return;
 	}

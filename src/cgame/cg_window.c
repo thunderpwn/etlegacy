@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -35,12 +35,15 @@
 
 #include "cg_local.h"
 
-#if FEATURE_MULTIVIEW
+#ifdef FEATURE_MULTIVIEW
 extern pmove_t cg_pmove;        // cg_predict.c
 #endif
 
 vec4_t colorGreen2 = { 0.305f, 0.475f, 0.305f, 0.48f }; // Slightly off from default fill
 
+/**
+ * @brief CG_createStatsWindow
+ */
 void CG_createStatsWindow(void)
 {
 	cg_window_t *sw = CG_windowAlloc(WFX_TEXTSIZING | WFX_FADEIN | /*WFX_SCROLLUP|*/ WFX_TRUETYPE, 110);
@@ -59,6 +62,10 @@ void CG_createStatsWindow(void)
 	sw->y          = (cg.snap->ps.pm_type == PM_INTERMISSION) ? -20 : -100; // Align from bottom minus offset and height
 }
 
+/**
+ * @brief CG_createTopShotsWindow
+ * @note Unused
+ */
 void CG_createTopShotsWindow(void)
 {
 	cg_window_t *sw = CG_windowAlloc(WFX_TEXTSIZING | WFX_FLASH | WFX_FADEIN | WFX_SCROLLUP | WFX_TRUETYPE, 190);
@@ -76,9 +83,14 @@ void CG_createTopShotsWindow(void)
 	sw->x             = (cg.snap->ps.pm_type == PM_INTERMISSION) ? -10 : -20;
 	sw->y             = (cg.snap->ps.pm_type == PM_INTERMISSION) ? -20 : -60; // Align from bottom minus offset and height
 	sw->flashMidpoint = sw->flashPeriod * 0.8f;
-	memcpy(&sw->colorBackground2, &colorGreen2, sizeof(vec4_t));
+	Com_Memcpy(&sw->colorBackground2, &colorGreen2, sizeof(vec4_t));
 }
 
+/**
+ * @brief CG_createMOTDWindow
+ *
+ * @todo TODO: dynamic game server MOTD window, see CG_DrawInformation()
+ */
 void CG_createMOTDWindow(void)
 {
 	const char *str = CG_ConfigString(CS_CUSTMOTD + 0);
@@ -101,7 +113,7 @@ void CG_createMOTDWindow(void)
 		sw->x             = 10;
 		sw->y             = -36;
 		sw->flashMidpoint = sw->flashPeriod * 0.8f;
-		memcpy(&sw->colorBackground2, &colorGreen2, sizeof(vec4_t));
+		Com_Memcpy(&sw->colorBackground2, &colorGreen2, sizeof(vec4_t));
 
 		// Copy all MOTD info into the window
 		cg.windowCurrent = sw;
@@ -110,7 +122,7 @@ void CG_createMOTDWindow(void)
 			str = CG_ConfigString(CS_CUSTMOTD + i);
 			if (str != NULL && *str != 0)
 			{
-				CG_printWindow((char *)str);
+				CG_printWindow(str);
 			}
 			else
 			{
@@ -128,7 +140,10 @@ void CG_createMOTDWindow(void)
 //////////////////////////////////////////////
 //////////////////////////////////////////////
 
-// Windowing system setup
+
+/**
+ * @brief Windowing system setup
+ */
 void CG_windowInit(void)
 {
 	int i;
@@ -145,7 +160,12 @@ void CG_windowInit(void)
 	cg.topshotsWindow     = NULL;
 }
 
-// Window stuct "constructor" with some common defaults
+/**
+ * @brief Window stuct "constructor" with some common defaults
+ * @param[in] w
+ * @param[out] fx
+ * @param[out] startupLength
+ */
 void CG_windowReset(cg_window_t *w, int fx, int startupLength)
 {
 	vec4_t colorGeneralBorder = { 0.5f, 0.35f, 0.25f, 0.5f };
@@ -165,11 +185,16 @@ void CG_windowReset(cg_window_t *w, int fx, int startupLength)
 	w->x             = 0;
 	w->y             = 0;
 
-	memcpy(&w->colorBorder, &colorGeneralBorder, sizeof(vec4_t));
-	memcpy(&w->colorBackground, &colorGeneralFill, sizeof(vec4_t));
+	Com_Memcpy(&w->colorBorder, &colorGeneralBorder, sizeof(vec4_t));
+	Com_Memcpy(&w->colorBackground, &colorGeneralFill, sizeof(vec4_t));
 }
 
-// Reserve a window
+/**
+ * @brief Reserve a window
+ * @param[in] fx
+ * @param[in] startupLength
+ * @return
+ */
 cg_window_t *CG_windowAlloc(int fx, int startupLength)
 {
 	int                i;
@@ -196,7 +221,10 @@ cg_window_t *CG_windowAlloc(int fx, int startupLength)
 	return NULL;
 }
 
-// Free up a window reservation
+/**
+ * @brief Free up a window reservation
+ * @param[in,out] w
+ */
 void CG_windowFree(cg_window_t *w)
 {
 	int                i, j;
@@ -239,6 +267,9 @@ void CG_windowFree(cg_window_t *w)
 	}
 }
 
+/**
+ * @brief CG_windowCleanup
+ */
 void CG_windowCleanup(void)
 {
 	int                i;
@@ -256,9 +287,12 @@ void CG_windowCleanup(void)
 	}
 }
 
+/**
+ * @brief CG_demoAviFPSDraw
+ */
 void CG_demoAviFPSDraw(void)
 {
-	qboolean fKeyDown = cgs.fKeyPressed[K_F1] | cgs.fKeyPressed[K_F2] | cgs.fKeyPressed[K_F3] | cgs.fKeyPressed[K_F4] | cgs.fKeyPressed[K_F5];
+	qboolean fKeyDown = (qboolean)(cgs.fKeyPressed[K_F1] | cgs.fKeyPressed[K_F2] | cgs.fKeyPressed[K_F3] | cgs.fKeyPressed[K_F4] | cgs.fKeyPressed[K_F5]);
 
 	if (cg.demoPlayback && fKeyDown && cgs.aviDemoRate >= 0)
 	{
@@ -266,6 +300,9 @@ void CG_demoAviFPSDraw(void)
 	}
 }
 
+/**
+ * @brief CG_demoTimescaleDraw
+ */
 void CG_demoTimescaleDraw(void)
 {
 	if (cg.demoPlayback && cgs.timescaleUpdate > cg.time && demo_drawTimeScale.integer != 0)
@@ -273,25 +310,27 @@ void CG_demoTimescaleDraw(void)
 		vec4_t bgColor = { 0.0f, 0.0f, 0.0f, 0.6f };
 		vec4_t bdColor = { 0.5f, 0.5f, 0.5f, 0.5f };
 
-		char *s = va("^7Time Scale: ^3%.1fx", cg_timescale.value);
+		char *s = va("^7Time Scale: ^3%.1fx", (double)cg_timescale.value);
 		int  h  = CG_Text_Height_Ext("A", cg_fontScaleSP.value, 0, &cgs.media.limboFont2);
 		int  w  = CG_Text_Width_Ext(s, cg_fontScaleSP.value, 0, &cgs.media.limboFont2);
-		int  x  = Ccg_WideX(SCREEN_WIDTH) - w - 108;
+		int  x  = (int)(Ccg_WideX(SCREEN_WIDTH) - w - 108);
 
-		CG_FillRect(x, SCREEN_HEIGHT - 21, w + 7, h * 2.5, bgColor);
-		CG_DrawRect(x, SCREEN_HEIGHT - 21, w + 7, h * 2.5, 1, bdColor);
+		CG_FillRect(x, SCREEN_HEIGHT - 21, w + 7, h * 2.5f, bgColor);
+		CG_DrawRect(x, SCREEN_HEIGHT - 21, w + 7, h * 2.5f, 1, bdColor);
 		CG_Text_Paint_Ext(x + 3, SCREEN_HEIGHT - 10, cg_fontScaleSP.value, cg_fontScaleSP.value, colorWhite, s, 0, 0, 0, &cgs.media.limboFont2);
 	}
 }
 
-// Main window-drawing handler
+/**
+ * @brief Main window-drawing handler
+ */
 void CG_windowDraw(void)
 {
 	int         h, x, y, i, j, milli, t_offset, tmp;
 	cg_window_t *w;
 	qboolean    fCleanup = qfalse;
-#if FEATURE_MULTIVIEW
-	qboolean fAllowMV = (cg.snap != NULL && cg.snap->ps.pm_type != PM_INTERMISSION && cgs.mvAllowed);
+#ifdef FEATURE_MULTIVIEW
+	qboolean fAllowMV = (qboolean)(cg.snap != NULL && cg.snap->ps.pm_type != PM_INTERMISSION && cgs.mvAllowed);
 #endif
 	vec4_t *bg;
 	vec4_t textColor, borderColor, bgColor;
@@ -305,9 +344,9 @@ void CG_windowDraw(void)
 	}
 
 	milli = trap_Milliseconds();
-	memcpy(textColor, colorWhite, sizeof(vec4_t));
+	Com_Memcpy(textColor, colorWhite, sizeof(vec4_t));
 
-#if FEATURE_MULTIVIEW
+#ifdef FEATURE_MULTIVIEW
 	// Mouse cursor position for MV highlighting (offset for cursor pointer position)
 	// Also allow for swingcam toggling
 	if (cg.mvTotalClients > 0 && fAllowMV)
@@ -326,7 +365,7 @@ void CG_windowDraw(void)
 			continue;
 		}
 
-#if FEATURE_MULTIVIEW
+#ifdef FEATURE_MULTIVIEW
 		// Multiview rendering has its own handling
 		if (w->effects & WFX_MULTIVIEW)
 		{
@@ -346,13 +385,13 @@ void CG_windowDraw(void)
 
 		bg = ((w->effects & WFX_FLASH) && (milli % w->flashPeriod) > w->flashMidpoint) ? &w->colorBackground2 : &w->colorBackground;
 
-		h            = w->h;
-		x            = w->x;
-		y            = w->y;
+		h            = (int)w->h;
+		x            = (int)w->x;
+		y            = (int)w->y;
 		t_offset     = milli - w->time;
 		textColor[3] = 1.0f;
-		memcpy(&borderColor, w->colorBorder, sizeof(vec4_t));
-		memcpy(&bgColor, bg, sizeof(vec4_t));
+		Com_Memcpy(&borderColor, w->colorBorder, sizeof(vec4_t));
+		Com_Memcpy(&bgColor, bg, sizeof(vec4_t));
 
 		// TODO: Add in support for ALL scrolling effects
 		if (w->state == WSTATE_START)
@@ -390,7 +429,7 @@ void CG_windowDraw(void)
 			{
 				if (tmp > 0)
 				{
-					y = w->curY + (SCREEN_HEIGHT - w->y) * t_offset / w->targetTime;        //(100 * t_offset / w->targetTime) / 100;
+					y = (int)(w->curY + (SCREEN_HEIGHT - w->y) * t_offset / w->targetTime);        //(100 * t_offset / w->targetTime) / 100;
 				}
 				if (tmp < 0 || y >= SCREEN_HEIGHT)
 				{
@@ -438,7 +477,7 @@ void CG_windowDraw(void)
 		}
 	}
 
-#if FEATURE_MULTIVIEW
+#ifdef FEATURE_MULTIVIEW
 	// Wedge in MV info overlay
 	if (cg.mvTotalClients > 0 && fAllowMV)
 	{
@@ -450,7 +489,7 @@ void CG_windowDraw(void)
 	CG_demoAviFPSDraw();
 	CG_demoTimescaleDraw();
 
-#if FEATURE_MULTIVIEW
+#ifdef FEATURE_MULTIVIEW
 	// Mouse cursor lays on top of everything
 	if (cg.mvTotalClients > 0 && cg.time < cgs.cursorUpdate && fAllowMV)
 	{
@@ -464,7 +503,10 @@ void CG_windowDraw(void)
 	}
 }
 
-// Set the window width and height based on the windows text/font parameters
+/**
+ * @brief Set the window width and height based on the windows text/font parameters
+ * @param[in,out] w
+ */
 void CG_windowNormalizeOnText(cg_window_t *w)
 {
 	int i, tmp;
@@ -479,8 +521,8 @@ void CG_windowNormalizeOnText(cg_window_t *w)
 
 	if (!(w->effects & WFX_TRUETYPE))
 	{
-		w->fontWidth  = w->fontScaleX * WINDOW_FONTWIDTH;
-		w->fontHeight = w->fontScaleY * WINDOW_FONTHEIGHT;
+		w->fontWidth  = (int)(w->fontScaleX * WINDOW_FONTWIDTH);
+		w->fontHeight = (int)(w->fontScaleY * WINDOW_FONTHEIGHT);
 	}
 
 	for (i = 0; i < w->lineCount; i++)
@@ -529,7 +571,11 @@ void CG_windowNormalizeOnText(cg_window_t *w)
 	}
 }
 
-void CG_printWindow(char *str)
+/**
+ * @brief CG_printWindow
+ * @param[in] str
+ */
+void CG_printWindow(const char *str)
 {
 	int         pos = 0, pos2 = 0;
 	char        buf[MAX_STRING_CHARS];
@@ -573,7 +619,9 @@ void CG_printWindow(char *str)
 	}
 }
 
-// String buffer handling
+/**
+ * @brief String buffer handling
+ */
 void CG_initStrings(void)
 {
 	int i;
@@ -585,7 +633,13 @@ void CG_initStrings(void)
 	}
 }
 
-qboolean CG_addString(cg_window_t *w, char *buf)
+/**
+ * @brief CG_addString
+ * @param[in,out] w
+ * @param[in] buf
+ * @return
+ */
+qboolean CG_addString(cg_window_t *w, const char *buf)
 {
 	int i;
 
@@ -603,7 +657,7 @@ qboolean CG_addString(cg_window_t *w, char *buf)
 			{
 				w->lineCount++;
 				cg.aStringPool[i].fActive = qtrue;
-				strcpy(cg.aStringPool[i].str, buf);
+				Q_strncpyz(cg.aStringPool[i].str, buf, sizeof(cg.aStringPool[0].str));
 
 				return qtrue;
 			}
@@ -615,7 +669,7 @@ qboolean CG_addString(cg_window_t *w, char *buf)
 		if (!cg.aStringPool[i].fActive)
 		{
 			cg.aStringPool[i].fActive = qtrue;
-			strcpy(cg.aStringPool[i].str, buf);
+			Q_strncpyz(cg.aStringPool[i].str, buf, sizeof(cg.aStringPool[0].str));
 			w->lineText[w->lineCount++] = (char *)&cg.aStringPool[i].str;
 
 			return qtrue;
@@ -625,6 +679,10 @@ qboolean CG_addString(cg_window_t *w, char *buf)
 	return qfalse;
 }
 
+/**
+ * @brief CG_removeStrings
+ * @param[in,out] w
+ */
 void CG_removeStrings(cg_window_t *w)
 {
 	int i, j;
@@ -654,8 +712,10 @@ void CG_removeStrings(cg_window_t *w)
 
 // cgame cursor handling
 
-#if FEATURE_MULTIVIEW
-// Mouse overlay for controlling multiview windows
+#ifdef FEATURE_MULTIVIEW
+/**
+ * @brief Mouse overlay for controlling multiview windows
+ */
 void CG_cursorUpdate(void)
 {
 	int                i, x;
@@ -806,7 +866,7 @@ void CG_cursorUpdate(void)
 	{
 		// display on two columns
 		int hOffset = 32;
-		int xOffset = MVINFO_RIGHT - hOffset;
+		int xOffset = (int)(MVINFO_RIGHT - hOffset);
 
 		// Ugh, have to loop through BOTH team lists
 		for (i = TEAM_AXIS; i <= TEAM_ALLIES; i++)
@@ -819,12 +879,12 @@ void CG_cursorUpdate(void)
 			if (cgs.cursorX >= nx && cgs.cursorY >= ny && cgs.cursorX < xOffset &&
 			    cgs.cursorY < ny + (cg.mvTotalTeam[i] * charHeight * 2.0f))
 			{
-				int pos = (int)(cgs.cursorY - ny) / (charHeight * 2.0f);
+				int pos = (int)((cgs.cursorY - ny) / (charHeight * 2.0f));
 
 				if (pos < cg.mvTotalTeam[i])
 				{
 					int x = xOffset - cg.mvOverlay[(cg.mvTeamList[i][pos])].width;
-					int y = MVINFO_TOP + ((pos + 1) * charHeight * 2.0f);
+					int y = (int)(MVINFO_TOP + ((pos + 1) * charHeight * 2.0f));
 
 					// See if we're really over something
 					if (cgs.cursorX >= x && cgs.cursorY >= y &&

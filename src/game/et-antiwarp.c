@@ -6,7 +6,13 @@
 
 #include "g_local.h"
 
-// fixes spectator bugs
+/**
+ * @brief G_DoAntiwarp
+ * @param[in] ent
+ * @return
+ *
+ * @note Fixes spectator bugs
+ */
 qboolean G_DoAntiwarp(gentity_t *ent)
 {
 	// only antiwarp if requested
@@ -23,12 +29,6 @@ qboolean G_DoAntiwarp(gentity_t *ent)
 			return qfalse;
 		}
 
-		// don't antiwarp during map load
-		if (ent->client->ps.pm_flags & PMF_TIME_LOAD)
-		{
-			return qfalse;
-		}
-
 		// don't antiwarp if they haven't been connected for 5 seconds
 		// note: this check is generally only triggered during mid-map
 		// connects, because clients connect before loading the map.
@@ -41,6 +41,11 @@ qboolean G_DoAntiwarp(gentity_t *ent)
 	return qtrue;
 }
 
+/**
+ * @brief etpro_AddUsercmd
+ * @param[in] clientNum
+ * @param[in] cmd
+ */
 void etpro_AddUsercmd(int clientNum, usercmd_t *cmd)
 {
 	gentity_t *ent = g_entities + clientNum;
@@ -58,7 +63,14 @@ void etpro_AddUsercmd(int clientNum, usercmd_t *cmd)
 	}
 }
 
-// G_CmdScale is a hack :x
+/**
+ * @brief G_CmdScale
+ * @param[in] ent
+ * @param[in] cmd
+ * @return
+ *
+ * @note G_CmdScale is a hack :x
+ */
 static float G_CmdScale(gentity_t *ent, usercmd_t *cmd)
 {
 	float scale = abs(cmd->forwardmove);
@@ -125,6 +137,10 @@ static float G_CmdScale(gentity_t *ent, usercmd_t *cmd)
 	return scale;
 }
 
+/**
+ * @brief DoClientThinks
+ * @param[in,out] ent
+ */
 void DoClientThinks(gentity_t *ent)
 {
 	usercmd_t *cmd;
@@ -229,7 +245,7 @@ void DoClientThinks(gentity_t *ent)
 			// try to split it up in to smaller commands
 
 			delta     = ((float)LAG_MAX_DELTA - ent->client->cmddelta);
-			timeDelta = ceil(delta / speed); // prefer speedup
+			timeDelta = (int)(ceil((double)(delta / speed))); // prefer speedup
 			delta     = (float)timeDelta * speed;
 
 			if (timeDelta < 1)
@@ -250,12 +266,12 @@ void DoClientThinks(gentity_t *ent)
 		}
 		else
 		{
-			savedTime = 0;  // zinx - shut up compiler
+			savedTime = 0;  // shut up compiler
 		}
 
 		// erh.  hack, really. make it run for the proper amount of time.
 		ent->client->ps.commandTime = lastTime;
-		ClientThink_cmd(ent, cmd);
+		ClientThink_cmd(ent, cmd, qtrue);
 		lastTime = ent->client->ps.commandTime;
 
 		if (deltahax)
@@ -292,6 +308,7 @@ drop_packet:
 		    );
 	}
 
+#ifdef LEGACY_DEBUG
 	// debug; size is added lag (amount above player's network lag)
 	// rotation is time
 	if ((g_antiwarp.integer & 16) && ent->client->cmdcount)
@@ -311,8 +328,11 @@ drop_packet:
 
 		//legacy_AddDebugLine( org, parms, ((ent - g_entities) % 32), LINEMODE_SPOKES, LINESHADER_RAILCORE, 0, qfalse );
 	}
+#endif
 
-	//ent->client->ps.stats[STAT_ANTIWARP_DELAY] = latestTime - ent->client->ps.commandTime;
-	//if (ent->client->ps.stats[STAT_ANTIWARP_DELAY] < 0)
-	//	ent->client->ps.stats[STAT_ANTIWARP_DELAY] = 0;
+	ent->client->ps.stats[STAT_ANTIWARP_DELAY] = latestTime - ent->client->ps.commandTime;
+	if (ent->client->ps.stats[STAT_ANTIWARP_DELAY] < 0)
+	{
+		ent->client->ps.stats[STAT_ANTIWARP_DELAY] = 0;
+	}
 }

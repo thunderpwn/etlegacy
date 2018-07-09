@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -36,17 +36,18 @@
 #ifndef INCLUDE_BG_LOCAL_H
 #define INCLUDE_BG_LOCAL_H
 
-#define MIN_WALK_NORMAL 0.7     // can't walk on very steep slopes
+#define MIN_WALK_NORMAL 0.7f     ///< Can't walk on very steep slopes
 
 #define STEPSIZE        18
 
 #define JUMP_VELOCITY   270
 
-#define MAX_MG42_HEAT   1500.f
-
-// all of the locals will be zeroed before each
-// pmove, just to make damn sure we don't have
-// any differences when running on client or server
+/**
+ * @struct pml_s
+ * @brief All of the locals will be zeroed before each
+ * pmove, just to make damn sure we don't have
+ * any differences when running on client or server
+ */
 typedef struct
 {
 	vec3_t forward, right, up;
@@ -75,9 +76,9 @@ extern pml_t   pml;
 extern float pm_stopspeed;
 
 extern float pm_waterSwimScale;
-extern float pm_waterWadeScale;
+//extern float pm_waterWadeScale;
 extern float pm_slagSwimScale;
-extern float pm_slagWadeScale;
+//extern float pm_slagWadeScale;
 
 extern float pm_accelerate;
 extern float pm_airaccelerate;
@@ -88,7 +89,7 @@ extern float pm_flyaccelerate;
 extern float pm_friction;
 extern float pm_waterfriction;
 extern float pm_slagfriction;
-extern float pm_flightfriction;
+//extern float pm_flightfriction;
 
 extern int c_pmove;
 
@@ -97,7 +98,5 @@ void PM_AddEvent(int newEvent);
 
 qboolean PM_SlideMove(qboolean gravity);
 void PM_StepSlideMove(qboolean gravity);
-
-void PM_BeginWeaponChange(int oldweapon, int newweapon, qboolean reload);
 
 #endif // #ifndef INCLUDE_BG_LOCAL_H

@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -36,13 +36,13 @@
 
 #include "cg_local.h"
 
-/*
-==================
-CG_BubbleTrail
-
-Bullets shot underwater
-==================
-*/
+/**
+ * @brief Bullets shot underwater
+ * @param[in] start
+ * @param[in] end
+ * @param[in] size
+ * @param[in] spacing
+ */
 void CG_BubbleTrail(vec3_t start, vec3_t end, float size, float spacing)
 {
 	vec3_t        move;
@@ -68,7 +68,7 @@ void CG_BubbleTrail(vec3_t start, vec3_t end, float size, float spacing)
 		le->leType    = LE_MOVE_SCALE_FADE;
 		le->startTime = cg.time;
 		le->endTime   = cg.time + 1000 + random() * 250;
-		le->lifeRate  = 1.0 / (le->endTime - le->startTime);
+		le->lifeRate  = 1.0f / (le->endTime - le->startTime);
 
 		re             = &le->refEntity;
 		re->shaderTime = cg.time / 1000.0f;
@@ -95,18 +95,26 @@ void CG_BubbleTrail(vec3_t start, vec3_t end, float size, float spacing)
 	}
 }
 
-/*
-=====================
-CG_SmokePuff
-
-Adds a smoke puff or blood trail localEntity.
-
-        it would be nice to have an acceleration vector for this as well.
-        big velocity vector with a negative acceleration for deceleration, etc.
-        (breath could then come out of a guys mouth at the rate he's walking/running and it
-        would slow down once it's created)
-=====================
-*/
+/**
+ * @brief Adds a smoke puff or blood trail localEntity.
+ * @param[in] p
+ * @param[in] vel
+ * @param[in] radius
+ * @param[in] r
+ * @param[in] g
+ * @param[in] b
+ * @param[in] a
+ * @param[in] duration
+ * @param[in] startTime
+ * @param[in] fadeInTime
+ * @param[in] leFlags
+ * @param[in] hShader
+ * @return 
+ * @todo It would be nice to have an acceleration vector for this as well.
+ * Big velocity vector with a negative acceleration for deceleration, etc.
+ * (breath could then come out of a guys mouth at the rate he's walking/running and it
+ * would slow down once it's created)
+ */
 localEntity_t *CG_SmokePuff(const vec3_t p, const vec3_t vel,
                             float radius,
                             float r, float g, float b, float a,
@@ -131,15 +139,15 @@ localEntity_t *CG_SmokePuff(const vec3_t p, const vec3_t vel,
 
 	le->leType     = LE_MOVE_SCALE_FADE;
 	le->startTime  = startTime;
-	le->endTime    = startTime + duration;
+	le->endTime    = startTime + (int)duration;
 	le->fadeInTime = fadeInTime;
 	if (fadeInTime > startTime)
 	{
-		le->lifeRate = 1.0 / (le->endTime - le->fadeInTime);
+		le->lifeRate = 1.0f / (le->endTime - le->fadeInTime);
 	}
 	else
 	{
-		le->lifeRate = 1.0 / (le->endTime - le->startTime);
+		le->lifeRate = 1.0f / (le->endTime - le->startTime);
 	}
 
 	le->color[0] = r;
@@ -155,9 +163,9 @@ localEntity_t *CG_SmokePuff(const vec3_t p, const vec3_t vel,
 	VectorCopy(p, re->origin);
 	re->customShader = hShader;
 
-	re->shaderRGBA[0] = le->color[0] * 0xff;
-	re->shaderRGBA[1] = le->color[1] * 0xff;
-	re->shaderRGBA[2] = le->color[2] * 0xff;
+	re->shaderRGBA[0] = (byte)(le->color[0] * 0xff);
+	re->shaderRGBA[1] = (byte)(le->color[1] * 0xff);
+	re->shaderRGBA[2] = (byte)(le->color[2] * 0xff);
 	re->shaderRGBA[3] = 0xff;
 
 	re->reType = RT_SPRITE;
@@ -166,11 +174,16 @@ localEntity_t *CG_SmokePuff(const vec3_t p, const vec3_t vel,
 	return le;
 }
 
-/*
-====================
-CG_MakeExplosion
-====================
-*/
+/**
+ * @brief CG_MakeExplosion
+ * @param[in] origin
+ * @param[in] dir
+ * @param[in] hModel
+ * @param[in] shader
+ * @param[in] msec
+ * @param[in] isSprite
+ * @return 
+ */
 localEntity_t *CG_MakeExplosion(vec3_t origin, vec3_t dir,
                                 qhandle_t hModel, qhandle_t shader,
                                 int msec, qboolean isSprite)
@@ -229,18 +242,26 @@ localEntity_t *CG_MakeExplosion(vec3_t origin, vec3_t dir,
 	ex->pos.trType = TR_LINEAR;
 	ex->pos.trTime = cg.time;
 	VectorCopy(newOrigin, ex->pos.trBase);
-	VectorScale(dir, 48, ex->pos.trDelta);
+
+    if (dir)
+    {
+        VectorScale(dir, 48, ex->pos.trDelta);
+    }
 
 	ex->color[0] = ex->color[1] = ex->color[2] = 1.0f;
 
 	return ex;
 }
 
-/*
-=================
-CG_AddBloodTrails
-=================
-*/
+/**
+ * @brief CG_AddBloodTrails
+ * @param[in] origin
+ * @param[in] dir
+ * @param[in] speed
+ * @param[in] duration
+ * @param[in] count
+ * @param[in] randScale
+ */
 void CG_AddBloodTrails(vec3_t origin, vec3_t dir, int speed, int duration, int count, float randScale)
 {
 	localEntity_t *le;
@@ -275,13 +296,11 @@ void CG_AddBloodTrails(vec3_t origin, vec3_t dir, int speed, int duration, int c
 }
 
 #define BLOOD_SPURT_COUNT   4
-/*
-=================
-CG_Bleed
-
-This is the spurt of blood when a character gets hit
-=================
-*/
+/**
+ * @brief This is the spurt of blood when a character gets hit
+ * @param[in] origin
+ * @param[in] entityNum
+ */
 void CG_Bleed(vec3_t origin, int entityNum)
 {
 	if (!cg_blood.integer)
@@ -338,7 +357,7 @@ void CG_Bleed(vec3_t origin, int entityNum)
 			VectorCopy(dir, ndir);
 			for (j = 0; j < 3; j++)
 			{
-				ndir[j] += crandom() * 0.3;
+				ndir[j] += crandom() * 0.3f;
 			}
 			VectorNormalize(ndir);
 			CG_AddBloodTrails(bOrigin, ndir,
@@ -350,11 +369,16 @@ void CG_Bleed(vec3_t origin, int entityNum)
 	}
 }
 
-/*
-==================
-CG_LaunchGib
-==================
-*/
+/**
+ * @brief CG_LaunchGib
+ * @param[in] cent
+ * @param[in] origin
+ * @param[in] angles
+ * @param[in] velocity
+ * @param[in] hModel
+ * @param[in] sizeScale
+ * @param[in] breakCount
+ */
 void CG_LaunchGib(centity_t *cent, vec3_t origin, vec3_t angles, vec3_t velocity, qhandle_t hModel, float sizeScale, int breakCount)
 {
 	localEntity_t *le;
@@ -370,14 +394,14 @@ void CG_LaunchGib(centity_t *cent, vec3_t origin, vec3_t angles, vec3_t velocity
 
 	le->leType     = LE_FRAGMENT;
 	le->startTime  = cg.time;
-	le->endTime    = le->startTime + 20000 + (crandom() * 5000);
+	le->endTime    = le->startTime + 20000 + (int)(crandom() * 5000);
 	le->breakCount = breakCount;
 	le->sizeScale  = sizeScale;
 
 	VectorCopy(angles, le->angles.trBase);
 	VectorCopy(origin, re->origin);
 	AnglesToAxis(angles, re->axis);
-	if (sizeScale != 1)
+	if (sizeScale != 1.f)
 	{
 		int i;
 
@@ -425,11 +449,11 @@ void CG_LaunchGib(centity_t *cent, vec3_t origin, vec3_t angles, vec3_t velocity
 #define GIB_VELOCITY    75
 #define GIB_JUMP        250
 
-/*
-==============
-CG_LoseHat
-==============
-*/
+/**
+ * @brief CG_LoseHat
+ * @param[in] cent
+ * @param[in] dir
+ */
 void CG_LoseHat(centity_t *cent, vec3_t dir)
 {
 	clientInfo_t   *ci;
@@ -452,9 +476,9 @@ void CG_LoseHat(centity_t *cent, vec3_t dir)
 
 	CG_GetOriginForTag(cent, &cent->pe.headRefEnt, "tag_mouth", 0, origin, NULL);
 
-	velocity[0] = dir[0] * (0.75 + random()) * GIB_VELOCITY;
-	velocity[1] = dir[1] * (0.75 + random()) * GIB_VELOCITY;
-	velocity[2] = GIB_JUMP - 50 + dir[2] * (0.5 + random()) * GIB_VELOCITY;
+	velocity[0] = dir[0] * (0.75f + random()) * GIB_VELOCITY;
+	velocity[1] = dir[1] * (0.75f + random()) * GIB_VELOCITY;
+	velocity[2] = GIB_JUMP - 50 + dir[2] * (0.5f + random()) * GIB_VELOCITY;
 
 	{
 		localEntity_t *le;
@@ -465,7 +489,7 @@ void CG_LoseHat(centity_t *cent, vec3_t dir)
 
 		le->leType    = LE_FRAGMENT;
 		le->startTime = cg.time;
-		le->endTime   = le->startTime + 20000 + (crandom() * 5000);
+		le->endTime   = (int)(le->startTime + 20000 + (crandom() * 5000));
 
 		VectorCopy(origin, re->origin);
 		AxisCopy(axisDefault, re->axis);
@@ -504,16 +528,17 @@ void CG_LoseHat(centity_t *cent, vec3_t dir)
 	}
 }
 
-/*
-======================
-CG_GetOriginForTag
-
-  places the position of the tag into "org"
-
-  returns the index of the tag it used, so we can cycle through tag's with the same name
-======================
-*/
-int CG_GetOriginForTag(centity_t *cent, refEntity_t *parent, char *tagName, int startIndex, vec3_t org, vec3_t axis[3])
+/**
+ * @brief Places the position of the tag into "org"
+ * @param cent - unused
+ * @param[in] parent
+ * @param[in] tagName
+ * @param[in] startIndex
+ * @param[in,out] org
+ * @param[in] axis
+ * @return The index of the tag it used, so we can cycle through tag's with the same name
+ */
+int CG_GetOriginForTag(centity_t *cent, refEntity_t *parent, const char *tagName, int startIndex, vec3_t org, vec3_t axis[3])
 {
 	int           i;
 	orientation_t lerped;
@@ -542,16 +567,15 @@ int CG_GetOriginForTag(centity_t *cent, refEntity_t *parent, char *tagName, int 
 	return retval;
 }
 
-/*
-===================
-CG_GibPlayer
-
-Generated a bunch of gibs launching out from the bodies location
-===================
-*/
 #define MAXJUNCTIONS 8
 #define GIB_BLOOD_DOTS  3
 
+/**
+ * @brief Generated a bunch of gibs launching out from the bodies location
+ * @param[in,out] cent
+ * @param[in] playerOrigin
+ * @param[in] gdir
+ */
 void CG_GibPlayer(centity_t *cent, vec3_t playerOrigin, vec3_t gdir)
 {
 	vec3_t         origin;
@@ -564,7 +588,7 @@ void CG_GibPlayer(centity_t *cent, vec3_t playerOrigin, vec3_t gdir)
 	vec3_t   junctionOrigin[MAXJUNCTIONS];
 	vec3_t   axis[3];
 
-	static char *JunctiongibTags[] =
+	static const char *JunctiongibTags[] =
 	{
 		// leg tag
 		"tag_footright",
@@ -580,7 +604,7 @@ void CG_GibPlayer(centity_t *cent, vec3_t playerOrigin, vec3_t gdir)
 		"tag_chest"
 	};
 
-	static char *ConnectTags[] =
+	static const char *ConnectTags[] =
 	{
 		// legs tags
 		"tag_legright",
@@ -596,7 +620,7 @@ void CG_GibPlayer(centity_t *cent, vec3_t playerOrigin, vec3_t gdir)
 		"tag_torso",
 	};
 
-	static char *gibTags[] =
+	static const char *gibTags[] =
 	{
 		// tags in the legs
 		"tag_footright",
@@ -658,9 +682,9 @@ void CG_GibPlayer(centity_t *cent, vec3_t playerOrigin, vec3_t gdir)
 				VectorNormalize(dir);
 
 				// spawn a gib
-				velocity[0] = dir[0] * (0.5 + random()) * GIB_VELOCITY * 0.3;
-				velocity[1] = dir[1] * (0.5 + random()) * GIB_VELOCITY * 0.3;
-				velocity[2] = GIB_JUMP + dir[2] * (0.5 + random()) * GIB_VELOCITY * 0.5;
+				velocity[0] = dir[0] * (0.5f + random()) * GIB_VELOCITY * 0.3f;
+				velocity[1] = dir[1] * (0.5f + random()) * GIB_VELOCITY * 0.3f;
+				velocity[2] = GIB_JUMP + dir[2] * (0.5f + random()) * GIB_VELOCITY * 0.5f;
 
 				VectorMA(velocity, GIB_VELOCITY, gdir, velocity);
 				AxisToAngles(axis, angles);
@@ -715,7 +739,7 @@ void CG_GibPlayer(centity_t *cent, vec3_t playerOrigin, vec3_t gdir)
 			VectorAdd(playerOrigin, velocity, origin);
 
 			CG_Trace(&trace, playerOrigin, NULL, NULL, origin, -1, CONTENTS_SOLID);
-			if (trace.fraction < 1.0)
+			if (trace.fraction < 1.0f)
 			{
 				//BG_GetMarkDir( velocity, trace.plane.normal, velocity );
 				//CG_ImpactMark( cgs.media.bloodDotShaders[rand()%5], trace.endpos, velocity, random()*360,
@@ -748,11 +772,13 @@ void CG_GibPlayer(centity_t *cent, vec3_t playerOrigin, vec3_t gdir)
 	}
 }
 
-/*
-==============
-CG_SparklerSparks
-==============
-*/
+/**
+ * @brief CG_SparklerSparks
+ * @param[in] origin
+ * @param[in] count
+ *
+ * @note Unused
+ */
 void CG_SparklerSparks(vec3_t origin, int count)
 {
 	// these effect the look of the, umm, effect
@@ -786,11 +812,11 @@ void CG_SparklerSparks(vec3_t origin, int count)
 	}
 }
 
-/*
-==============
-CG_RumbleEfx
-==============
-*/
+/**
+ * @brief CG_RumbleEfx
+ * @param[in] pitch
+ * @param[in] yaw
+ */
 void CG_RumbleEfx(float pitch, float yaw)
 {
 	float  pitchRecoilAdd = 0, pitchAdd = 0;
@@ -803,7 +829,7 @@ void CG_RumbleEfx(float pitch, float yaw)
 	}
 
 	pitchRecoilAdd = pow(random(), 8) * (10 + VectorLength(cg.snap->ps.velocity) / 5);
-	pitchAdd       = (rand() % (int)pitch) - (pitch * 0.5); //5
+	pitchAdd       = (rand() % (int)pitch) - (pitch * 0.5f); //5
 	yawRandom      = yaw; //2
 
 	pitchRecoilAdd *= 0.5;
@@ -819,7 +845,7 @@ void CG_RumbleEfx(float pitch, float yaw)
 	// sign otherwise. This seems better at balancing out the effect.
 	if (cg.kickAVel[YAW] > 0)
 	{
-		if (random() < 0.05)
+		if (random() < 0.05f)
 		{
 			recoil[YAW] = -random() * yawRandom;
 		}
@@ -830,7 +856,7 @@ void CG_RumbleEfx(float pitch, float yaw)
 	}
 	else if (cg.kickAVel[YAW] < 0)
 	{
-		if (random() < 0.05)
+		if (random() < 0.05f)
 		{
 			recoil[YAW] = random() * yawRandom;
 		}
@@ -841,7 +867,7 @@ void CG_RumbleEfx(float pitch, float yaw)
 	}
 	else
 	{
-		if (random() < 0.5)
+		if (random() < 0.5f)
 		{
 			recoil[YAW] = random() * yawRandom;
 		}
@@ -886,11 +912,14 @@ static int           SmokeSpriteCount = 0;
 static smokesprite_t *firstfreesmokesprite;         // pointer to the first free smokepuff in the SmokeSprites pool
 static smokesprite_t *lastusedsmokesprite;          // pointer to the last used smokepuff
 
+/**
+ * @brief InitSmokeSprites
+ */
 void InitSmokeSprites(void)
 {
 	int i;
 
-	memset(&SmokeSprites, 0, sizeof(SmokeSprites));
+	Com_Memset(&SmokeSprites, 0, sizeof(SmokeSprites));
 	for (i = 0; i < MAX_SMOKESPRITES - 1; i++)
 	{
 		SmokeSprites[i].next = &SmokeSprites[i + 1];
@@ -901,6 +930,10 @@ void InitSmokeSprites(void)
 	SmokeSpriteCount     = 0;
 }
 
+/**
+ * @brief AllocSmokeSprite
+ * @return 
+ */
 static smokesprite_t *AllocSmokeSprite(void)
 {
 	smokesprite_t *alloc;
@@ -927,7 +960,11 @@ static smokesprite_t *AllocSmokeSprite(void)
 	return(alloc);
 }
 
-// Returns previous alloced smokesprite in list (or NULL when there are no more alloced smokesprites left)
+/**
+ * @brief DeAllocSmokeSprite
+ * @param[in,out] dealloc
+ * @return Previous alloced smokesprite in list (or NULL when there are no more alloced smokesprites left)
+ */
 static smokesprite_t *DeAllocSmokeSprite(smokesprite_t *dealloc)
 {
 	smokesprite_t *ret_smokesprite;
@@ -952,7 +989,7 @@ static smokesprite_t *DeAllocSmokeSprite(smokesprite_t *dealloc)
 
 	ret_smokesprite = dealloc->prev;
 
-	memset(dealloc, 0, sizeof(smokesprite_t));
+	Com_Memset(dealloc, 0, sizeof(smokesprite_t));
 	dealloc->next        = firstfreesmokesprite;
 	firstfreesmokesprite = dealloc;
 
@@ -960,6 +997,12 @@ static smokesprite_t *DeAllocSmokeSprite(smokesprite_t *dealloc)
 	return(ret_smokesprite);
 }
 
+/**
+ * @brief CG_SmokeSpritePhysics
+ * @param[in,out] smokesprite
+ * @param[in] dist
+ * @return 
+ */
 static qboolean CG_SmokeSpritePhysics(smokesprite_t *smokesprite, const float dist)
 {
 	trace_t tr;
@@ -981,7 +1024,7 @@ static qboolean CG_SmokeSpritePhysics(smokesprite_t *smokesprite, const float di
 	//CG_Trace( &tr, oldpos, mins, maxs, smokesprite->pos, -1, CONTENTS_SOLID );
 	CG_Trace(&tr, oldpos, NULL, NULL, smokesprite->pos, -1, CONTENTS_SOLID);
 
-	if (tr.fraction != 1)
+	if (tr.fraction != 1.f)
 	{
 		//float dot;
 
@@ -1002,6 +1045,12 @@ static qboolean CG_SmokeSpritePhysics(smokesprite_t *smokesprite, const float di
 	return qtrue;
 }
 
+/**
+ * @brief CG_SpawnSmokeSprite
+ * @param[in,out] cent
+ * @param[in] dist
+ * @return 
+ */
 qboolean CG_SpawnSmokeSprite(centity_t *cent, float dist)
 {
 	smokesprite_t *smokesprite = AllocSmokeSprite();
@@ -1035,6 +1084,11 @@ qboolean CG_SpawnSmokeSprite(centity_t *cent, float dist)
 	return qtrue;
 }
 
+/**
+ * @brief CG_RenderSmokeGrenadeSmoke
+ * @param[in,out] cent
+ * @param[in] weapon
+ */
 void CG_RenderSmokeGrenadeSmoke(centity_t *cent, const weaponInfo_t *weapon)
 {
 	//int numSpritesForRadius, numNewSpritesNeeded = 0;
@@ -1051,7 +1105,7 @@ void CG_RenderSmokeGrenadeSmoke(centity_t *cent, const weaponInfo_t *weapon)
 
 	if (cent->currentState.effect1Time > 16)
 	{
-		int volume        = 16 + ((cent->currentState.effect1Time / 640.f) * (100 - 16));
+		int volume        = 16 + ((cent->currentState.effect1Time / 640) * (100 - 16));
 		int spritesNeeded = 0;
 
 		if (!cent->dl_atten ||
@@ -1096,7 +1150,7 @@ void CG_RenderSmokeGrenadeSmoke(centity_t *cent, const weaponInfo_t *weapon)
 		if (cg.oldTime && cent->lastFuseSparkTime != cg.time)
 		{
 			cent->muzzleFlashTime  += cg.frametime;
-			spritesNeeded           = cent->muzzleFlashTime / spawnrate;
+			spritesNeeded           = cent->muzzleFlashTime / (int)spawnrate;
 			cent->muzzleFlashTime  -= (spawnrate * spritesNeeded);
 			cent->lastFuseSparkTime = cg.time;
 		}
@@ -1161,6 +1215,9 @@ void CG_RenderSmokeGrenadeSmoke(centity_t *cent, const weaponInfo_t *weapon)
 	}
 }
 
+/**
+ * @brief CG_AddSmokeSprites
+ */
 void CG_AddSmokeSprites(void)
 {
 	smokesprite_t *smokesprite = lastusedsmokesprite;
@@ -1228,40 +1285,40 @@ void CG_AddSmokeSprites(void)
 		VectorMA(smokesprite->pos, halfSmokeSpriteHeight, up, top);
 		VectorMA(smokesprite->pos, -halfSmokeSpriteHeight, up, bottom);
 
-		color[0] = smokesprite->colour[0] * 0xff;
-		color[1] = smokesprite->colour[1] * 0xff;
-		color[2] = smokesprite->colour[2] * 0xff;
-		color[3] = smokesprite->colour[3] * 0xff;
+		color[0] = (byte)(smokesprite->colour[0] * 0xff);
+		color[1] = (byte)(smokesprite->colour[1] * 0xff);
+		color[2] = (byte)(smokesprite->colour[2] * 0xff);
+		color[3] = (byte)(smokesprite->colour[3] * 0xff);
 
 		// fadeout
 		if (smokesprite->dist > (radius * .5f * .8f))
 		{
-			color[3] = (smokesprite->colour[3] -  smokesprite->colour[3] * ((smokesprite->dist - (radius * .5f * .8f)) / ((radius * .5f) - (radius * .5f * .8f)))) * 0xff;
+			color[3] = (byte)(smokesprite->colour[3] - smokesprite->colour[3] * ((smokesprite->dist - (radius * .5f * .8f)) / ((radius * .5f) - (radius * .5f * .8f)))) * 0xff;
 		}
 		else
 		{
-			color[3] = smokesprite->colour[3] * 0xff;
+			color[3] = (byte)(smokesprite->colour[3] * 0xff);
 		}
 
 		VectorMA(top, halfSmokeSpriteWidth, right, verts[0].xyz);
 		verts[0].st[0] = 1;
 		verts[0].st[1] = 0;
-		memcpy(verts[0].modulate, color, 4);
+		Com_Memcpy(verts[0].modulate, color, 4);
 
 		VectorMA(top, -halfSmokeSpriteWidth, right, verts[1].xyz);
 		verts[1].st[0] = 0;
 		verts[1].st[1] = 0;
-		memcpy(verts[1].modulate, color, 4);
+		Com_Memcpy(verts[1].modulate, color, 4);
 
 		VectorMA(bottom, -halfSmokeSpriteWidth, right, verts[2].xyz);
 		verts[2].st[0] = 0;
 		verts[2].st[1] = 1;
-		memcpy(verts[2].modulate, color, 4);
+		Com_Memcpy(verts[2].modulate, color, 4);
 
 		VectorMA(bottom, halfSmokeSpriteWidth, right, verts[3].xyz);
 		verts[3].st[0] = 1;
 		verts[3].st[1] = 1;
-		memcpy(verts[3].modulate, color, 4);
+		Com_Memcpy(verts[3].modulate, color, 4);
 
 		trap_R_AddPolyToScene(cgs.media.smokePuffShader, 4, verts);
 

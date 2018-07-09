@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -128,11 +128,11 @@ static void *OpenALLib = NULL;
 
 static qboolean alinit_fail = qfalse;
 
-/*
-=================
-GPA
-=================
-*/
+/**
+ * @brief GPA
+ * @param[in,out] str
+ * @return 
+ */
 static void *GPA(char *str)
 {
 	void *rv;
@@ -151,11 +151,11 @@ static void *GPA(char *str)
 	}
 }
 
-/*
-=================
-QAL_Init
-=================
-*/
+/**
+ * @brief QAL_Init
+ * @param[in] libname
+ * @return 
+ */
 qboolean QAL_Init(const char *libname)
 {
 	if (OpenALLib)
@@ -276,11 +276,9 @@ qboolean QAL_Init(const char *libname)
 	return qtrue;
 }
 
-/*
-=================
-QAL_Shutdown
-=================
-*/
+/**
+ * @brief QAL_Shutdown
+ */
 void QAL_Shutdown(void)
 {
 	if (OpenALLib)
@@ -372,10 +370,24 @@ void QAL_Shutdown(void)
 	qalAuxiliaryEffectSloti    = NULL;
 }
 #else
+
+/**
+ * @brief QAL_Init
+ * @param libname - unused
+ * @return 
+ * 
+ * @todo TODO: not implemented
+ */
 qboolean QAL_Init(const char *libname)
 {
 	return qtrue;
 }
+
+/**
+ * @brief QAL_Shutdown
+ * 
+ * @todo TODO: not implemented
+ */
 void QAL_Shutdown(void)
 {
 }

@@ -1,4 +1,4 @@
-Enemy Territory: Legacy [![Build Status](https://travis-ci.org/etlegacy/etlegacy.png?branch=master)](https://travis-ci.org/etlegacy/etlegacy) [![Analysis Status](https://scan.coverity.com/projects/1160/badge.svg)](https://scan.coverity.com/projects/1160) [![Join the chat at https://gitter.im/etlegacy/etlegacy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/etlegacy/etlegacy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+Enemy Territory: Legacy [![Travis Status](https://travis-ci.org/etlegacy/etlegacy.svg?branch=master)](https://travis-ci.org/etlegacy/etlegacy) [![AppVeyor status](https://ci.appveyor.com/api/projects/status/468s0285u3w4vfom/branch/master?svg=true)](https://ci.appveyor.com/project/rmarquis/etlegacy/branch/master) [![Analysis Status](https://scan.coverity.com/projects/1160/badge.svg)](https://scan.coverity.com/projects/1160) [![Join the chat at https://gitter.im/etlegacy/etlegacy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/etlegacy/etlegacy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 ==========
 
 *A second breath of life for Wolfenstein: Enemy Territory*
@@ -9,6 +9,8 @@ Enemy Territory: Legacy [![Build Status](https://travis-ci.org/etlegacy/etlegacy
 * Forums: [https://dev.etlegacy.com/projects/etlegacy/boards](https://dev.etlegacy.com/projects/etlegacy/boards)
 * Development (bug reports and feature requests): [https://dev.etlegacy.com](https://dev.etlegacy.com)
 * Repository: [https://github.com/etlegacy/etlegacy](https://github.com/etlegacy/etlegacy)
+* Assets Repository: [https://drive.google.com](https://drive.google.com/drive/folders/0Bw7Yu-pqzcSaLXEtVEVjZF82UEU)
+* Legacy Lua API: [http://legacy-lua-api.readthedocs.io](http://legacy-lua-api.readthedocs.io)
 * Translation: [https://www.transifex.com/projects/p/etlegacy/](https://www.transifex.com/projects/p/etlegacy/)
 * Contact: [\#etlegacy](http://webchat.freenode.net/?channels=#etlegacy) on irc.freenode.net and [etlegacy/etlegacy](https://gitter.im/etlegacy/etlegacy) on Gitter.im
 
@@ -84,19 +86,22 @@ DEPENDENCIES
 
 * **CMake** (compile-time only)
 * **OpenGL**
-* **GLEW** version 1.10
-* **SDL** version 2.0.4
-* **ZLib** version 1.2.8
+* **GLEW**
+* **SDL**
+* **ZLib**
 * **MiniZip**
-* **libjpeg-turbo** version 1.3, or **libjpeg** version 8
+* **libjpeg-turbo** or **libjpeg**
 * **libcurl** (optional, enabled by default)
-* **Lua** version 5.3 (optional, enabled by default)
+* **Lua** (optional, enabled by default)
 * **Ogg Vorbis** (optional, enabled by default)
 * **Theora** (optional, enabled by default)
-* **Freetype** version 2 (optional, enabled by default)
-* **SQLite** version 3 (optional, enabled by default)
-* **OpenAL** version 1.17 (optional, enabled by default)
+* **Freetype** (optional, enabled by default)
+* **SQLite** (optional, enabled by default)
+* **OpenAL** (optional, enabled by default)
 * **Jansson** (optional)
+
+
+Grab info about current lib versions from our wiki page [ET: Legacy Libs_Changelog](https://dev.etlegacy.com/projects/etlegacy/wiki/Libs_Changelog)
 
 To get the latest source code install [git](http://git-scm.com/) and
 clone our repository hosted at [Github.com](https://github.com/etlegacy/etlegacy):
@@ -292,7 +297,7 @@ OpenWolf GPL Source Code
 Copyright (C) 2011 Dusan Jocic
 
 ET: Legacy
-Copyright (C) 2012-2016 ET:Legacy Team <mail@etlegacy.com>
+Copyright (C) 2012-2018 ET:Legacy Team <mail@etlegacy.com>
 
   ET: Legacy is free software: you can redistribute it and/or modify it under
   the terms of the GNU General Public License as published by the Free Software

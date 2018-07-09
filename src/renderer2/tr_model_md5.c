@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -37,6 +37,14 @@
 #include "tr_local.h"
 #include "tr_model_skel.h"
 
+/**
+ * @brief R_LoadMD5
+ * @param[in,out] mod
+ * @param[in,out] buffer
+ * @param bufferSize - unused
+ * @param[in] modName
+ * @return
+ */
 qboolean R_LoadMD5(model_t *mod, void *buffer, int bufferSize, const char *modName)
 {
 	int           i, j, k;
@@ -52,7 +60,7 @@ qboolean R_LoadMD5(model_t *mod, void *buffer, int bufferSize, const char *modNa
 	char          *token;
 	vec3_t        boneOrigin;
 	quat_t        boneQuat;
-	mat4_t      boneMat;
+	mat4_t        boneMat;
 	int           numRemaining;
 	growList_t    sortedTriangles;
 	growList_t    vboTriangles;
@@ -585,7 +593,7 @@ qboolean R_LoadMD5(model_t *mod, void *buffer, int bufferSize, const char *modNa
 				bb = (dv[1]->texCoords[0] - dv[0]->texCoords[0]) * (dv[2]->texCoords[1] - dv[0]->texCoords[1]) - (dv[2]->texCoords[0] - dv[0]->texCoords[0]) * (dv[1]->texCoords[1] -
 				                                                                                                                                                dv[0]->texCoords[1]);
 
-				if (fabs(bb) < 0.00000001f)
+				if (Q_fabs(bb) < 0.00000001f)
 				{
 					continue;
 				}
@@ -655,30 +663,31 @@ qboolean R_LoadMD5(model_t *mod, void *buffer, int bufferSize, const char *modNa
 		}
 #endif
 
-#if 0
-		// do another extra smoothing for normals to avoid flat shading
-		for (j = 0; j < surf->numVerts; j++)
+		if (r_smoothNormals->integer & FLAGS_SMOOTH_MD5) // do another extra smoothing for normals to avoid flat shading
 		{
-			for (k = 0; k < surf->numVerts; k++)
+			// FIXME: this doesn't work properly - see head of players in game
+			for (j = 0; j < surf->numVerts; j++)
 			{
-				if (j == k)
+				for (k = 0; k < surf->numVerts; k++)
 				{
-					continue;
+					if (j == k)
+					{
+						continue;
+					}
+
+					if (VectorCompare(surf->verts[j].position, surf->verts[k].position))
+					{
+						VectorAdd(surf->verts[j].normal, surf->verts[k].normal, surf->verts[j].normal);
+					}
 				}
 
-				if (VectorCompare(surf->verts[j].position, surf->verts[k].position))
-				{
-					VectorAdd(surf->verts[j].normal, surf->verts[k].normal, surf->verts[j].normal);
-				}
+				VectorNormalize(surf->verts[j].normal);
 			}
-
-			VectorNormalize(surf->verts[j].normal);
 		}
-#endif
 	}
 
 	// split the surfaces into VBO surfaces by the maximum number of GPU vertex skinning bones
-	Com_InitGrowList(&vboSurfaces, 10);
+	Com_InitGrowList(&vboSurfaces, 32);
 
 	for (i = 0, surf = md5->surfaces; i < md5->numSurfaces; i++, surf++)
 	{

@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -61,6 +61,9 @@ static void RB_Hyperspace(void)
 	backEnd.isHyperspace = qtrue;
 }
 
+/**
+ * @brief SetViewportAndScissor
+ */
 static void SetViewportAndScissor(void)
 {
 	GL_LoadProjectionMatrix(backEnd.viewParms.projectionMatrix);
@@ -73,6 +76,9 @@ static void SetViewportAndScissor(void)
 	           backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight);
 }
 
+/**
+ * @brief RB_SafeState
+ */
 static void RB_SafeState(void)
 {
 	// HACK: bring OpenGL into a safe state or strange FBO update problems will occur
@@ -84,6 +90,9 @@ static void RB_SafeState(void)
 	GL_Bind(tr.whiteImage);
 }
 
+/**
+ * @brief RB_SetGL2D
+ */
 static void RB_SetGL2D(void)
 {
 	mat4_t proj;
@@ -109,9 +118,13 @@ static void RB_SetGL2D(void)
 
 	// set time for 2D shaders
 	backEnd.refdef.time      = ri.Milliseconds();
-	backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
+	backEnd.refdef.floatTime = backEnd.refdef.time * 0.001;
 }
 
+/**
+ * @brief RB_GetScreenQuad
+ * @return
+ */
 static vec4_t *RB_GetScreenQuad(void)
 {
 	static vec4_t quad[4];
@@ -124,7 +137,9 @@ static vec4_t *RB_GetScreenQuad(void)
 	return quad;
 }
 
-// Set the model view projection matrix to match the ingame view
+/**
+ * @brief Set the model view projection matrix to match the ingame view
+ */
 void RB_SetViewMVPM(void)
 {
 	mat4_t ortho;
@@ -144,11 +159,16 @@ enum renderDrawSurfaces_e
 	DRAWSURFACES_ALL
 };
 
+/**
+ * @brief RB_RenderDrawSurfaces
+ * @param[in] opaque
+ * @param[in] drawSurfFilter
+ */
 static void RB_RenderDrawSurfaces(qboolean opaque, int drawSurfFilter)
 {
 	trRefEntity_t *entity, *oldEntity = NULL;
 	shader_t      *shader, *oldShader = NULL;
-	int           lightmapNum, oldLightmapNum = -1;
+	int           lightmapNum, oldLightmapNum = LIGHTMAP_NONE;
 	int           fogNum, oldFogNum = -1;
 	qboolean      depthRange = qfalse, oldDepthRange = qfalse;
 	int           i;
@@ -164,7 +184,7 @@ static void RB_RenderDrawSurfaces(qboolean opaque, int drawSurfFilter)
 	{
 		// update locals
 		entity      = drawSurf->entity;
-		shader      = tr.sortedShaders[drawSurf->shaderNum];
+		shader      = drawSurf->shader;
 		lightmapNum = drawSurf->lightmapNum;
 		fogNum      = drawSurf->fogNum;
 
@@ -296,11 +316,9 @@ static void RB_RenderDrawSurfaces(qboolean opaque, int drawSurfFilter)
 	GL_CheckErrors();
 }
 
-/**
+/*
  * @brief RB_RenderOpaqueSurfacesIntoDepth
  * @note Unused
- */
-/*
 static void RB_RenderOpaqueSurfacesIntoDepth(qboolean onlyWorld)
 {
     trRefEntity_t *entity, *oldEntity;
@@ -325,7 +343,7 @@ static void RB_RenderOpaqueSurfacesIntoDepth(qboolean onlyWorld)
     {
         // update locals
         entity    = drawSurf->entity;
-        shader    = tr.sortedShaders[drawSurf->shaderNum];
+        shader    = drawSurf->shader;
         alphaTest = shader->alphaTest;
 
 //#if 0
@@ -440,16 +458,18 @@ static void RB_RenderOpaqueSurfacesIntoDepth(qboolean onlyWorld)
 */
 
 // *INDENT-OFF*
+/**
+ * @brief Render_lightVolume
+ * @param[in] ia
+ */
 static void Render_lightVolume(interaction_t *ia)
 {
 	int           j;
-	trRefLight_t  *light;
+	trRefLight_t  *light = ia->light;
 	shader_t      *lightShader;
 	shaderStage_t *attenuationXYStage;
 	shaderStage_t *attenuationZStage;
 	vec4_t        quadVerts[4];
-
-	light = ia->light;
 
 	// set the window clipping
 	GL_Viewport(backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
@@ -467,7 +487,7 @@ static void Render_lightVolume(interaction_t *ia)
 	case RL_PROJ:
 	{
 		mat4_reset_translate(light->attenuationMatrix, 0.5, 0.5, 0.0);        // bias
-		MatrixMultiplyScale(light->attenuationMatrix, 0.5, 0.5, 1.0 / Q_min(light->falloffLength, 1.0));        // scale
+		MatrixMultiplyScale(light->attenuationMatrix, 0.5, 0.5, 1.0f / Q_min(light->falloffLength, 1.0f));        // scale
 		break;
 	}
 	case RL_OMNI:
@@ -498,7 +518,7 @@ static void Render_lightVolume(interaction_t *ia)
 			continue;
 		}
 
-		if (!RB_EvalExpression(&attenuationXYStage->ifExp, 1.0))
+		if (!RB_EvalExpression(&attenuationXYStage->ifExp, 1.0f))
 		{
 			continue;
 		}
@@ -508,9 +528,6 @@ static void Render_lightVolume(interaction_t *ia)
 
 		if (light->l.rlType == RL_OMNI)
 		{
-			vec3_t   viewOrigin;
-			vec3_t   lightOrigin;
-			vec4_t   lightColor;
 			qboolean shadowCompare;
 
 			Ren_LogComment("--- Render_lightVolume_omni ---\n");
@@ -519,17 +536,11 @@ static void Render_lightVolume(interaction_t *ia)
 			GL_Cull(CT_TWO_SIDED);
 			GL_State(GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE);
 
-			// set uniforms
-			VectorCopy(backEnd.viewParms.orientation.origin, viewOrigin);   // in world space
-			VectorCopy(light->origin, lightOrigin);
-			VectorCopy(tess.svars.color, lightColor);
-
 			shadowCompare = (r_shadows->integer >= SHADOWING_ESM16 && !light->l.noShadows && light->shadowLOD >= 0);
 
-
-			SetUniformVec3(UNIFORM_VIEWORIGIN, viewOrigin);
-			SetUniformVec3(UNIFORM_LIGHTORIGIN, lightOrigin);
-			SetUniformVec3(UNIFORM_LIGHTCOLOR, lightColor);
+			SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin); // in world space
+			SetUniformVec3(UNIFORM_LIGHTORIGIN, light->origin);
+			SetUniformVec3(UNIFORM_LIGHTCOLOR, tess.svars.color);
 			SetUniformFloat(UNIFORM_LIGHTRADIUS, light->sphereRadius);
 			SetUniformFloat(UNIFORM_LIGHTSCALE, light->l.scale);
 			SetUniformMatrix16(UNIFORM_LIGHTATTENUATIONMATRIX, light->attenuationMatrix2);
@@ -584,7 +595,13 @@ static void Render_lightVolume(interaction_t *ia)
 // *INDENT-ON*
 
 /**
- * @brief helper function for parallel split shadow mapping
+ * @brief Helper function for parallel split shadow mapping
+ * @param[in] lightViewProjectionMatrix
+ * @param[in] ia
+ * @param[in] iaCount
+ * @param[in,out] bounds
+ * @param[in] shadowCasters
+ * @return
  */
 static int MergeInteractionBounds(const mat4_t lightViewProjectionMatrix, interaction_t *ia, int iaCount, vec3_t bounds[2], qboolean shadowCasters)
 {
@@ -770,6 +787,9 @@ skipInteraction:
 	return numCasters;
 }
 
+/**
+ * @brief RB_RenderInteractions
+ */
 static void RB_RenderInteractions()
 {
 	shader_t      *shader, *oldShader;
@@ -780,7 +800,7 @@ static void RB_RenderInteractions()
 	int           iaCount;
 	surfaceType_t *surface;
 	vec3_t        tmp;
-	mat4_t      modelToLight;
+	mat4_t        modelToLight;
 	int           startTime = 0;
 
 	Ren_LogComment("--- RB_RenderInteractions ---\n");
@@ -916,7 +936,7 @@ static void RB_RenderInteractions()
 			case RL_PROJ:
 			{
 				mat4_reset_translate(light->attenuationMatrix, 0.5, 0.5, 0.0);            // bias
-				MatrixMultiplyScale(light->attenuationMatrix, 0.5, 0.5, 1.0 / Q_min(light->falloffLength, 1.0));            // scale
+				MatrixMultiplyScale(light->attenuationMatrix, 0.5, 0.5, 1.0f / Q_min(light->falloffLength, 1.0f));            // scale
 				break;
 			}
 			case RL_OMNI:
@@ -997,28 +1017,31 @@ skipInteraction:
 	}
 }
 
+/**
+ * @brief RB_RenderInteractionsShadowMapped
+ */
 static void RB_RenderInteractionsShadowMapped()
 {
-	shader_t       *shader, *oldShader;
-	trRefEntity_t  *entity, *oldEntity;
-	trRefLight_t   *light, *oldLight;
-	interaction_t  *ia;
-	int            iaCount;
-	int            iaFirst;
-	surfaceType_t  *surface;
-	qboolean       depthRange, oldDepthRange;
-	qboolean       alphaTest, oldAlphaTest;
-	deformType_t   deformType, oldDeformType;
-	vec3_t         tmp;
-	mat4_t       modelToLight;
-	qboolean       drawShadows;
-	int            cubeSide;
-	int            splitFrustumIndex;
-	int            startTime = 0;
-	const mat4_t bias      = { 0.5, 0.0, 0.0, 0.0,
-		                         0.0,      0.5, 0.0, 0.0,
-		                         0.0,      0.0, 0.5, 0.0,
-		                         0.5,      0.5, 0.5, 1.0 };
+	shader_t      *shader, *oldShader;
+	trRefEntity_t *entity, *oldEntity;
+	trRefLight_t  *light, *oldLight;
+	interaction_t *ia;
+	int           iaCount;
+	int           iaFirst;
+	surfaceType_t *surface;
+	qboolean      depthRange, oldDepthRange;
+	qboolean      alphaTest, oldAlphaTest;
+	deformType_t  deformType, oldDeformType;
+	vec3_t        tmp;
+	mat4_t        modelToLight;
+	qboolean      drawShadows;
+	int           cubeSide;
+	int           splitFrustumIndex;
+	int           startTime = 0;
+	const mat4_t  bias      = { 0.5, 0.0, 0.0, 0.0,
+		                        0.0,       0.5, 0.0, 0.0,
+		                        0.0,       0.0, 0.5, 0.0,
+		                        0.5,       0.5, 0.5, 1.0 };
 
 	if (!glConfig2.framebufferObjectAvailable || !glConfig2.textureFloatAvailable)
 	{
@@ -1102,7 +1125,7 @@ static void RB_RenderInteractionsShadowMapped()
 						float    fovX, fovY;
 						qboolean flipX, flipY;
 						//float          *proj;
-						vec3_t   angles;
+						vec3_t angles;
 						mat4_t rotationMatrix, transformMatrix, viewMatrix;
 
 						Ren_LogComment("----- Rendering shadowCube side: %i -----\n", cubeSide);
@@ -1231,16 +1254,16 @@ static void RB_RenderInteractionsShadowMapped()
 					}
 					case RL_DIRECTIONAL:
 					{
-						int      j;
-						vec3_t   angles;
-						vec4_t   forward, side, up;
-						vec3_t   lightDirection;
-						vec3_t   viewOrigin, viewDirection;
+						int    j;
+						vec3_t angles;
+						vec4_t forward, side, up;
+						vec3_t lightDirection;
+						vec3_t viewOrigin, viewDirection;
 						mat4_t rotationMatrix, transformMatrix, viewMatrix, projectionMatrix, viewProjectionMatrix;
 						mat4_t cropMatrix;
-						vec4_t   splitFrustum[6];
-						vec3_t   splitFrustumCorners[8];
-						vec3_t   splitFrustumBounds[2];
+						vec4_t splitFrustum[6];
+						vec3_t splitFrustumCorners[8];
+						vec3_t splitFrustumBounds[2];
 						//vec3_t   splitFrustumViewBounds[2];
 						vec3_t splitFrustumClipBounds[2];
 						//float    splitFrustumRadius;
@@ -1586,8 +1609,8 @@ static void RB_RenderInteractionsShadowMapped()
 				case RL_OMNI:
 				{
 					MatrixAffineInverse(light->transformMatrix, light->viewMatrix);
-					mat4_reset_scale(light->projectionMatrix, 1.0 / light->l.radius[0], 1.0 / light->l.radius[1],
-					                 1.0 / light->l.radius[2]);
+					mat4_reset_scale(light->projectionMatrix, 1.0f / light->l.radius[0], 1.0f / light->l.radius[1],
+					                 1.0f / light->l.radius[2]);
 					break;
 				}
 				case RL_DIRECTIONAL:
@@ -1698,7 +1721,7 @@ static void RB_RenderInteractionsShadowMapped()
 								Vector4Set(quadVerts[3], nearCorners[3][0], nearCorners[3][1], nearCorners[3][2], 1);
 								Tess_AddQuadStamp2(quadVerts, colorGreen);
 
-								Tess_UpdateVBOs(ATTR_POSITION | ATTR_COLOR);
+								Tess_UpdateVBOs(tess.attribsSet); // set by Tess_AddQuadStamp2
 								Tess_DrawElements();
 
 								// draw light volume
@@ -2140,16 +2163,19 @@ skipInteraction:
 	}
 }
 
+/**
+ * @brief RB_RenderScreenSpaceAmbientOcclusion
+ */
 void RB_RenderScreenSpaceAmbientOcclusion()
 {
 	Ren_LogComment("--- RB_RenderScreenSpaceAmbientOcclusion ---\n");
 
-	if (backEnd.refdef.rdflags & RDF_NOWORLDMODEL)
+	if (!r_screenSpaceAmbientOcclusion->integer)
 	{
 		return;
 	}
 
-	if (!r_screenSpaceAmbientOcclusion->integer)
+	if (backEnd.refdef.rdflags & RDF_NOWORLDMODEL)
 	{
 		return;
 	}
@@ -2185,16 +2211,19 @@ void RB_RenderScreenSpaceAmbientOcclusion()
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RB_RenderDepthOfField
+ */
 void RB_RenderDepthOfField()
 {
 	Ren_LogComment("--- RB_RenderDepthOfField ---\n");
 
-	if (backEnd.refdef.rdflags & RDF_NOWORLDMODEL)
+	if (!r_depthOfField->integer)
 	{
 		return;
 	}
 
-	if (!r_depthOfField->integer)
+	if (backEnd.refdef.rdflags & RDF_NOWORLDMODEL)
 	{
 		return;
 	}
@@ -2245,6 +2274,9 @@ void RB_RenderDepthOfField()
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RB_RenderGlobalFog
+ */
 void RB_RenderGlobalFog()
 {
 	vec3_t local;
@@ -2252,12 +2284,18 @@ void RB_RenderGlobalFog()
 
 	Ren_LogComment("--- RB_RenderGlobalFog ---\n");
 
-	if (backEnd.refdef.rdflags & RDF_NOWORLDMODEL)
+	if (r_noFog->integer)
 	{
 		return;
 	}
 
-	if (r_noFog->integer)
+	// no fog pass in snooper
+	if ((tr.refdef.rdflags & RDF_SNOOPERVIEW) || tess.surfaceShader->noFog)
+	{
+		return;
+	}
+
+	if (backEnd.refdef.rdflags & RDF_NOWORLDMODEL)
 	{
 		return;
 	}
@@ -2297,6 +2335,7 @@ void RB_RenderGlobalFog()
 
 		SetUniformVec4(UNIFORM_FOGDISTANCEVECTOR, fogDistanceVector);
 		SetUniformVec4(UNIFORM_COLOR, fog->color);
+		SetUniformFloat(UNIFORM_FOGDENSITY, 0.6f);
 	}
 
 	SetUniformMatrix16(UNIFORM_VIEWMATRIX, backEnd.viewParms.world.viewMatrix);
@@ -2333,14 +2372,23 @@ void RB_RenderGlobalFog()
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RB_RenderBloom
+ */
 void RB_RenderBloom()
 {
-	int      i, j;
+	int    i, j;
 	mat4_t ortho;
 
 	Ren_LogComment("--- RB_RenderBloom ---\n");
 
-	if ((backEnd.refdef.rdflags & (RDF_NOWORLDMODEL | RDF_NOBLOOM)) || !r_bloom->integer || backEnd.viewParms.isPortal || !glConfig2.framebufferObjectAvailable)
+	// hdr requires bloom renderer
+	if (!r_bloom->integer && !HDR_ENABLED())
+	{
+		return;
+	}
+
+	if ((backEnd.refdef.rdflags & (RDF_NOWORLDMODEL | RDF_NOBLOOM)) || backEnd.viewParms.isPortal || !glConfig2.framebufferObjectAvailable)
 	{
 		return;
 	}
@@ -2485,11 +2533,19 @@ void RB_RenderBloom()
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RB_RenderRotoscope
+ */
 void RB_RenderRotoscope(void)
 {
 	Ren_LogComment("--- RB_RenderRotoscope ---\n");
 
-	if ((backEnd.refdef.rdflags & RDF_NOWORLDMODEL) || !r_rotoscope->integer || backEnd.viewParms.isPortal)
+	if (!r_rotoscope->integer)
+	{
+		return;
+	}
+	
+	if ((backEnd.refdef.rdflags & RDF_NOWORLDMODEL) || backEnd.viewParms.isPortal)
 	{
 		return;
 	}
@@ -2518,14 +2574,21 @@ void RB_RenderRotoscope(void)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RB_CameraPostFX
+ */
 void RB_CameraPostFX(void)
 {
 	mat4_t grain;
 
 	Ren_LogComment("--- RB_CameraPostFX ---\n");
 
-	if ((backEnd.refdef.rdflags & RDF_NOWORLDMODEL) || !r_cameraPostFX->integer || backEnd.viewParms.isPortal ||
-	    !tr.grainImage || !tr.vignetteImage)
+	if (!r_cameraPostFX->integer)
+	{
+		return;
+	}
+
+	if ((backEnd.refdef.rdflags & RDF_NOWORLDMODEL) || backEnd.viewParms.isPortal)
 	{
 		return;
 	}
@@ -2559,8 +2622,14 @@ void RB_CameraPostFX(void)
 
 	// bind u_GrainMap
 	SelectTexture(TEX_GRAIN);
-	GL_Bind(tr.grainImage);
-	//GL_Bind(tr.defaultImage);
+	if (tr.grainImage)
+	{
+		GL_Bind(tr.grainImage);
+	}
+	else
+	{
+		GL_Bind(tr.defaultImage);
+	}
 
 	// bind u_VignetteMap
 	SelectTexture(TEX_VIGNETTE);
@@ -2582,6 +2651,9 @@ void RB_CameraPostFX(void)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RB_CalculateAdaptation
+ */
 static void RB_CalculateAdaptation()
 {
 	int          i;
@@ -2591,7 +2663,7 @@ static void RB_CalculateAdaptation()
 	float        luminance;
 	float        avgLuminance;
 	float        maxLuminance     = 0.0f;
-	double       sum              = 0.0f;
+	double       sum              = 0.0;
 	const vec3_t LUMINANCE_VECTOR = { 0.2125f, 0.7154f, 0.0721f };
 	vec4_t       color;
 	float        newAdaptation;
@@ -2619,7 +2691,7 @@ static void RB_CalculateAdaptation()
 
 		sum += log(luminance);
 	}
-	sum         /= (64.0f * 64.0f);
+	sum         /= (64.0 * 64.0);
 	avgLuminance = exp(sum);
 
 	// the user's adapted luminance level is simulated by closing the gap between
@@ -2662,7 +2734,7 @@ static void RB_CalculateAdaptation()
 	if (r_hdrKey->value <= 0)
 	{
 		// calculation from: Perceptual Effects in Real-time Tone Mapping - Krawczyk et al.
-		backEnd.hdrKey = 1.03 - 2.0 / (2.0 + log10f(backEnd.hdrAverageLuminance + 1.0f));
+		backEnd.hdrKey = 1.03f - 2.0f / (2.0f + log10f(backEnd.hdrAverageLuminance + 1.0f));
 	}
 	else
 	{
@@ -2681,6 +2753,10 @@ static void RB_CalculateAdaptation()
 // LIGHTS OCCLUSION CULLING
 // ================================================================================================
 
+/**
+ * @brief RenderLightOcclusionVolume
+ * @param[in] light
+ */
 static void RenderLightOcclusionVolume(trRefLight_t *light)
 {
 	int    j;
@@ -2724,7 +2800,7 @@ static void RenderLightOcclusionVolume(trRefLight_t *light)
 		{
 			Tess_AddCube(vec3_origin, light->localBounds[0], light->localBounds[1], colorWhite);
 
-			Tess_UpdateVBOs(ATTR_POSITION | ATTR_COLOR);
+			Tess_UpdateVBOs(tess.attribsSet); // set by Tess_AddCube
 			Tess_DrawElements();
 			break;
 		}
@@ -2809,7 +2885,7 @@ static void RenderLightOcclusionVolume(trRefLight_t *light)
 				Tess_AddQuadStamp2(quadVerts, colorRed);
 			}
 
-			Tess_UpdateVBOs(ATTR_POSITION | ATTR_COLOR);
+			Tess_UpdateVBOs(tess.attribsSet); // set by Tess_AddQuadStamp2
 			Tess_DrawElements();
 			break;
 		}
@@ -2825,6 +2901,12 @@ static void RenderLightOcclusionVolume(trRefLight_t *light)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief IssueLightOcclusionQuery
+ * @param[in] queue
+ * @param[in] light
+ * @param[in] resetMultiQueryLink
+ */
 static void IssueLightOcclusionQuery(link_t *queue, trRefLight_t *light, qboolean resetMultiQueryLink)
 {
 	Ren_LogComment("--- IssueLightOcclusionQuery ---\n");
@@ -2874,6 +2956,11 @@ static void IssueLightOcclusionQuery(link_t *queue, trRefLight_t *light, qboolea
 	GL_CheckErrors();
 }
 
+/**
+ * @brief IssueLightMultiOcclusionQueries
+ * @param[in] multiQueue
+ * @param[in] individualQueue
+ */
 static void IssueLightMultiOcclusionQueries(link_t *multiQueue, link_t *individualQueue)
 {
 	trRefLight_t *light;
@@ -2959,6 +3046,11 @@ static void IssueLightMultiOcclusionQueries(link_t *multiQueue, link_t *individu
 	//Ren_Print("--- IssueMultiOcclusionQueries end ---\n");
 }
 
+/**
+ * @brief LightOcclusionResultAvailable
+ * @param[in] light
+ * @return
+ */
 static int LightOcclusionResultAvailable(trRefLight_t *light)
 {
 	GLint available;
@@ -2980,6 +3072,10 @@ static int LightOcclusionResultAvailable(trRefLight_t *light)
 	return qtrue;
 }
 
+/**
+ * @brief GetLightOcclusionQueryResult
+ * @param[in] light
+ */
 static void GetLightOcclusionQueryResult(trRefLight_t *light)
 {
 	link_t *l, *sentinel;
@@ -3034,6 +3130,12 @@ static void GetLightOcclusionQueryResult(trRefLight_t *light)
 	}
 }
 
+/**
+ * @brief LightCompare
+ * @param[in] a
+ * @param[in] b
+ * @return
+ */
 static int LightCompare(const void *a, const void *b)
 {
 	float        d1, d2;
@@ -3055,6 +3157,9 @@ static int LightCompare(const void *a, const void *b)
 	return 0;
 }
 
+/**
+ * @brief RB_RenderLightOcclusionQueries
+ */
 void RB_RenderLightOcclusionQueries()
 {
 	Ren_LogComment("--- RB_RenderLightOcclusionQueries ---\n");
@@ -3329,12 +3434,16 @@ void RB_RenderLightOcclusionQueries()
 // ENTITY OCCLUSION CULLING
 // ================================================================================================
 
+/**
+ * @brief RenderEntityOcclusionVolume
+ * @param[in] entity
+ */
 static void RenderEntityOcclusionVolume(trRefEntity_t *entity)
 {
-	vec3_t   boundsCenter;
-	vec3_t   boundsSize;
+	vec3_t boundsCenter;
+	vec3_t boundsSize;
 	mat4_t rot; // transform, scale,
-	axis_t   axis;
+	axis_t axis;
 
 	GL_CheckErrors();
 
@@ -3407,6 +3516,12 @@ static void RenderEntityOcclusionVolume(trRefEntity_t *entity)
 	GL_CheckErrors();
 }
 
+/**
+ * @brief IssueEntityOcclusionQuery
+ * @param[in] queue
+ * @param[in,out] entity
+ * @param[in] resetMultiQueryLink
+ */
 static void IssueEntityOcclusionQuery(link_t *queue, trRefEntity_t *entity, qboolean resetMultiQueryLink)
 {
 	Ren_LogComment("--- IssueEntityOcclusionQuery ---\n");
@@ -3456,6 +3571,9 @@ static void IssueEntityOcclusionQuery(link_t *queue, trRefEntity_t *entity, qboo
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RB_RenderHDRResultToFrameBuffer
+ */
 static void RB_RenderHDRResultToFrameBuffer()
 {
 	Ren_LogComment("--- RB_RenderHDRResultToFrameBuffer ---\n");
@@ -3498,6 +3616,11 @@ static void RB_RenderHDRResultToFrameBuffer()
 	GL_PopMatrix();
 }
 
+/**
+ * @brief IssueEntityMultiOcclusionQueries
+ * @param[in] multiQueue
+ * @param[in] individualQueue
+ */
 static void IssueEntityMultiOcclusionQueries(link_t *multiQueue, link_t *individualQueue)
 {
 	trRefEntity_t *entity;
@@ -3583,6 +3706,11 @@ static void IssueEntityMultiOcclusionQueries(link_t *multiQueue, link_t *individ
 	//Ren_Print("--- IssueMultiOcclusionQueries end ---\n");
 }
 
+/**
+ * @brief EntityOcclusionResultAvailable
+ * @param[in] entity
+ * @return
+ */
 static int EntityOcclusionResultAvailable(trRefEntity_t *entity)
 {
 	GLint available;
@@ -3604,6 +3732,10 @@ static int EntityOcclusionResultAvailable(trRefEntity_t *entity)
 	return qtrue;
 }
 
+/**
+ * @brief GetEntityOcclusionQueryResult
+ * @param[in,out] entity
+ */
 static void GetEntityOcclusionQueryResult(trRefEntity_t *entity)
 {
 	link_t *l, *sentinel;
@@ -3651,6 +3783,12 @@ static void GetEntityOcclusionQueryResult(trRefEntity_t *entity)
 	}
 }
 
+/**
+ * @brief EntityCompare
+ * @param[in] a
+ * @param[in] b
+ * @return
+ */
 static int EntityCompare(const void *a, const void *b)
 {
 	float         d1, d2;
@@ -3672,6 +3810,9 @@ static int EntityCompare(const void *a, const void *b)
 	return 0;
 }
 
+/**
+ * @brief RB_RenderEntityOcclusionQueries
+ */
 void RB_RenderEntityOcclusionQueries()
 {
 	Ren_LogComment("--- RB_RenderEntityOcclusionQueries ---\n");
@@ -3845,7 +3986,7 @@ void RB_RenderEntityOcclusionQueries()
 		R2_TIMING(RSPEEDS_OCCLUSION_QUERIES)
 		{
 			backEnd.pc.c_occlusionQueriesResponseTime = ri.Milliseconds() - startTime;
-			startTime                                 = ri.Milliseconds();
+			startTime                                 = ri.Milliseconds();  // FIXME: never read
 		}
 
 		// go back to the world modelview matrix
@@ -3863,6 +4004,9 @@ void RB_RenderEntityOcclusionQueries()
 // BSP OCCLUSION CULLING
 // ================================================================================================
 
+/**
+ * @brief RB_RenderBspOcclusionQueries
+ */
 void RB_RenderBspOcclusionQueries()
 {
 	Ren_LogComment("--- RB_RenderBspOcclusionQueries ---\n");
@@ -3938,13 +4082,16 @@ void RB_RenderBspOcclusionQueries()
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RB_CollectBspOcclusionQueries
+ */
 void RB_CollectBspOcclusionQueries()
 {
 	Ren_LogComment("--- RB_CollectBspOcclusionQueries ---\n");
 
 	if (glConfig2.occlusionQueryBits && r_dynamicBspOcclusionCulling->integer)
 	{
-		int       j = 0;
+		// int       j = 0;
 		bspNode_t *node;
 		link_t    *l, *sentinel;
 		int       ocCount = 0;
@@ -3972,7 +4119,11 @@ void RB_CollectBspOcclusionQueries()
 			{
 				node = (bspNode_t *) l->data;
 
-				if (node->issueOcclusionQuery)
+				// FIXME: don't know if it should done like this,
+				// but this statement was always true.
+				// if (node->issueOcclusionQuery)
+				// TODO: issueOcclusionQuery is never used
+				if (node->issueOcclusionQuery[backEnd.viewParms.viewCount])
 				{
 					available = 0;
 					if (glIsQuery(node->occlusionQueryObjects[backEnd.viewParms.viewCount]))
@@ -3983,7 +4134,10 @@ void RB_CollectBspOcclusionQueries()
 
 					if (available)
 					{
-						node->issueOcclusionQuery[j] = qfalse;
+						// FIXME: j is neither incremented not used,
+						// node->issueOcclusionQuery[j] = qfalse;
+						// TODO: issueOcclusionQuery is never used
+						node->issueOcclusionQuery[backEnd.viewParms.viewCount] = qfalse;
 						avCount++;
 
 						//if(//avCount % oc)
@@ -3992,7 +4146,6 @@ void RB_CollectBspOcclusionQueries()
 					}
 				}
 			}
-
 		}
 		while (avCount < ocCount);
 
@@ -4031,6 +4184,9 @@ void RB_CollectBspOcclusionQueries()
 	}
 }
 
+/**
+ * @brief RB_RenderDebugUtils
+ */
 static void RB_RenderDebugUtils()
 {
 	Ren_LogComment("--- RB_RenderDebugUtils ---\n");
@@ -4115,7 +4271,7 @@ static void RB_RenderDebugUtils()
 					Vector4Copy(colorBlue, lightColor);
 				}
 
-				lightColor[3] = 0.2;
+				lightColor[3] = 0.2f;
 
 				SetUniformVec4(UNIFORM_COLOR, lightColor);
 
@@ -4203,7 +4359,7 @@ static void RB_RenderDebugUtils()
 							Tess_AddCube(light->l.center, minSize, maxSize, colorYellow);
 						}
 
-						Tess_UpdateVBOs(ATTR_POSITION | ATTR_COLOR);
+						Tess_UpdateVBOs(tess.attribsSet); // set by Tess_AddCube
 						Tess_DrawElements();
 #else
 						mat4_t transform, scale, rot;
@@ -4365,7 +4521,7 @@ static void RB_RenderDebugUtils()
 							Tess_AddCube(light->l.projEnd, minSize, maxSize, colorMagenta);
 						}
 
-						Tess_UpdateVBOs(ATTR_POSITION | ATTR_COLOR);
+						Tess_UpdateVBOs(tess.attribsSet); // set by Tess_AddCube
 						Tess_DrawElements();
 						break;
 					}
@@ -4551,7 +4707,7 @@ static void RB_RenderDebugUtils()
 				Tess_AddCube(vec3_origin, entity->localBounds[0], entity->localBounds[1], lightColor);
 			}
 
-			Tess_UpdateVBOs(ATTR_POSITION | ATTR_COLOR);
+			Tess_UpdateVBOs(tess.attribsSet); // set by Tess_AddCube
 			Tess_DrawElements();
 
 			tess.multiDrawPrimitives = 0;
@@ -4651,7 +4807,7 @@ static void RB_RenderDebugUtils()
 
 			Tess_AddCube(vec3_origin, mins, maxs, colorWhite);
 
-			Tess_UpdateVBOs(ATTR_POSITION | ATTR_COLOR);
+			Tess_UpdateVBOs(tess.attribsSet); // set by Tess_AddCube
 			Tess_DrawElements();
 
 			tess.multiDrawPrimitives = 0;
@@ -4783,8 +4939,8 @@ static void RB_RenderDebugUtils()
 						PerpendicularVector(tmp, diff);
 						//VectorCopy(up, tmp);
 
-						VectorScale(tmp, length * 0.1, tmp2);
-						VectorMA(tmp2, length * 0.2, diff, tmp2);
+						VectorScale(tmp, length * 0.1f, tmp2);
+						VectorMA(tmp2, length * 0.2f, diff, tmp2);
 
 						for (k = 0; k < 3; k++)
 						{
@@ -5137,8 +5293,8 @@ static void RB_RenderDebugUtils()
 			PerpendicularVector(tmp, lightDirection);
 			//VectorCopy(up, tmp);
 
-			VectorScale(tmp, length * 0.1, tmp2);
-			VectorMA(tmp2, length * 0.2, lightDirection, tmp2);
+			VectorScale(tmp, length * 0.1f, tmp2);
+			VectorMA(tmp2, length * 0.2f, lightDirection, tmp2);
 
 			for (k = 0; k < 3; k++)
 			{
@@ -5231,8 +5387,8 @@ static void RB_RenderDebugUtils()
 
 					// calculate top down view projection matrix
 					{
-						vec3_t   forward = { 0, 0, -1 };
-						vec3_t   up      = { 1, 0, 0 };
+						vec3_t forward = { 0, 0, -1 };
+						vec3_t up      = { 1, 0, 0 };
 						mat4_t viewMatrix, projectionMatrix; // rotationMatrix, transformMatrix,
 
 						// Quake -> OpenGL view matrix from light perspective
@@ -5332,7 +5488,7 @@ static void RB_RenderDebugUtils()
 					Vector4Set(quadVerts[3], nearCorners[3][0], nearCorners[3][1], nearCorners[3][2], 1);
 					Tess_AddQuadStamp2(quadVerts, colorGreen);
 
-					Tess_UpdateVBOs(ATTR_POSITION | ATTR_COLOR);
+					Tess_UpdateVBOs(tess.attribsSet); // set by Tess_AddQuadStamp2
 					Tess_DrawElements();
 
 					GLSL_SetUniform_ColorModulate(trProg.gl_genericShader, CGEN_CUSTOM_RGB, AGEN_CUSTOM);
@@ -5372,9 +5528,6 @@ static void RB_RenderDebugUtils()
 							continue;
 						}
 
-						//if(node->shrinkedAABB)
-						//	gl_genericShader->SetUniform_Color(colorBlue);
-						//else
 						if (node->visCounts[tr.visIndex] == tr.visCounts[tr.visIndex])
 						{
 							SetUniformVec4(UNIFORM_COLOR, colorGreen);
@@ -5576,6 +5729,9 @@ static void RB_RenderDebugUtils()
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RB_RenderViewFront
+ */
 static void RB_RenderViewFront(void)
 {
 	// Forward shading path
@@ -5644,7 +5800,7 @@ static void RB_RenderViewFront(void)
 			// portal scene, clear whatever is necessary
 			clearBits |= GL_DEPTH_BUFFER_BIT;
 
-			if (r_fastsky->integer || (backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
+			if (r_fastSky->integer || (backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
 			{
 				// fastsky: clear color
 
@@ -5663,7 +5819,7 @@ static void RB_RenderViewFront(void)
 				else
 				{
 					//GL_ClearColor(GLCOLOR_RED);   // red clear for testing portal sky clear
-					GL_ClearColor(0.5, 0.5, 0.5, 1.0);
+					GL_ClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 				}
 			}
 			else
@@ -5709,7 +5865,7 @@ static void RB_RenderViewFront(void)
 			{
 				// portal skies have been manually turned off, clear bg color
 				clearBits |= GL_COLOR_BUFFER_BIT;
-				GL_ClearColor(0.5, 0.5, 0.5, 1.0);
+				GL_ClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 			}
 		}
 	}
@@ -5723,7 +5879,7 @@ static void RB_RenderViewFront(void)
 		{
 			clearBits &= ~GL_COLOR_BUFFER_BIT;
 		}
-		else if (r_fastsky->integer || (backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
+		else if (r_fastSky->integer || (backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
 		{
 			clearBits |= GL_COLOR_BUFFER_BIT;
 
@@ -5736,7 +5892,7 @@ static void RB_RenderViewFront(void)
 			else
 			{
 				//GL_ClearColor(GLCOLOR_BLUE);   // blue clear for testing world sky clear
-				GL_ClearColor(0.05, 0.05, 0.05, 1.0);   // changed per id req was 0.5s
+				GL_ClearColor(0.05f, 0.05f, 0.05f, 1.0f);   // changed per id req was 0.5s
 			}
 		}
 		else
@@ -5942,6 +6098,9 @@ static void RB_RenderViewFront(void)
 #endif
 }
 
+/**
+ * @brief RB_RenderView
+ */
 static void RB_RenderView(void)
 {
 	Ren_LogComment("--- RB_RenderView( %i surfaces, %i interactions ) ---\n", backEnd.viewParms.numDrawSurfs, backEnd.viewParms.numInteractions);
@@ -5989,15 +6148,22 @@ RENDER BACK END THREAD FUNCTIONS
 ============================================================================
 */
 
-/*
-=============
-RE_StretchRaw
-
-FIXME: not exactly backend
-Stretches a raw 32 bit power of 2 bitmap image over the given screen rectangle.
-Used for cinematics.
-=============
-*/
+/**
+ * @brief RE_StretchRaw
+ * @param[in] x
+ * @param[in] y
+ * @param[in] w
+ * @param[in] h
+ * @param[in] cols
+ * @param[in] rows
+ * @param[in] data
+ * @param[in] client
+ * @param[in] dirty
+ *
+ * @todo FIXME: not exactly backend
+ * Stretches a raw 32 bit power of 2 bitmap image over the given screen rectangle.
+ * Used for cinematics.
+ */
 void RE_StretchRaw(int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
 {
 	//int i, j;
@@ -6054,7 +6220,7 @@ void RE_StretchRaw(int x, int y, int w, int h, int cols, int rows, const byte *d
 
 	RE_UploadCinematic(w, h, cols, rows, data, client, dirty);
 
-	R2_TIMING_SIMPLE();
+	R2_TIMING_SIMPLE()
 	{
 		end = ri.Milliseconds();
 		Ren_Print("glTexSubImage2D %i, %i: %i msec\n", cols, rows, end - start);
@@ -6122,6 +6288,16 @@ void RE_StretchRaw(int x, int y, int w, int h, int cols, int rows, const byte *d
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RE_UploadCinematic
+ * @param w - unused
+ * @param h - unused
+ * @param[in] cols
+ * @param[in] rows
+ * @param[in] data
+ * @param[in] client
+ * @param[in] dirty
+ */
 void RE_UploadCinematic(int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
 {
 	GL_Bind(tr.scratchImage[client]);
@@ -6159,6 +6335,11 @@ void RE_UploadCinematic(int w, int h, int cols, int rows, const byte *data, int 
 	GL_CheckErrors();
 }
 
+/**
+ * @brief RB_SetColor
+ * @param[in] data
+ * @return
+ */
 const void *RB_SetColor(const void *data)
 {
 	const setColorCommand_t *cmd = (const setColorCommand_t *)data;
@@ -6173,6 +6354,11 @@ const void *RB_SetColor(const void *data)
 	return (const void *)(cmd + 1);
 }
 
+/**
+ * @brief RB_StretchPic
+ * @param[in] data
+ * @return
+ */
 const void *RB_StretchPic(const void *data)
 {
 	int                       i;
@@ -6261,9 +6447,15 @@ const void *RB_StretchPic(const void *data)
 	tess.texCoords[numVerts + 3][2] = 0;
 	tess.texCoords[numVerts + 3][3] = 1;
 
+	tess.attribsSet |= ATTR_POSITION | ATTR_TEXCOORD | ATTR_COLOR;
 	return (const void *)(cmd + 1);
 }
 
+/**
+ * @brief RB_Draw2dPolys
+ * @param[in] data
+ * @return
+ */
 const void *RB_Draw2dPolys(const void *data)
 {
 	const poly2dCommand_t *cmd = (const poly2dCommand_t *)data;
@@ -6306,16 +6498,22 @@ const void *RB_Draw2dPolys(const void *data)
 		tess.texCoords[tess.numVertexes][0] = cmd->verts[i].st[0];
 		tess.texCoords[tess.numVertexes][1] = cmd->verts[i].st[1];
 
-		tess.colors[tess.numVertexes][0] = cmd->verts[i].modulate[0] * (1.0 / 255.0f);
-		tess.colors[tess.numVertexes][1] = cmd->verts[i].modulate[1] * (1.0 / 255.0f);
-		tess.colors[tess.numVertexes][2] = cmd->verts[i].modulate[2] * (1.0 / 255.0f);
-		tess.colors[tess.numVertexes][3] = cmd->verts[i].modulate[3] * (1.0 / 255.0f);
+		tess.colors[tess.numVertexes][0] = cmd->verts[i].modulate[0] * (1.0f / 255.0f);
+		tess.colors[tess.numVertexes][1] = cmd->verts[i].modulate[1] * (1.0f / 255.0f);
+		tess.colors[tess.numVertexes][2] = cmd->verts[i].modulate[2] * (1.0f / 255.0f);
+		tess.colors[tess.numVertexes][3] = cmd->verts[i].modulate[3] * (1.0f / 255.0f);
 		tess.numVertexes++;
 	}
 
+	tess.attribsSet |= ATTR_POSITION | ATTR_TEXCOORD | ATTR_COLOR;
 	return (const void *)(cmd + 1);
 }
 
+/**
+ * @brief RB_RotatedPic
+ * @param[in] data
+ * @return
+ */
 const void *RB_RotatedPic(const void *data)
 {
 	const stretchPicCommand_t *cmd = (const stretchPicCommand_t *)data;
@@ -6367,8 +6565,8 @@ const void *RB_RotatedPic(const void *data)
 	mw = cmd->w * ROTSCALE;
 	mh = cmd->h * ROTSCALE;
 
-#define COSAN mx + (cos(angle) * mw)
-#define SINAN my + (sin(angle) * mh)
+#define COSAN mx + (float)(cos(angle) * mw)
+#define SINAN my + (float)(sin(angle) * mh)
 
 	angle                 = cmd->angle * pi2;
 	tess.xyz[numVerts][0] = COSAN;
@@ -6379,7 +6577,7 @@ const void *RB_RotatedPic(const void *data)
 	tess.texCoords[numVerts][0] = cmd->s1;
 	tess.texCoords[numVerts][1] = cmd->t1;
 
-	angle                     = cmd->angle * pi2 + 0.25 * pi2;
+	angle                     = cmd->angle * pi2 + 0.25f * pi2;
 	tess.xyz[numVerts + 1][0] = COSAN;
 	tess.xyz[numVerts + 1][1] = SINAN;
 	tess.xyz[numVerts + 1][2] = 0;
@@ -6388,7 +6586,7 @@ const void *RB_RotatedPic(const void *data)
 	tess.texCoords[numVerts + 1][0] = cmd->s2;
 	tess.texCoords[numVerts + 1][1] = cmd->t1;
 
-	angle                     = cmd->angle * pi2 + 0.50 * pi2;
+	angle                     = cmd->angle * pi2 + 0.50f * pi2;
 	tess.xyz[numVerts + 2][0] = COSAN;
 	tess.xyz[numVerts + 2][1] = SINAN;
 	tess.xyz[numVerts + 2][2] = 0;
@@ -6397,7 +6595,7 @@ const void *RB_RotatedPic(const void *data)
 	tess.texCoords[numVerts + 2][0] = cmd->s2;
 	tess.texCoords[numVerts + 2][1] = cmd->t2;
 
-	angle                     = cmd->angle * pi2 + 0.75 * pi2;
+	angle                     = cmd->angle * pi2 + 0.75f * pi2;
 	tess.xyz[numVerts + 3][0] = COSAN;
 	tess.xyz[numVerts + 3][1] = SINAN;
 	tess.xyz[numVerts + 3][2] = 0;
@@ -6406,9 +6604,15 @@ const void *RB_RotatedPic(const void *data)
 	tess.texCoords[numVerts + 3][0] = cmd->s1;
 	tess.texCoords[numVerts + 3][1] = cmd->t2;
 
+	tess.attribsSet |= ATTR_POSITION | ATTR_TEXCOORD | ATTR_COLOR;
 	return (const void *)(cmd + 1);
 }
 
+/**
+ * @brief RB_StretchPicGradient
+ * @param[in] data
+ * @return
+ */
 const void *RB_StretchPicGradient(const void *data)
 {
 	const stretchPicCommand_t *cmd = (const stretchPicCommand_t *)data;
@@ -6490,9 +6694,15 @@ const void *RB_StretchPicGradient(const void *data)
 	tess.texCoords[numVerts + 3][0] = cmd->s1;
 	tess.texCoords[numVerts + 3][1] = cmd->t2;
 
+	tess.attribsSet |= ATTR_POSITION | ATTR_TEXCOORD | ATTR_COLOR;
 	return (const void *)(cmd + 1);
 }
 
+/**
+ * @brief RB_DrawView
+ * @param[in] data
+ * @return
+ */
 const void *RB_DrawView(const void *data)
 {
 	const drawViewCommand_t *cmd;
@@ -6515,6 +6725,11 @@ const void *RB_DrawView(const void *data)
 	return (const void *)(cmd + 1);
 }
 
+/**
+ * @brief RB_DrawBuffer
+ * @param[in] data
+ * @return
+ */
 const void *RB_DrawBuffer(const void *data)
 {
 	const drawBufferCommand_t *cmd = (const drawBufferCommand_t *)data;
@@ -6533,16 +6748,12 @@ const void *RB_DrawBuffer(const void *data)
 	return (const void *)(cmd + 1);
 }
 
-/*
-===============
-RB_ShowImages
-
-Draw all the images to the screen, on top of whatever
-was there.  This is used to test for texture thrashing.
-
-Also called by RE_EndRegistration
-===============
-*/
+/**
+ * @brief Draw all the images to the screen, on top of whatever
+ * was there.  This is used to test for texture thrashing.
+ *
+ * Also called by RE_EndRegistration
+ */
 void RB_ShowImages(void)
 {
 	int     i;
@@ -6604,7 +6815,9 @@ void RB_ShowImages(void)
 
 	GL_CheckErrors();
 }
-
+/**
+ * @brief RB_ColorCorrection
+ */
 static void RB_ColorCorrection()
 {
 	Ren_LogComment("--- RB_ColorCorrection ---\n");
@@ -6628,6 +6841,10 @@ static void RB_ColorCorrection()
 /************************************************************************/
 /* Do all post processing of the back buffer here                       */
 /************************************************************************/
+
+/**
+ * @brief RB_PostProcess
+ */
 static void RB_PostProcess()
 {
 	Ren_LogComment("--- RB_PostProcess ---\n");
@@ -6653,6 +6870,9 @@ static void RB_PostProcess()
 	}
 }
 
+/**
+ * @brief RB_CountOverDraw
+ */
 static void RB_CountOverDraw()
 {
 	int           i;
@@ -6671,6 +6891,11 @@ static void RB_CountOverDraw()
 	ri.Hunk_FreeTempMemory(stencilReadback);
 }
 
+/**
+ * @brief RB_SwapBuffers
+ * @param[in] data
+ * @return
+ */
 const void *RB_SwapBuffers(const void *data)
 {
 	const swapBuffersCommand_t *cmd;
@@ -6703,9 +6928,16 @@ const void *RB_SwapBuffers(const void *data)
 
 	backEnd.projection2D = qfalse;
 
+	glState.finishCalled = qfalse;
+
 	return (const void *)(cmd + 1);
 }
 
+/**
+ * @brief RB_RenderToTexture
+ * @param[in] data
+ * @return
+ */
 const void *RB_RenderToTexture(const void *data)
 {
 	const renderToTextureCommand_t *cmd = (const renderToTextureCommand_t *)data;
@@ -6722,6 +6954,11 @@ const void *RB_RenderToTexture(const void *data)
 	return (const void *)(cmd + 1);
 }
 
+/**
+ * @brief RB_Finish
+ * @param[in] data
+ * @return
+ */
 const void *RB_Finish(const void *data)
 {
 	const renderFinishCommand_t *cmd = (const renderFinishCommand_t *)data;
@@ -6733,14 +6970,11 @@ const void *RB_Finish(const void *data)
 	return (const void *)(cmd + 1);
 }
 
-/*
-====================
-RB_ExecuteRenderCommands
-
-This function will be called synchronously if running without
-smp extensions, or asynchronously by another thread.
-====================
-*/
+/**
+ * @brief This function will be called synchronously if running without
+ * smp extensions, or asynchronously by another thread.
+ * @param[in] data
+ */
 void RB_ExecuteRenderCommands(const void *data)
 {
 	int t1, t2;

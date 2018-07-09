@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -44,6 +44,8 @@ SKINS
 /**
  * @brief This is unfortunate, but the skin files aren't
  * compatable with our normal parsing rules.
+ *
+ * @param[in,out] data_p
  */
 static char *CommaParse(char **data_p)
 {
@@ -116,7 +118,7 @@ static char *CommaParse(char **data_p)
 				*data_p        = (char *)data;
 				return com_token;
 			}
-			if (len < MAX_TOKEN_CHARS)
+			if (len < MAX_TOKEN_CHARS - 1)
 			{
 				com_token[len] = c;
 				len++;
@@ -127,7 +129,7 @@ static char *CommaParse(char **data_p)
 	// parse a regular word
 	do
 	{
-		if (len < MAX_TOKEN_CHARS)
+		if (len < MAX_TOKEN_CHARS - 1)
 		{
 			com_token[len] = c;
 			len++;
@@ -148,6 +150,13 @@ static char *CommaParse(char **data_p)
 	return com_token;
 }
 
+/**
+ * @brief RE_GetSkinModel
+ * @param[in] skinid
+ * @param[in] type
+ * @param[out] name
+ * @return
+ */
 qboolean RE_GetSkinModel(qhandle_t skinid, const char *type, char *name)
 {
 	int    i;
@@ -172,16 +181,16 @@ qboolean RE_GetSkinModel(qhandle_t skinid, const char *type, char *name)
 	return qfalse;
 }
 
-/*
-==============
-RE_GetShaderFromModel
-    return a shader index for a given model's surface
-    'withlightmap' set to '0' will create a new shader that is a copy of the one found
-    on the model, without the lighmap stage, if the shader has a lightmap stage
-
-    NOTE: only works for bmodels right now.  Could modify for other models (md3's etc.)
-==============
-*/
+/**
+ * @brief RE_GetShaderFromModel
+ * @param[in] modelid
+ * @param[in] surfnum
+ * @param withlightmap set to '0' will create a new shader that is a copy of the one found
+ * on the model, without the lighmap stage, if the shader has a lightmap stage - unused
+ * @return a shader index for a given model's surface
+ *
+ * @note Only works for bmodels right now.  Could modify for other models (md3's etc.)
+ */
 qhandle_t RE_GetShaderFromModel(qhandle_t modelid, int surfnum, int withlightmap)
 {
 	model_t      *model;
@@ -203,6 +212,7 @@ qhandle_t RE_GetShaderFromModel(qhandle_t modelid, int surfnum, int withlightmap
 		{
 			if (surfnum >= bmodel->numSurfaces)
 			{                   // if it's out of range, return the first surface
+				Ren_Print("RE_GetShaderFromModel warning: surface is our of range.\n");
 				surfnum = 0;
 			}
 
@@ -210,6 +220,7 @@ qhandle_t RE_GetShaderFromModel(qhandle_t modelid, int surfnum, int withlightmap
 			// RF, check for null shader (can happen on func_explosive's with botclips attached)
 			if (!surf->shader)
 			{
+				Ren_Print("RE_GetShaderFromModel warning: missing first surface shader.\n");
 				return 0;
 			}
 			//if(surf->shader->lightmapIndex != LIGHTMAP_NONE) {
@@ -245,11 +256,19 @@ qhandle_t RE_GetShaderFromModel(qhandle_t modelid, int surfnum, int withlightmap
 		}
 	}
 
+	Ren_Print("RE_GetShaderFromModel warning: no model for modelid '%i'.\n");
+
 	return 0;
 }
 
+/**
+ * @brief RE_RegisterSkin
+ * @param[in] name
+ * @return
+ */
 qhandle_t RE_RegisterSkin(const char *name)
 {
+	skinSurface_t parseSurfaces[MAX_SKIN_SURFACES];
 	qhandle_t     hSkin;
 	skin_t        *skin;
 	skinSurface_t *surf;
@@ -257,6 +276,7 @@ qhandle_t RE_RegisterSkin(const char *name)
 	char          *text, *text_p;
 	char          *token;
 	char          surfName[MAX_QPATH];
+	int           totalSurfaces = 0;
 
 	if (!name || !name[0])
 	{
@@ -302,9 +322,9 @@ qhandle_t RE_RegisterSkin(const char *name)
 	// If not a .skin file, load as a single shader
 	if (strcmp(name + strlen(name) - 5, ".skin"))
 	{
-		skin->numSurfaces         = 1;
-		skin->surfaces[0]         = ri.Hunk_Alloc(sizeof(skin->surfaces[0]), h_low);
-		skin->surfaces[0]->shader = R_FindShader(name, SHADER_3D_DYNAMIC, qtrue);
+		skin->numSurfaces        = 1;
+		skin->surfaces           = ri.Hunk_Alloc(sizeof(skinSurface_t), h_low);
+		skin->surfaces[0].shader = R_FindShader(name, SHADER_3D_DYNAMIC, qtrue);
 		return hSkin;
 	}
 #endif
@@ -356,7 +376,7 @@ qhandle_t RE_RegisterSkin(const char *name)
 			}
 
 			// this is specifying a model
-			model = skin->models[skin->numModels] = (skinModel_t *)ri.Hunk_Alloc(sizeof(*skin->models[0]), h_low);
+			model = skin->models[skin->numModels] = ri.Hunk_Alloc(sizeof(skinModel_t), h_low);
 			Q_strncpyz(model->type, token, sizeof(model->type));
 			model->hash = Com_HashKey(model->type, sizeof(model->type));
 
@@ -372,22 +392,25 @@ qhandle_t RE_RegisterSkin(const char *name)
 		// parse the shader name
 		token = CommaParse(&text_p);
 
-		if (skin->numSurfaces >= MD3_MAX_SURFACES)
+		if (skin->numSurfaces < MAX_SKIN_SURFACES)
 		{
-			Ren_Warning("WARNING: Ignoring surfaces in '%s', the max is %d surfaces!\n", name, MD3_MAX_SURFACES);
-			break;
+			surf = &parseSurfaces[skin->numSurfaces];
+			Q_strncpyz(surf->name, surfName, sizeof(surf->name));
+			// FIXME: bspSurface not not have ::hash yet
+			//surf->hash = Com_HashKey(surf->name, sizeof(surf->name));
+			surf->shader = R_FindShader(token, SHADER_3D_DYNAMIC, qtrue);
+			skin->numSurfaces++;
 		}
-
-		surf = skin->surfaces[skin->numSurfaces] = (skinSurface_t *)ri.Hunk_Alloc(sizeof(*skin->surfaces[0]), h_low);
-		Q_strncpyz(surf->name, surfName, sizeof(surf->name));
-
-		// FIXME: bspSurface not not have ::hash yet
-		//surf->hash = Com_HashKey(surf->name, sizeof(surf->name));
-		surf->shader = R_FindShader(token, SHADER_3D_DYNAMIC, qtrue);
-		skin->numSurfaces++;
+		totalSurfaces++;
 	}
 
 	ri.FS_FreeFile(text);
+
+	if (totalSurfaces > MAX_SKIN_SURFACES)
+	{
+		ri.Printf(PRINT_WARNING, "WARNING: Ignoring excess surfaces (found %d, max is %d) in skin '%s'!\n",
+		          totalSurfaces, MAX_SKIN_SURFACES, name);
+	}
 
 	// never let a skin have 0 shaders
 	if (skin->numSurfaces == 0)
@@ -395,9 +418,16 @@ qhandle_t RE_RegisterSkin(const char *name)
 		return 0;               // use default skin
 	}
 
+	// copy surfaces to skin
+	skin->surfaces = ri.Hunk_Alloc(skin->numSurfaces * sizeof(skinSurface_t), h_low);
+	Com_Memcpy(skin->surfaces, parseSurfaces, skin->numSurfaces * sizeof(skinSurface_t));
+
 	return hSkin;
 }
 
+/**
+ * @brief R_InitSkins
+ */
 void R_InitSkins(void)
 {
 	skin_t *skin;
@@ -405,13 +435,18 @@ void R_InitSkins(void)
 	tr.numSkins = 1;
 
 	// make the default skin have all default shaders
-	skin = tr.skins[0] = (skin_t *)ri.Hunk_Alloc(sizeof(skin_t), h_low);
+	skin = tr.skins[0] = ri.Hunk_Alloc(sizeof(skin_t), h_low);
 	Q_strncpyz(skin->name, "<default skin>", sizeof(skin->name));
-	skin->numSurfaces         = 1;
-	skin->surfaces[0]         = (skinSurface_t *)ri.Hunk_Alloc(sizeof(*skin->surfaces[0]), h_low);
-	skin->surfaces[0]->shader = tr.defaultShader;
+	skin->numSurfaces        = 1;
+	skin->surfaces           = ri.Hunk_Alloc(sizeof(skinSurface_t), h_low);
+	skin->surfaces[0].shader = tr.defaultShader;
 }
 
+/**
+ * @brief R_GetSkinByHandle
+ * @param[in] hSkin
+ * @return
+ */
 skin_t *R_GetSkinByHandle(qhandle_t hSkin)
 {
 	if (hSkin < 1 || hSkin >= tr.numSkins)
@@ -421,6 +456,9 @@ skin_t *R_GetSkinByHandle(qhandle_t hSkin)
 	return tr.skins[hSkin];
 }
 
+/**
+ * @brief R_SkinList_f
+ */
 void R_SkinList_f(void)
 {
 	int    i, j;
@@ -432,10 +470,10 @@ void R_SkinList_f(void)
 	{
 		skin = tr.skins[i];
 
-		Ren_Print("%3i:%s\n", i, skin->name);
+		Ren_Print("%3i:%s (%d surfaces)\n", i, skin->name, skin->numSurfaces);
 		for (j = 0; j < skin->numSurfaces; j++)
 		{
-			Ren_Print("       %s = %s\n", skin->surfaces[j]->name, skin->surfaces[j]->shader->name);
+			Ren_Print("       %s = %s\n", skin->surfaces[j].name, skin->surfaces[j].shader->name);
 		}
 	}
 	Ren_Print("------------------\n");

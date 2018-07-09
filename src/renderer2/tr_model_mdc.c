@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -39,31 +39,39 @@
 #define NUMMDCVERTEXNORMALS 256
 // *INDENT-ON*
 
-// NOTE: MDC_MAX_ERROR is effectively the compression level. the lower this value, the higher
-// the accuracy, but with lower compression ratios.
-#define MDC_MAX_ERROR     0.1 // if any compressed vert is off by more than this from the
-// actual vert, make this a baseframe
+/**
+ * @def MDC_MAX_ERROR
+ *
+ * @brief MDC_MAX_ERROR is effectively the compression level. the lower this value, the higher
+ * the accuracy, but with lower compression ratios.
+ * If any compressed vert is off by more than this from the
+ * actual vert, make this a baseframe
+ */
+#define MDC_MAX_ERROR     0.1
 
-#define MDC_DIST_SCALE    0.05 // lower for more accuracy, but less range
+#define MDC_DIST_SCALE    0.05f  ///< lower for more accuracy, but less range
 
-// note: we are locked in at 8 or less bits since changing to byte-encoded normals
-#define MDC_BITS_PER_AXIS 8
-#define MDC_MAX_OFS       127.0 // to be safe
+#define MDC_BITS_PER_AXIS 8     ///< we are locked in at 8 or less bits since changing to byte-encoded normals
+#define MDC_MAX_OFS       127.0f ///< to be safe
 
 #define MDC_MAX_DIST      (MDC_MAX_OFS * MDC_DIST_SCALE)
 
 #define R_MDC_DecodeXyzCompressed(ofsVec, out, normal) \
-	(out)[0] = ((float)((ofsVec) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
-	(out)[1] = ((float)((ofsVec >> 8) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
-	(out)[2] = ((float)((ofsVec >> 16) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
+	(out)[0] = (((ofsVec) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
+	(out)[1] = (((ofsVec >> 8) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
+	(out)[2] = (((ofsVec >> 16) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
 	VectorCopy((r_anormals)[(ofsVec >> 24)], normal);             //This doesn't do anything...
 
 #define R_MDC_DecodeXyzCompressed2(ofsVec, out) \
-	(out)[0] = ((float)((ofsVec) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
-	(out)[1] = ((float)((ofsVec >> 8) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
-	(out)[2] = ((float)((ofsVec >> 16) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
+	(out)[0] = (((ofsVec) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
+	(out)[1] = (((ofsVec >> 8) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
+	(out)[2] = (((ofsVec >> 16) & 255) - MDC_MAX_OFS) * MDC_DIST_SCALE; \
 	//VectorCopy( ( r_anormals )[( ofsVec >> 24 )], normal ); //This doesn't do anything...
 
+/**
+ * @brief R_MDC_CreateVBO_Surfaces
+ * @param[in,out] mdvModel
+ */
 static void R_MDC_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 {
 	int            i, j, k;
@@ -94,7 +102,15 @@ static void R_MDC_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 	int vertexesNum;
 	int f;
 
-	Com_InitGrowList(&vboSurfaces, 10);
+	const float *v0, *v1, *v2;
+	const float *t0, *t1, *t2;
+	vec3_t      tangent;
+	vec3_t      binormal;
+	vec3_t      normal;
+
+	float *v;
+
+	Com_InitGrowList(&vboSurfaces, 32);
 
 	for (i = 0, surf = mdvModel->surfaces; i < mdvModel->numSurfaces; i++, surf++)
 	{
@@ -103,12 +119,6 @@ static void R_MDC_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 
 		// calc tangent spaces
 		{
-			const float *v0, *v1, *v2;
-			const float *t0, *t1, *t2;
-			vec3_t      tangent = { 0, 0, 0 };
-			vec3_t      binormal;
-			vec3_t      normal;
-
 			for (j = 0, vert = vertexes; j < (surf->numVerts * mdvModel->numFrames); j++, vert++)
 			{
 				VectorClear(vert->tangent);
@@ -137,8 +147,6 @@ static void R_MDC_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 
 					for (k = 0; k < 3; k++)
 					{
-						float *v;
-
 						v = vertexes[surf->numVerts * f + tri->indexes[k]].tangent;
 						VectorAdd(v, tangent, v);
 
@@ -156,6 +164,28 @@ static void R_MDC_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 				VectorNormalize(vert->tangent);
 				VectorNormalize(vert->binormal);
 				VectorNormalize(vert->normal);
+			}
+
+			if (r_smoothNormals->integer & FLAGS_SMOOTH_MDC) // do another extra smoothing for normals to avoid flat shading
+			{
+				for (j = 0; j < surf->numVerts; j++)
+				{
+					for (k = 0; k < surf->numVerts; k++)
+					{
+						if (j == k)
+						{
+							continue;
+						}
+
+						// R_CompareVert
+						if (VectorCompare(surf->verts[j].xyz, surf->verts[k].xyz))
+						{
+							VectorAdd(vertexes[j].normal, vertexes[k].normal, vertexes[j].normal);
+						}
+					}
+
+					VectorNormalize(vertexes[j].normal);
+				}
 			}
 		}
 
@@ -322,12 +352,15 @@ static void R_MDC_CreateVBO_Surfaces(mdvModel_t *mdvModel)
 	Com_DestroyGrowList(&vboSurfaces);
 }
 
-
-/*
-=================
-R_LoadMDC
-=================
-*/
+/**
+ * @brief R_LoadMDC
+ * @param[in,out] mod
+ * @param[in] lod
+ * @param[in,out] buffer
+ * @param bufferSize - unused
+ * @param[in] modName
+ * @return
+ */
 qboolean R_LoadMDC(model_t *mod, int lod, void *buffer, int bufferSize, const char *modName)
 {
 	int                i, j, k;

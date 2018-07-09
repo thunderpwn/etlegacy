@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -75,7 +75,7 @@ extern vmCvar_t ui_browserShowMaxlives;
 extern vmCvar_t ui_browserShowAntilag;
 extern vmCvar_t ui_browserShowWeaponsRestricted;
 extern vmCvar_t ui_browserShowTeamBalanced;
-extern vmCvar_t ui_browserShowBots;
+extern vmCvar_t ui_browserShowHumans;
 
 extern vmCvar_t ui_browserModFilter;
 extern vmCvar_t ui_browserMapFilter;
@@ -103,6 +103,8 @@ extern vmCvar_t cg_crosshairSize;
 
 extern vmCvar_t cl_bypassMouseInput;
 
+extern vmCvar_t ui_serverRedirect;
+
 // ui_qmenu.c
 #define RCOLUMN_OFFSET          (BIGCHAR_WIDTH)
 #define LCOLUMN_OFFSET          (-BIGCHAR_WIDTH)
@@ -110,9 +112,11 @@ extern vmCvar_t cl_bypassMouseInput;
 #define SLIDER_RANGE            10
 #define MAX_EDIT_LINE           256
 
-#define MAX_MENUDEPTH           8
-#define MAX_MENUITEMS           128
-
+/**
+ * @struct _tag_menuframework
+ * @typedef menuframework_s
+ * @brief
+ */
 typedef struct _tag_menuframework
 {
 	int cursor;
@@ -132,6 +136,10 @@ typedef struct _tag_menuframework
 
 } menuframework_s;
 
+/**
+ * @struct menucommon_s
+ * @brief
+ */
 typedef struct
 {
 	int type;
@@ -151,6 +159,10 @@ typedef struct
 	void (*ownerdraw)(void *self);
 } menucommon_s;
 
+/**
+ * @struct mfield_s
+ * @brief
+ */
 typedef struct
 {
 	int cursor;
@@ -160,12 +172,20 @@ typedef struct
 	int maxchars;
 } mfield_t;
 
+/**
+ * @struct menufield_s
+ * @brief
+ */
 typedef struct
 {
 	menucommon_s generic;
 	mfield_t field;
 } menufield_s;
 
+/**
+ * @struct menuslider_s
+ * @brief
+ */
 typedef struct
 {
 	menucommon_s generic;
@@ -177,6 +197,10 @@ typedef struct
 	float range;
 } menuslider_s;
 
+/**
+ * @struct menulist_s
+ * @brief
+ */
 typedef struct
 {
 	menucommon_s generic;
@@ -194,17 +218,29 @@ typedef struct
 	int seperation;
 } menulist_s;
 
+/**
+ * @struct menuaction_s
+ * @brief
+ */
 typedef struct
 {
 	menucommon_s generic;
 } menuaction_s;
 
+/**
+ * @struct menuradiobutton_s
+ * @brief
+ */
 typedef struct
 {
 	menucommon_s generic;
 	int curvalue;
 } menuradiobutton_s;
 
+/**
+ * @struct menubitmap_s
+ * @brief
+ */
 typedef struct
 {
 	menucommon_s generic;
@@ -217,10 +253,14 @@ typedef struct
 	float *focuscolor;
 } menubitmap_s;
 
+/**
+ * @struct menutext_s
+ * @brief
+ */
 typedef struct
 {
 	menucommon_s generic;
-	char *string;
+	char *fmt;
 	int style;
 	float *color;
 } menutext_s;
@@ -253,8 +293,8 @@ extern vec4_t text_color_disabled;
 extern vec4_t text_color_normal;
 extern vec4_t text_color_highlight;
 
-extern menuDef_t Menus[MAX_MENUS];      // defined menus
-extern int       menuCount;         // how many
+extern menuDef_t Menus[MAX_MENUS];      ///< defined menus
+extern int       menuCount;             ///< how many menus
 
 extern menuDef_t *modalMenuStack[MAX_MODAL_MENUS];
 extern int       modalMenuCount;
@@ -275,17 +315,17 @@ extern qboolean debugMode;
 
 #define SET_EDITITEM(x) g_editingField  = qtrue; g_editItem = x;
 #define CLEAR_EDITITEM() g_editingField = qfalse; g_editItem = NULL;
-#define IS_EDITMODE(x) (x->window.flags & WINDOW_HASFOCUS && g_editingField)
+#define IS_EDITMODE(x) ((x->window.flags & WINDOW_HASFOCUS) && g_editingField)
 #define COMBO_SELECTORCHAR "V"
 
 // ui_main.c
 void UI_Report(void);
 void UI_Load(void);
 void UI_LoadMenus(const char *menuFile, qboolean reset);
-void  _UI_SetActiveMenu(uiMenuCommand_t menu);
-uiMenuCommand_t _UI_GetActiveMenu(void);
+void  UI_SetActiveMenu(uiMenuCommand_t menu);
+uiMenuCommand_t UI_GetActiveMenu(void);
 int UI_AdjustTimeByGame(int time);
-void UI_ShowPostGame(qboolean newHigh);
+void UI_ShowPostGame();
 void UI_LoadArenas(void);
 void UI_LoadCampaigns(void);
 mapInfo *UI_FindMapInfoByMapname(const char *name);
@@ -315,29 +355,18 @@ extern void UI_DrawConnectScreen(qboolean overlay);
 extern void UI_DrawLoadPanel(qboolean ownerdraw, qboolean uihack);
 
 // Is this diffevent in other systems? OSX?
-#define K_CLIPBOARD(x) (tolower(x) == 'v' && DC->keyIsDown(K_CTRL))
+#define K_CLIPBOARD(x) (tolower(x) == 'v' && (DC->keyIsDown(K_LCTRL) || DC->keyIsDown(K_RCTRL)))
 
 // new ui stuff
 #define MAX_HEADS 64
 #define MAX_ALIASES 64
-#define MAX_HEADNAME  32
 #define MAX_TEAMS 64
 
-#define MAX_MAPS 256
-#define MAX_SPMAPS 16
-#define PLAYERS_PER_TEAM 5
-#define MAX_PINGREQUESTS        16
+#define MAX_MAPS 512
 #define MAX_ADDRESSLENGTH       64
-#define MAX_HOSTNAMELENGTH      22
-#define MAX_MAPNAMELENGTH       16
-#define MAX_STATUSLENGTH        64
-#define MAX_LISTBOXWIDTH        59
-#define UI_FONT_THRESHOLD       0.1
 #define MAX_DISPLAY_SERVERS     4096
 #define MAX_SERVERSTATUS_LINES  128
 #define MAX_SERVERSTATUS_TEXT   2048
-#define MAX_FOUNDPLAYER_SERVERS 16
-#define TEAM_MEMBERS 5
 
 #define MAX_MODS 64
 #define MAX_DEMOS 256
@@ -345,8 +374,6 @@ extern void UI_DrawLoadPanel(qboolean ownerdraw, qboolean uihack);
 #define MAX_PLAYERMODELS 256
 #define MAX_SPAWNPOINTS 128
 #define MAX_SPAWNDESC   128
-#define MAX_PBLINES     128
-#define MAX_PBWIDTH     42
 
 #define MAX_PROFILES 64
 
@@ -355,6 +382,11 @@ extern void UI_DrawLoadPanel(qboolean ownerdraw, qboolean uihack);
 #define SCROLL_TIME_ADJUSTOFFSET    40
 #define SCROLL_TIME_FLOOR           20
 
+/**
+ * @struct scrollInfo_s
+ * @typedef scrollInfo_t
+ * @brief
+ */
 typedef struct scrollInfo_s
 {
 	int nextScrollTime;
@@ -369,6 +401,10 @@ typedef struct scrollInfo_s
 
 extern scrollInfo_t scrollInfo;
 
+/**
+ * @struct characterInfo
+ * @brief
+ */
 typedef struct
 {
 	const char *name;
@@ -377,6 +413,10 @@ typedef struct
 	qboolean female;
 } characterInfo;
 
+/**
+ * @struct aliasInfo
+ * @brief
+ */
 typedef struct
 {
 	const char *name;
@@ -384,17 +424,24 @@ typedef struct
 	const char *action;
 } aliasInfo;
 
+/**
+ * @struct teamInfo
+ * @brief
+ */
 typedef struct
 {
 	const char *teamName;
 	const char *imageName;
-	const char *teamMembers[TEAM_MEMBERS];
 	qhandle_t teamIcon;
 	qhandle_t teamIcon_Metal;
 	qhandle_t teamIcon_Name;
 	int cinematic;
 } teamInfo;
 
+/**
+ * @struct gameTypeInfo
+ * @brief
+ */
 typedef struct
 {
 	const char *gameType;
@@ -403,18 +450,32 @@ typedef struct
 	const char *gameTypeDescription;
 } gameTypeInfo;
 
+/**
+ * @struct profileInfo_s
+ * @brief
+ */
 typedef struct
 {
 	const char *name;
 	const char *dir;
 } profileInfo_t;
 
+/**
+ * @struct serverFilter_s
+ * @typedef serverFilter_t
+ * @brief
+ */
 typedef struct serverFilter_s
 {
 	const char *description;
 	const char *basedir;
 } serverFilter_t;
 
+/**
+ * @struct serverStatus_s
+ * @typedef serverStatus_t
+ * @brief
+ */
 typedef struct serverStatus_s
 {
 	int refreshtime;
@@ -437,21 +498,10 @@ typedef struct serverStatus_s
 	char motd[MAX_STRING_CHARS];
 } serverStatus_t;
 
-typedef struct
-{
-	char adrstr[MAX_ADDRESSLENGTH];
-	char name[MAX_ADDRESSLENGTH];
-	int startTime;
-	int serverNum;
-	qboolean valid;
-} pendingServer_t;
-
-typedef struct
-{
-	int num;
-	pendingServer_t server[MAX_SERVERSTATUSREQUESTS];
-} pendingServerStatus_t;
-
+/**
+ * @struct serverStatusInfo_s
+ * @brief
+ */
 typedef struct
 {
 	char address[MAX_ADDRESSLENGTH];
@@ -461,20 +511,25 @@ typedef struct
 	int numLines;
 } serverStatusInfo_t;
 
+/**
+ * @struct modInfo_s
+ * @brief
+ */
 typedef struct
 {
 	const char *modName;
 	const char *modDescr;
 } modInfo_t;
 
+/**
+ * @struct uiInfo_s
+ * @brief
+ *
+ * @todo Cleanup
+ */
 typedef struct
 {
 	displayContextDef_t uiDC;
-	int newHighScoreTime; // FIXME: remove
-	int newBestTime; // FIXME: remove
-	qboolean newHighScore; // FIXME: remove
-	qboolean demoAvailable; // FIXME: remove?
-	qboolean soundHighScore; // FIXME: remove
 
 	int legacyClient;
 
@@ -539,15 +594,6 @@ typedef struct
 	serverStatusInfo_t serverStatusInfo;
 	int nextServerStatusRefresh;
 
-	// to retrieve the status of server to find a player
-	pendingServerStatus_t pendingServerStatus;
-	char findPlayerName[MAX_STRING_CHARS];
-	char foundPlayerServerAddresses[MAX_FOUNDPLAYER_SERVERS][MAX_ADDRESSLENGTH];
-	char foundPlayerServerNames[MAX_FOUNDPLAYER_SERVERS][MAX_ADDRESSLENGTH];
-	int currentFoundPlayerServer;
-	int numFoundPlayerServers;
-	int nextFindPlayerRefresh;
-
 	int currentCrosshair;
 	int startPostGameTime;
 
@@ -596,39 +642,14 @@ extern uiInfo_t uiInfo;
 
 extern displayContextDef_t *DC;
 
-//FIXME: are these all removed? Can we remove these?
-extern void UI_Init(void);
-extern void UI_KeyEvent(int key);
-extern void UI_MouseEvent(int dx, int dy);
-extern void UI_Refresh(int realtime);
+// ui_atoms.c
 extern qboolean UI_ConsoleCommand(int realTime);
-extern void UI_DrawNamedPic(float x, float y, float width, float height, const char *picname);
 extern void UI_DrawHandlePic(float x, float y, float w, float h, qhandle_t hShader);
 extern void UI_FillRect(float x, float y, float width, float height, const float *color);
-extern void UI_DrawRect(float x, float y, float width, float height, const float *color);
 extern void UI_DrawTopBottom(float x, float y, float w, float h);
-extern void UI_DrawSides(float x, float y, float w, float h);
 extern void UI_AdjustFrom640(float *x, float *y, float *w, float *h);
-extern qboolean UI_IsFullscreen(void);
-extern void UI_SetActiveMenu(uiMenuCommand_t menu);
-extern void UI_PushMenu(menuframework_s *menu);
-extern void UI_PopMenu(void);
-extern void UI_ForceMenuOff(void);
 extern char *UI_Argv(int arg);
-extern char *UI_Cvar_VariableString(const char *var_name);
-extern void UI_Refresh(int time);
-extern void UI_KeyEvent(int key);
-
-/* unused
-extern void UI_DrawBannerString(int x, int y, const char *str, int style, vec4_t color);
-extern float UI_ProportionalSizeScale(int style);
-extern void UI_DrawProportionalString(int x, int y, const char *str, int style, vec4_t color);
-extern int UI_ProportionalStringWidth(const char *str);
-extern void UI_DrawString(int x, int y, const char *str, int style, vec4_t color);
-extern void UI_DrawChar(int x, int y, int ch, int style, vec4_t color);
-extern void UI_DrawTextBox(int x, int y, int width, int lines);
-extern qboolean UI_CursorInRect(int x, int y, int width, int height);
-*/
+extern char *UI_Cvar_VariableString(const char *varName);
 
 // ui_shared.c
 int Binding_IDFromName(const char *name);
@@ -640,18 +661,18 @@ int Binding_Count(void);
 char *Binding_FromName(const char *cvar);
 
 // ui_syscalls.c
-void trap_Print(const char *string);
-void trap_Error(const char *string) __attribute__((noreturn));
+void trap_Print(const char *fmt);
+void trap_Error(const char *fmt) __attribute__((noreturn));
 int trap_Milliseconds(void);
 void trap_Cvar_Register(vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags);
 void trap_Cvar_Update(vmCvar_t *vmCvar);
-void trap_Cvar_Set(const char *var_name, const char *value);
-float trap_Cvar_VariableValue(const char *var_name);
-void trap_Cvar_VariableStringBuffer(const char *var_name, char *buffer, int bufsize);
-void trap_Cvar_LatchedVariableStringBuffer(const char *var_name, char *buffer, int bufsize);
-void trap_Cvar_SetValue(const char *var_name, float value);
+void trap_Cvar_Set(const char *varName, const char *value);
+float trap_Cvar_VariableValue(const char *varName);
+void trap_Cvar_VariableStringBuffer(const char *varName, char *buffer, int bufsize);
+void trap_Cvar_LatchedVariableStringBuffer(const char *varName, char *buffer, int bufsize);
+void trap_Cvar_SetValue(const char *varName, float value);
 void trap_Cvar_Reset(const char *name);
-void trap_Cvar_Create(const char *var_name, const char *var_value, int flags);
+void trap_Cvar_Create(const char *varName, const char *var_value, int flags);
 void trap_Cvar_InfoStringBuffer(int bit, char *buffer, int bufsize);
 int trap_Argc(void);
 void trap_Argv(int n, char *buffer, int bufferLength);
@@ -691,10 +712,10 @@ void trap_Key_SetOverstrikeMode(qboolean state);
 void trap_Key_ClearStates(void);
 int trap_Key_GetCatcher(void);
 void trap_Key_SetCatcher(int catcher);
-void trap_GetClipboardData(char *buf, int bufsize);
+void trap_GetClipboardData(char *buf, size_t bufsize);
 void trap_GetClientState(uiClientState_t *state);
 void trap_GetGlconfig(glconfig_t *glconfig);
-int trap_GetConfigString(int index, char *buff, int buffsize);
+int trap_GetConfigString(int index, char *buff, size_t buffsize);
 int trap_LAN_GetServerCount(int source);
 int trap_LAN_GetLocalServerCount(void);
 void trap_LAN_GetLocalServerAddressString(int n, char *buf, int buflen);
@@ -721,10 +742,10 @@ int trap_LAN_ServerStatus(const char *serverAddress, char *serverStatus, int max
 void trap_LAN_LoadCachedServers(void);
 qboolean trap_LAN_ServerIsInFavoriteList(int source, int n);
 
-void trap_R_RegisterFont(const char *pFontname, int pointSize, void *font);
+void trap_R_RegisterFont(const char *fontName, int pointSize, void *font);
 void trap_S_StopBackgroundTrack(void);
 void trap_S_StartBackgroundTrack(const char *intro, const char *loop, int fadeupTime);
-void trap_S_FadeAllSound(float targetvol, int time, qboolean stopsound);
+void trap_S_FadeAllSound(float targetvol, int time, qboolean stopsounds);
 int trap_CIN_PlayCinematic(const char *arg0, int xpos, int ypos, int width, int height, int bits);
 e_status trap_CIN_StopCinematic(int handle);
 e_status trap_CIN_RunCinematic(int handle);
@@ -739,14 +760,10 @@ void trap_GetAutoUpdate(void);
 void trap_openURL(const char *url);
 void trap_GetHunkData(int *hunkused, int *hunkexpected);
 
-char *trap_TranslateString(const char *string); // localization
+const char *trap_TranslateString(const char *fmt); // localization
 
 const char *UI_DescriptionForCampaign(void);
 const char *UI_NameForCampaign(void);
-
-// 4:3 aspectratio is the default for this game engine..
-#define RATIO43     (4.0f / 3.0f)
-#define RPRATIO43   (1 / RATIO43)
 
 #define EDITFIELD_TEMP_CVAR         "ui_textfield_temp"
 

@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -37,26 +37,30 @@
 backEndData_t  *backEndData;
 backEndState_t backEnd;
 
+/**
+ * @var s_flipMatrix
+ * @brief Convert from our coordinate system (looking down X)
+ * to OpenGL's coordinate system (looking down -Z)
+ */
 static float s_flipMatrix[16] =
 {
-	// convert from our coordinate system (looking down X)
-	// to OpenGL's coordinate system (looking down -Z)
 	0,  0, -1, 0,
 	-1, 0, 0,  0,
 	0,  1, 0,  0,
 	0,  0, 0,  1
 };
 
-/*
-GL_Bind
-*/
+/**
+ * @brief GL_Bind
+ * @param[in,out] image
+ */
 void GL_Bind(image_t *image)
 {
 	int texnum;
 
 	if (!image)
 	{
-		ri.Printf(PRINT_WARNING, "GL_Bind: NULL image\n");
+		Ren_Warning("GL_Bind: NULL image\n");
 		texnum = tr.defaultImage->texnum;
 	}
 	else
@@ -64,22 +68,27 @@ void GL_Bind(image_t *image)
 		texnum = image->texnum;
 	}
 
-	if (r_nobind->integer && tr.dlightImage)            // performance evaluation option
+	if (r_noBind->integer && tr.dlightImage)            // performance evaluation option
 	{
 		texnum = tr.dlightImage->texnum;
 	}
 
 	if (glState.currenttextures[glState.currenttmu] != texnum)
 	{
-		image->frameUsed                            = tr.frameCount;
+		if (image)
+		{
+			image->frameUsed = tr.frameCount;
+		}
+
 		glState.currenttextures[glState.currenttmu] = texnum;
 		qglBindTexture(GL_TEXTURE_2D, texnum);
 	}
 }
 
-/*
-GL_SelectTexture
-*/
+/**
+ * @brief GL_SelectTexture
+ * @param[in] unit
+ */
 void GL_SelectTexture(int unit)
 {
 	if (glState.currenttmu == unit)
@@ -103,46 +112,51 @@ void GL_SelectTexture(int unit)
 	}
 	else
 	{
-		ri.Error(ERR_DROP, "GL_SelectTexture: unit = %i", unit);
+		Ren_Drop("GL_SelectTexture: unit = %i", unit);
 	}
 
 	glState.currenttmu = unit;
 }
 
 /*
-GL_BindMultitexture
-
-@note Unused
-*/
+ * @brief GL_BindMultitexture
+ * @param image0
+ * @param env0 - unused
+ * @param image1
+ * @param env1 - unused
+ *
+ * @note Unused
 void GL_BindMultitexture(image_t *image0, GLuint env0, image_t *image1, GLuint env1)
 {
-	int texnum0 = image0->texnum;
-	int texnum1 = image1->texnum;
+    int texnum0 = image0->texnum;
+    int texnum1 = image1->texnum;
 
-	if (r_nobind->integer && tr.dlightImage)            // performance evaluation option
-	{
-		texnum0 = texnum1 = tr.dlightImage->texnum;
-	}
+    if (r_nobind->integer && tr.dlightImage)            // performance evaluation option
+    {
+        texnum0 = texnum1 = tr.dlightImage->texnum;
+    }
 
-	if (glState.currenttextures[1] != texnum1)
-	{
-		GL_SelectTexture(1);
-		image1->frameUsed          = tr.frameCount;
-		glState.currenttextures[1] = texnum1;
-		qglBindTexture(GL_TEXTURE_2D, texnum1);
-	}
-	if (glState.currenttextures[0] != texnum0)
-	{
-		GL_SelectTexture(0);
-		image0->frameUsed          = tr.frameCount;
-		glState.currenttextures[0] = texnum0;
-		qglBindTexture(GL_TEXTURE_2D, texnum0);
-	}
+    if (glState.currenttextures[1] != texnum1)
+    {
+        GL_SelectTexture(1);
+        image1->frameUsed          = tr.frameCount;
+        glState.currenttextures[1] = texnum1;
+        qglBindTexture(GL_TEXTURE_2D, texnum1);
+    }
+    if (glState.currenttextures[0] != texnum0)
+    {
+        GL_SelectTexture(0);
+        image0->frameUsed          = tr.frameCount;
+        glState.currenttextures[0] = texnum0;
+        qglBindTexture(GL_TEXTURE_2D, texnum0);
+    }
 }
-
-/*
-GL_Cull
 */
+
+/**
+ * @brief GL_Cull
+ * @param[in] cullType
+ */
 void GL_Cull(int cullType)
 {
 	if (glState.faceCulling == cullType)
@@ -158,36 +172,23 @@ void GL_Cull(int cullType)
 	}
 	else
 	{
+		qboolean cullFront;
 		qglEnable(GL_CULL_FACE);
 
-		if (cullType == CT_BACK_SIDED)
+		cullFront = (cullType == CT_FRONT_SIDED);
+		if (backEnd.viewParms.isMirror)
 		{
-			if (backEnd.viewParms.isMirror)
-			{
-				qglCullFace(GL_FRONT);
-			}
-			else
-			{
-				qglCullFace(GL_BACK);
-			}
+			cullFront = !cullFront;
 		}
-		else
-		{
-			if (backEnd.viewParms.isMirror)
-			{
-				qglCullFace(GL_BACK);
-			}
-			else
-			{
-				qglCullFace(GL_FRONT);
-			}
-		}
+
+		qglCullFace(cullFront ? GL_FRONT : GL_BACK);
 	}
 }
 
-/*
-GL_TexEnv
-*/
+/**
+ * @brief GL_TexEnv
+ * @param[in] env
+ */
 void GL_TexEnv(int env)
 {
 	if (env == glState.texEnv[glState.currenttmu])
@@ -196,6 +197,7 @@ void GL_TexEnv(int env)
 	}
 
 	glState.texEnv[glState.currenttmu] = env;
+
 
 	switch (env)
 	{
@@ -212,16 +214,14 @@ void GL_TexEnv(int env)
 		qglTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_ADD);
 		break;
 	default:
-		ri.Error(ERR_DROP, "GL_TexEnv: invalid env '%d' passed", env);
-		break;
+		Ren_Drop("GL_TexEnv: invalid env '%d' passed\n", env);
 	}
 }
 
-/*
-GL_State
-
-    This routine is responsible for setting the most commonly changed state in Q3.
-*/
+/**
+ * @brief This routine is responsible for setting the most commonly changed state in Q3.
+ * @param[in] stateBits
+ */
 void GL_State(unsigned long stateBits)
 {
 	unsigned long diff = stateBits ^ glState.glStateBits;
@@ -282,8 +282,7 @@ void GL_State(unsigned long stateBits)
 				break;
 			default:
 				srcFactor = GL_ONE;     // to get warning to shut up
-				ri.Error(ERR_DROP, "GL_State: invalid src blend state bits");
-				break;
+				Ren_Drop("GL_State: invalid src blend state bits\n");
 			}
 
 			switch (stateBits & GLS_DSTBLEND_BITS)
@@ -314,8 +313,7 @@ void GL_State(unsigned long stateBits)
 				break;
 			default:
 				dstFactor = GL_ONE;     // to get warning to shut up
-				ri.Error(ERR_DROP, "GL_State: invalid dst blend state bits");
-				break;
+				Ren_Drop("GL_State: invalid dst blend state bits\n");
 			}
 
 			qglEnable(GL_BLEND);
@@ -337,6 +335,19 @@ void GL_State(unsigned long stateBits)
 		else
 		{
 			qglDepthMask(GL_FALSE);
+		}
+	}
+
+	// fill/line mode
+	if (diff & GLS_POLYMODE_LINE)
+	{
+		if (stateBits & GLS_POLYMODE_LINE)
+		{
+			qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		}
+		else
+		{
+			qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		}
 	}
 
@@ -374,7 +385,7 @@ void GL_State(unsigned long stateBits)
 			qglAlphaFunc(GL_GEQUAL, 0.5f);
 			break;
 		default:
-			assert(0);
+			etl_assert(0);
 			break;
 		}
 	}
@@ -382,24 +393,22 @@ void GL_State(unsigned long stateBits)
 	glState.glStateBits = stateBits;
 }
 
-/*
-================
-RB_Hyperspace
-
-A player has predicted a teleport, but hasn't arrived yet
-================
-*/
+/**
+ * @brief A player has predicted a teleport, but hasn't arrived yet
+ */
 static void RB_Hyperspace(void)
 {
-	float c;
+	float c = (backEnd.refdef.time & 255) / 255.0f;
 
-	c = (backEnd.refdef.time & 255) / 255.0f;
 	qglClearColor(c, c, c, 1);
 	qglClear(GL_COLOR_BUFFER_BIT);
 
 	backEnd.isHyperspace = qtrue;
 }
 
+/**
+ * @brief SetViewportAndScissor
+ */
 static void SetViewportAndScissor(void)
 {
 	qglMatrixMode(GL_PROJECTION);
@@ -413,14 +422,10 @@ static void SetViewportAndScissor(void)
 	           backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight);
 }
 
-/*
-=================
-RB_BeginDrawingView
-
-Any mirrored or portaled views have already been drawn, so prepare
-to actually render the visible surfaces for this view
-=================
-*/
+/**
+ * @brief Any mirrored or portaled views have already been drawn, so prepare
+ * to actually render the visible surfaces for this view
+ */
 void RB_BeginDrawingView(void)
 {
 	int clearBits = 0;
@@ -472,7 +477,7 @@ void RB_BeginDrawingView(void)
 		{
 			clearBits |= GL_DEPTH_BUFFER_BIT;
 
-			if (r_fastsky->integer || (backEnd.refdef.rdflags & RDF_NOWORLDMODEL))      // fastsky: clear color
+			if (r_fastSky->integer || (backEnd.refdef.rdflags & RDF_NOWORLDMODEL))      // fastsky: clear color
 			{   // try clearing first with the portal sky fog color, then the world fog color, then finally a default
 				clearBits |= GL_COLOR_BUFFER_BIT;
 				if (glfogsettings[FOG_PORTALVIEW].registered)
@@ -516,14 +521,14 @@ void RB_BeginDrawingView(void)
 					}
 
 				}
-				else if (!(r_portalsky->integer)) // portal skies have been manually turned off, clear bg color
+				else if (!(r_portalSky->integer)) // portal skies have been manually turned off, clear bg color
 				{
 					clearBits |= GL_COLOR_BUFFER_BIT;
 				}
 
 				qglClearColor(glfogsettings[FOG_CURRENT].color[0], glfogsettings[FOG_CURRENT].color[1], glfogsettings[FOG_CURRENT].color[2], glfogsettings[FOG_CURRENT].color[3]);
 			}
-			else if (!(r_portalsky->integer)) // portal skies have been manually turned off, clear bg color
+			else if (!(r_portalSky->integer)) // portal skies have been manually turned off, clear bg color
 			{
 				clearBits |= GL_COLOR_BUFFER_BIT;
 				qglClearColor(0.5, 0.5, 0.5, 1.0);
@@ -539,7 +544,7 @@ void RB_BeginDrawingView(void)
 		{
 			clearBits &= ~GL_COLOR_BUFFER_BIT;
 		}
-		else if (r_fastsky->integer || (backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
+		else if (r_fastSky->integer || (backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
 		{
 
 			clearBits |= GL_COLOR_BUFFER_BIT;
@@ -550,7 +555,7 @@ void RB_BeginDrawingView(void)
 			}
 			else
 			{
-				qglClearColor(0.05, 0.05, 0.05, 1.0);    // changed per id req was 0.5s
+				qglClearColor(0.05f, 0.05f, 0.05f, 1.0f);    // JPW NERVE changed per id req was 0.5s
 			}
 		}
 		else  // world scene, no portal sky, not fastsky, clear color if fog says to, otherwise, just set the clearcolor
@@ -596,8 +601,8 @@ void RB_BeginDrawingView(void)
 	// clip to the plane of the portal
 	if (backEnd.viewParms.isPortal)
 	{
-		float plane[4];
-		float plane2[4];
+		float  plane[4];
+		double plane2[4]; // keep this, glew expects double
 
 		plane[0] = backEnd.viewParms.portalPlane.normal[0];
 		plane[1] = backEnd.viewParms.portalPlane.normal[1];
@@ -619,11 +624,11 @@ void RB_BeginDrawingView(void)
 	}
 }
 
-/*
-==================
-RB_RenderDrawSurfList
-==================
-*/
+/**
+ * @brief RB_RenderDrawSurfList
+ * @param[in] drawSurfs
+ * @param[in] numDrawSurfs
+ */
 void RB_RenderDrawSurfList(drawSurf_t *drawSurfs, int numDrawSurfs)
 {
 	shader_t   *shader, *oldShader;
@@ -635,10 +640,7 @@ void RB_RenderDrawSurfList(drawSurf_t *drawSurfs, int numDrawSurfs)
 	int        i;
 	drawSurf_t *drawSurf;
 	int        oldSort;
-	double     originalTime;
-
-	// save original time for entity shader offsets
-	originalTime = backEnd.refdef.floatTime;
+	double     originalTime = backEnd.refdef.floatTime; // save original time for entity shader offsets
 
 	// clear the z buffer, set the modelview, etc
 	RB_BeginDrawingView();
@@ -669,8 +671,8 @@ void RB_RenderDrawSurfList(drawSurf_t *drawSurfs, int numDrawSurfs)
 		// change the tess parameters if needed
 		// a "entityMergable" shader is a shader that can have surfaces from seperate
 		// entities merged into a single batch, like smoke and blood puff sprites
-		if (shader != oldShader || fogNum != oldFogNum || dlighted != oldDlighted
-		    || (entityNum != oldEntityNum && !shader->entityMergable))
+		if (shader && (shader != oldShader || fogNum != oldFogNum || dlighted != oldDlighted
+		               || (entityNum != oldEntityNum && !shader->entityMergable)))
 		{
 			if (oldShader != NULL)
 			{
@@ -689,8 +691,10 @@ void RB_RenderDrawSurfList(drawSurf_t *drawSurfs, int numDrawSurfs)
 
 			if (entityNum != ENTITYNUM_WORLD)
 			{
-				backEnd.currentEntity    = &backEnd.refdef.entities[entityNum];
-				backEnd.refdef.floatTime = originalTime; // - backEnd.currentEntity->e.shaderTime; // pulled this to match q3ta
+				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
+
+				// FIXME: e.shaderTime must be passed as int to avoid fp-precision loss issues
+				backEnd.refdef.floatTime = originalTime; // - backEnd.currentEntity->e.shaderTime; // JPW NERVE pulled this to match q3ta
 
 				// we have to reset the shaderTime as well otherwise image animations start
 				// from the wrong frame
@@ -781,11 +785,9 @@ RENDER BACK END FUNCTIONS
 ============================================================================
 */
 
-/*
-================
-RB_SetGL2D
-================
-*/
+/**
+ * @brief RB_SetGL2D
+ */
 void RB_SetGL2D(void)
 {
 	backEnd.projection2D = qtrue;
@@ -808,18 +810,25 @@ void RB_SetGL2D(void)
 
 	// set time for 2D shaders
 	backEnd.refdef.time      = ri.Milliseconds();
-	backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
+	backEnd.refdef.floatTime = backEnd.refdef.time * 0.001;
 }
 
-/*
-=============
-RE_StretchRaw
-
-FIXME: not exactly backend
-Stretches a raw 32 bit power of 2 bitmap image over the given screen rectangle.
-Used for cinematics.
-=============
-*/
+/**
+ * @brief Stretches a raw 32 bit power of 2 bitmap image over the given screen rectangle.
+ * Used for cinematics.
+ *
+ * @param[in] x
+ * @param[in] y
+ * @param[in] w
+ * @param[in] h
+ * @param[in] cols
+ * @param[in] rows
+ * @param[in] data
+ * @param[in] client
+ * @param[in] dirty
+ *
+ * @todo FIXME: not exactly backend
+ */
 void RE_StretchRaw(int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
 {
 	int i, j;
@@ -840,16 +849,19 @@ void RE_StretchRaw(int x, int y, int w, int h, int cols, int rows, const byte *d
 		start = ri.Milliseconds();
 	}
 
-	// make sure rows and cols are powers of 2
-	for (i = 0 ; (1 << i) < cols ; i++)
+	if (!GL_ARB_texture_non_power_of_two)
 	{
-	}
-	for (j = 0 ; (1 << j) < rows ; j++)
-	{
-	}
-	if ((1 << i) != cols || (1 << j) != rows)
-	{
-		ri.Error(ERR_DROP, "Draw_StretchRaw: size not a power of 2: %i by %i", cols, rows);
+		// make sure rows and cols are powers of 2
+		for (i = 0; (1 << i) < cols; i++)
+		{
+		}
+		for (j = 0; (1 << j) < rows; j++)
+		{
+		}
+		if ((1 << i) != cols || (1 << j) != rows)
+		{
+			Ren_Drop("Draw_StretchRaw: size not a power of 2: %i by %i", cols, rows);
+		}
 	}
 
 	GL_Bind(tr.scratchImage[client]);
@@ -859,7 +871,7 @@ void RE_StretchRaw(int x, int y, int w, int h, int cols, int rows, const byte *d
 	{
 		tr.scratchImage[client]->width  = tr.scratchImage[client]->uploadWidth = cols;
 		tr.scratchImage[client]->height = tr.scratchImage[client]->uploadHeight = rows;
-		qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		qglTexImage2D(GL_TEXTURE_2D, 0, 3, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -879,13 +891,14 @@ void RE_StretchRaw(int x, int y, int w, int h, int cols, int rows, const byte *d
 	{
 		int end = ri.Milliseconds();
 
-		ri.Printf(PRINT_ALL, "qglTexSubImage2D %i, %i: %i msec\n", cols, rows, end - start);
+		Ren_Print("qglTexSubImage2D %i, %i: %i msec\n", cols, rows, end - start);
 	}
 
 	RB_SetGL2D();
 
 	qglColor3f(tr.identityLight, tr.identityLight, tr.identityLight);
 
+	// OpenGLES implementation
 	GLfloat tex[] =
 	{
 		0.5f / cols,          0.5f / rows,
@@ -924,6 +937,17 @@ void RE_StretchRaw(int x, int y, int w, int h, int cols, int rows, const byte *d
 	}
 }
 
+/**
+ * @brief RE_UploadCinematic
+ *
+ * @param w - unused
+ * @param h - unused
+ * @param[in] cols
+ * @param[in] rows
+ * @param[in] data
+ * @param[in] client
+ * @param[in] dirty
+ */
 void RE_UploadCinematic(int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
 {
 	GL_Bind(tr.scratchImage[client]);
@@ -933,7 +957,7 @@ void RE_UploadCinematic(int w, int h, int cols, int rows, const byte *data, int 
 	{
 		tr.scratchImage[client]->width  = tr.scratchImage[client]->uploadWidth = cols;
 		tr.scratchImage[client]->height = tr.scratchImage[client]->uploadHeight = rows;
-		qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		qglTexImage2D(GL_TEXTURE_2D, 0, 3, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -950,29 +974,28 @@ void RE_UploadCinematic(int w, int h, int cols, int rows, const byte *data, int 
 	}
 }
 
-/*
-=============
-RB_SetColor
-
-=============
-*/
+/**
+ * @brief RB_SetColor
+ * @param[in] data
+ * @return
+ */
 const void *RB_SetColor(const void *data)
 {
 	const setColorCommand_t *cmd = ( const setColorCommand_t * ) data;
 
-	backEnd.color2D[0] = cmd->color[0] * 255;
-	backEnd.color2D[1] = cmd->color[1] * 255;
-	backEnd.color2D[2] = cmd->color[2] * 255;
-	backEnd.color2D[3] = cmd->color[3] * 255;
+	backEnd.color2D[0] = (byte)(cmd->color[0] * 255);
+	backEnd.color2D[1] = (byte)(cmd->color[1] * 255);
+	backEnd.color2D[2] = (byte)(cmd->color[2] * 255);
+	backEnd.color2D[3] = (byte)(cmd->color[3] * 255);
 
 	return ( const void * ) (cmd + 1);
 }
 
-/*
-=============
-RB_StretchPic
-=============
-*/
+/**
+ * @brief RB_StretchPic
+ * @param[in] data
+ * @return
+ */
 const void *RB_StretchPic(const void *data)
 {
 	const stretchPicCommand_t *cmd = ( const stretchPicCommand_t * ) data;
@@ -1009,42 +1032,47 @@ const void *RB_StretchPic(const void *data)
 	tess.indexes[numIndexes + 4] = numVerts + 0;
 	tess.indexes[numIndexes + 5] = numVerts + 1;
 
-	*( int * ) tess.vertexColors[numVerts].v                 =
-	    *( int * ) tess.vertexColors[numVerts + 1].v         =
-	        *( int * ) tess.vertexColors[numVerts + 2].v     =
-	            *( int * ) tess.vertexColors[numVerts + 3].v = *( int * ) backEnd.color2D;
+	*( int * ) tess.vertexColors[numVerts]                 =
+	    *( int * ) tess.vertexColors[numVerts + 1]         =
+	        *( int * ) tess.vertexColors[numVerts + 2]     =
+	            *( int * ) tess.vertexColors[numVerts + 3] = *( int * ) backEnd.color2D;
 
-	tess.xyz[numVerts].v[0] = cmd->x;
-	tess.xyz[numVerts].v[1] = cmd->y;
-	tess.xyz[numVerts].v[2] = 0;
+	tess.xyz[numVerts][0] = cmd->x;
+	tess.xyz[numVerts][1] = cmd->y;
+	tess.xyz[numVerts][2] = 0;
 
-	tess.texCoords0[numVerts].v[0] = cmd->s1;
-	tess.texCoords0[numVerts].v[1] = cmd->t1;
+	tess.texCoords[numVerts][0][0] = cmd->s1;
+	tess.texCoords[numVerts][0][1] = cmd->t1;
 
-	tess.xyz[numVerts + 1].v[0] = cmd->x + cmd->w;
-	tess.xyz[numVerts + 1].v[1] = cmd->y;
-	tess.xyz[numVerts + 1].v[2] = 0;
+	tess.xyz[numVerts + 1][0] = cmd->x + cmd->w;
+	tess.xyz[numVerts + 1][1] = cmd->y;
+	tess.xyz[numVerts + 1][2] = 0;
 
-	tess.texCoords0[numVerts + 1].v[0] = cmd->s2;
-	tess.texCoords0[numVerts + 1].v[1] = cmd->t1;
+	tess.texCoords[numVerts + 1][0][0] = cmd->s2;
+	tess.texCoords[numVerts + 1][0][1] = cmd->t1;
 
-	tess.xyz[numVerts + 2].v[0] = cmd->x + cmd->w;
-	tess.xyz[numVerts + 2].v[1] = cmd->y + cmd->h;
-	tess.xyz[numVerts + 2].v[2] = 0;
+	tess.xyz[numVerts + 2][0] = cmd->x + cmd->w;
+	tess.xyz[numVerts + 2][1] = cmd->y + cmd->h;
+	tess.xyz[numVerts + 2][2] = 0;
 
-	tess.texCoords0[numVerts + 2].v[0] = cmd->s2;
-	tess.texCoords0[numVerts + 2].v[1] = cmd->t2;
+	tess.texCoords[numVerts + 2][0][0] = cmd->s2;
+	tess.texCoords[numVerts + 2][0][1] = cmd->t2;
 
-	tess.xyz[numVerts + 3].v[0] = cmd->x;
-	tess.xyz[numVerts + 3].v[1] = cmd->y + cmd->h;
-	tess.xyz[numVerts + 3].v[2] = 0;
+	tess.xyz[numVerts + 3][0] = cmd->x;
+	tess.xyz[numVerts + 3][1] = cmd->y + cmd->h;
+	tess.xyz[numVerts + 3][2] = 0;
 
-	tess.texCoords0[numVerts + 3].v[0] = cmd->s1;
-	tess.texCoords0[numVerts + 3].v[1] = cmd->t2;
+	tess.texCoords[numVerts + 3][0][0] = cmd->s1;
+	tess.texCoords[numVerts + 3][0][1] = cmd->t2;
 
 	return ( const void * ) (cmd + 1);
 }
 
+/**
+ * @brief RB_Draw2dPolys
+ * @param[in] data
+ * @return
+ */
 const void *RB_Draw2dPolys(const void *data)
 {
 	const poly2dCommand_t *cmd = ( const poly2dCommand_t * ) data;
@@ -1079,28 +1107,28 @@ const void *RB_Draw2dPolys(const void *data)
 
 	for (i = 0; i < cmd->numverts; i++)
 	{
-		tess.xyz[tess.numVertexes].v[0] = cmd->verts[i].xyz[0];
-		tess.xyz[tess.numVertexes].v[1] = cmd->verts[i].xyz[1];
-		tess.xyz[tess.numVertexes].v[2] = 0;
+		tess.xyz[tess.numVertexes][0] = cmd->verts[i].xyz[0];
+		tess.xyz[tess.numVertexes][1] = cmd->verts[i].xyz[1];
+		tess.xyz[tess.numVertexes][2] = 0;
 
-		tess.texCoords0[tess.numVertexes].v[0] = cmd->verts[i].st[0];
-		tess.texCoords0[tess.numVertexes].v[1] = cmd->verts[i].st[1];
+		tess.texCoords[tess.numVertexes][0][0] = cmd->verts[i].st[0];
+		tess.texCoords[tess.numVertexes][0][1] = cmd->verts[i].st[1];
 
-		tess.vertexColors[tess.numVertexes].v[0] = cmd->verts[i].modulate[0];
-		tess.vertexColors[tess.numVertexes].v[1] = cmd->verts[i].modulate[1];
-		tess.vertexColors[tess.numVertexes].v[2] = cmd->verts[i].modulate[2];
-		tess.vertexColors[tess.numVertexes].v[3] = cmd->verts[i].modulate[3];
+		tess.vertexColors[tess.numVertexes][0] = cmd->verts[i].modulate[0];
+		tess.vertexColors[tess.numVertexes][1] = cmd->verts[i].modulate[1];
+		tess.vertexColors[tess.numVertexes][2] = cmd->verts[i].modulate[2];
+		tess.vertexColors[tess.numVertexes][3] = cmd->verts[i].modulate[3];
 		tess.numVertexes++;
 	}
 
 	return ( const void * ) (cmd + 1);
 }
 
-/*
-=============
-RB_RotatedPic
-=============
-*/
+/**
+ * @brief RB_RotatedPic
+ * @param[in] data
+ * @return
+ */
 const void *RB_RotatedPic(const void *data)
 {
 	const stretchPicCommand_t *cmd = ( const stretchPicCommand_t * ) data;
@@ -1139,51 +1167,51 @@ const void *RB_RotatedPic(const void *data)
 	tess.indexes[numIndexes + 4] = numVerts + 0;
 	tess.indexes[numIndexes + 5] = numVerts + 1;
 
-	*( int * ) tess.vertexColors[numVerts].v                 =
-	    *( int * ) tess.vertexColors[numVerts + 1].v         =
-	        *( int * ) tess.vertexColors[numVerts + 2].v     =
-	            *( int * ) tess.vertexColors[numVerts + 3].v = *( int * ) backEnd.color2D;
+	*( int * ) tess.vertexColors[numVerts]                 =
+	    *( int * ) tess.vertexColors[numVerts + 1]         =
+	        *( int * ) tess.vertexColors[numVerts + 2]     =
+	            *( int * ) tess.vertexColors[numVerts + 3] = *( int * ) backEnd.color2D;
 
-	angle                   = cmd->angle * pi2;
-	tess.xyz[numVerts].v[0] = cmd->x + (cos(angle) * cmd->w);
-	tess.xyz[numVerts].v[1] = cmd->y + (sin(angle) * cmd->h);
-	tess.xyz[numVerts].v[2] = 0;
+	angle                 = cmd->angle * pi2;
+	tess.xyz[numVerts][0] = cmd->x + (cos(angle) * cmd->w);
+	tess.xyz[numVerts][1] = cmd->y + (sin(angle) * cmd->h);
+	tess.xyz[numVerts][2] = 0;
 
-	tess.texCoords0[numVerts].v[0] = cmd->s1;
-	tess.texCoords0[numVerts].v[1] = cmd->t1;
+	tess.texCoords[numVerts][0][0] = cmd->s1;
+	tess.texCoords[numVerts][0][1] = cmd->t1;
 
-	angle                       = cmd->angle * pi2 + 0.25 * pi2;
-	tess.xyz[numVerts + 1].v[0] = cmd->x + (cos(angle) * cmd->w);
-	tess.xyz[numVerts + 1].v[1] = cmd->y + (sin(angle) * cmd->h);
-	tess.xyz[numVerts + 1].v[2] = 0;
+	angle                     = cmd->angle * pi2 + 0.25 * pi2;
+	tess.xyz[numVerts + 1][0] = cmd->x + (cos(angle) * cmd->w);
+	tess.xyz[numVerts + 1][1] = cmd->y + (sin(angle) * cmd->h);
+	tess.xyz[numVerts + 1][2] = 0;
 
-	tess.texCoords0[numVerts + 1].v[0] = cmd->s2;
-	tess.texCoords0[numVerts + 1].v[1] = cmd->t1;
+	tess.texCoords[numVerts + 1][0][0] = cmd->s2;
+	tess.texCoords[numVerts + 1][0][1] = cmd->t1;
 
-	angle                       = cmd->angle * pi2 + 0.50 * pi2;
-	tess.xyz[numVerts + 2].v[0] = cmd->x + (cos(angle) * cmd->w);
-	tess.xyz[numVerts + 2].v[1] = cmd->y + (sin(angle) * cmd->h);
-	tess.xyz[numVerts + 2].v[2] = 0;
+	angle                     = cmd->angle * pi2 + 0.50 * pi2;
+	tess.xyz[numVerts + 2][0] = cmd->x + (cos(angle) * cmd->w);
+	tess.xyz[numVerts + 2][1] = cmd->y + (sin(angle) * cmd->h);
+	tess.xyz[numVerts + 2][2] = 0;
 
-	tess.texCoords0[numVerts + 2].v[0] = cmd->s2;
-	tess.texCoords0[numVerts + 2].v[1] = cmd->t2;
+	tess.texCoords[numVerts + 2][0][0] = cmd->s2;
+	tess.texCoords[numVerts + 2][0][1] = cmd->t2;
 
-	angle                       = cmd->angle * pi2 + 0.75 * pi2;
-	tess.xyz[numVerts + 3].v[0] = cmd->x + (cos(angle) * cmd->w);
-	tess.xyz[numVerts + 3].v[1] = cmd->y + (sin(angle) * cmd->h);
-	tess.xyz[numVerts + 3].v[2] = 0;
+	angle                     = cmd->angle * pi2 + 0.75 * pi2;
+	tess.xyz[numVerts + 3][0] = cmd->x + (cos(angle) * cmd->w);
+	tess.xyz[numVerts + 3][1] = cmd->y + (sin(angle) * cmd->h);
+	tess.xyz[numVerts + 3][2] = 0;
 
-	tess.texCoords0[numVerts + 3].v[0] = cmd->s1;
-	tess.texCoords0[numVerts + 3].v[1] = cmd->t2;
+	tess.texCoords[numVerts + 3][0][0] = cmd->s1;
+	tess.texCoords[numVerts + 3][0][1] = cmd->t2;
 
 	return ( const void * ) (cmd + 1);
 }
 
-/*
-==============
-RB_StretchPicGradient
-==============
-*/
+/**
+ * @brief RB_StretchPicGradient
+ * @param[in] data
+ * @return
+ */
 const void *RB_StretchPicGradient(const void *data)
 {
 	const stretchPicCommand_t *cmd = ( const stretchPicCommand_t * ) data;
@@ -1220,48 +1248,48 @@ const void *RB_StretchPicGradient(const void *data)
 	tess.indexes[numIndexes + 4] = numVerts + 0;
 	tess.indexes[numIndexes + 5] = numVerts + 1;
 
-	*( int * ) tess.vertexColors[numVerts].v         =
-	    *( int * ) tess.vertexColors[numVerts + 1].v = *( int * ) backEnd.color2D;
+	*( int * ) tess.vertexColors[numVerts]         =
+	    *( int * ) tess.vertexColors[numVerts + 1] = *( int * ) backEnd.color2D;
 
-	*( int * ) tess.vertexColors[numVerts + 2].v     =
-	    *( int * ) tess.vertexColors[numVerts + 3].v = *( int * ) cmd->gradientColor;
+	*( int * ) tess.vertexColors[numVerts + 2]     =
+	    *( int * ) tess.vertexColors[numVerts + 3] = *( int * ) cmd->gradientColor;
 
-	tess.xyz[numVerts].v[0] = cmd->x;
-	tess.xyz[numVerts].v[1] = cmd->y;
-	tess.xyz[numVerts].v[2] = 0;
+	tess.xyz[numVerts][0] = cmd->x;
+	tess.xyz[numVerts][1] = cmd->y;
+	tess.xyz[numVerts][2] = 0;
 
-	tess.texCoords0[numVerts].v[0] = cmd->s1;
-	tess.texCoords0[numVerts].v[1] = cmd->t1;
+	tess.texCoords[numVerts][0][0] = cmd->s1;
+	tess.texCoords[numVerts][0][1] = cmd->t1;
 
-	tess.xyz[numVerts + 1].v[0] = cmd->x + cmd->w;
-	tess.xyz[numVerts + 1].v[1] = cmd->y;
-	tess.xyz[numVerts + 1].v[2] = 0;
+	tess.xyz[numVerts + 1][0] = cmd->x + cmd->w;
+	tess.xyz[numVerts + 1][1] = cmd->y;
+	tess.xyz[numVerts + 1][2] = 0;
 
-	tess.texCoords0[numVerts + 1].v[0] = cmd->s2;
-	tess.texCoords0[numVerts + 1].v[1] = cmd->t1;
+	tess.texCoords[numVerts + 1][0][0] = cmd->s2;
+	tess.texCoords[numVerts + 1][0][1] = cmd->t1;
 
-	tess.xyz[numVerts + 2].v[0] = cmd->x + cmd->w;
-	tess.xyz[numVerts + 2].v[1] = cmd->y + cmd->h;
-	tess.xyz[numVerts + 2].v[2] = 0;
+	tess.xyz[numVerts + 2][0] = cmd->x + cmd->w;
+	tess.xyz[numVerts + 2][1] = cmd->y + cmd->h;
+	tess.xyz[numVerts + 2][2] = 0;
 
-	tess.texCoords0[numVerts + 2].v[0] = cmd->s2;
-	tess.texCoords0[numVerts + 2].v[1] = cmd->t2;
+	tess.texCoords[numVerts + 2][0][0] = cmd->s2;
+	tess.texCoords[numVerts + 2][0][1] = cmd->t2;
 
-	tess.xyz[numVerts + 3].v[0] = cmd->x;
-	tess.xyz[numVerts + 3].v[1] = cmd->y + cmd->h;
-	tess.xyz[numVerts + 3].v[2] = 0;
+	tess.xyz[numVerts + 3][0] = cmd->x;
+	tess.xyz[numVerts + 3][1] = cmd->y + cmd->h;
+	tess.xyz[numVerts + 3][2] = 0;
 
-	tess.texCoords0[numVerts + 3].v[0] = cmd->s1;
-	tess.texCoords0[numVerts + 3].v[1] = cmd->t2;
+	tess.texCoords[numVerts + 3][0][0] = cmd->s1;
+	tess.texCoords[numVerts + 3][0][1] = cmd->t2;
 
 	return ( const void * ) (cmd + 1);
 }
 
-/*
-=============
-RB_DrawSurfs
-=============
-*/
+/**
+ * @brief RB_DrawSurfs
+ * @param[in] data
+ * @return
+ */
 const void *RB_DrawSurfs(const void *data)
 {
 	const drawSurfsCommand_t *cmd;
@@ -1282,14 +1310,16 @@ const void *RB_DrawSurfs(const void *data)
 	return ( const void * ) (cmd + 1);
 }
 
-/*
-=============
-RB_DrawBuffer
-=============
-*/
+/**
+ * @brief RB_DrawBuffer
+ * @param[in] data
+ * @return
+ */
 const void *RB_DrawBuffer(const void *data)
 {
 	const drawBufferCommand_t *cmd = ( const drawBufferCommand_t * ) data;
+
+	qglDrawBuffer(cmd->buffer);
 
 	// clear screen for debugging
 	if (r_clear->integer)
@@ -1301,16 +1331,14 @@ const void *RB_DrawBuffer(const void *data)
 	return ( const void * ) (cmd + 1);
 }
 
-/*
-===============
-RB_ShowImages
 
-Draw all the images to the screen, on top of whatever
-was there.  This is used to test for texture thrashing.
 
-Also called by RE_EndRegistration
-===============
-*/
+/**
+ * @brief Draw all the images to the screen, on top of whatever
+ * was there.  This is used to test for texture thrashing.
+ *
+ * Also called by RE_EndRegistration
+ */
 void RB_ShowImages(void)
 {
 	int     i;
@@ -1328,6 +1356,7 @@ void RB_ShowImages(void)
 	qglFinish();
 
 	start = ri.Milliseconds();
+	// OpenGLES Implementation
 	GLboolean text  = qglIsEnabled(GL_TEXTURE_COORD_ARRAY);
 	GLboolean glcol = qglIsEnabled(GL_COLOR_ARRAY);
 	if (glcol)
@@ -1356,6 +1385,7 @@ void RB_ShowImages(void)
 			h *= image->uploadHeight / 512.0f;
 		}
 
+		// OpenGLES Implementation
 		GLfloat tex[] =
 		{
 			0, 0,
@@ -1373,6 +1403,7 @@ void RB_ShowImages(void)
 		qglTexCoordPointer(2, GL_FLOAT, 0, tex);
 		qglVertexPointer(2, GL_FLOAT, 0, vtx);
 		qglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
 	}
 
 	if (glcol)
@@ -1382,85 +1413,92 @@ void RB_ShowImages(void)
 	if (!text)
 	{
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
 	}
+
 	qglFinish();
 
 	end = ri.Milliseconds();
-	ri.Printf(PRINT_ALL, "%i msec to draw all images\n", end - start);
-}
-
-/**
- * @note Unused.
- */
-void RB_DrawBounds(vec3_t mins, vec3_t maxs)
-{
-	vec3_t center;
-
-	GL_Bind(tr.whiteImage);
-	GL_State(GLS_POLYMODE_LINE);
-
-	// box corners
-	GLboolean text  = qglIsEnabled(GL_TEXTURE_COORD_ARRAY);
-	GLboolean glcol = qglIsEnabled(GL_COLOR_ARRAY);
-	if (glcol)
-	{
-		qglDisableClientState(GL_COLOR_ARRAY);
-	}
-	if (text)
-	{
-		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	}
-	GLfloat vtx1[] =
-	{
-		mins[0], mins[1], mins[2],
-		maxs[0], mins[1], mins[2],
-		mins[0], mins[1], mins[2],
-		mins[0], maxs[1], mins[2],
-		mins[0], mins[1], mins[2],
-		mins[0], mins[1], maxs[2],
-		maxs[0], maxs[1], maxs[2],
-		mins[0], maxs[1], maxs[2],
-		maxs[0], maxs[1], maxs[2],
-		maxs[0], mins[1], maxs[2],
-		maxs[0], maxs[1], maxs[2],
-		maxs[0], maxs[1], mins[2]
-	};
-	qglColor3f(1, 1, 1);
-	qglVertexPointer(3, GL_FLOAT, 0, vtx1);
-	qglDrawArrays(GL_LINES, 0, 12);
-
-	center[0] = (mins[0] + maxs[0]) * 0.5;
-	center[1] = (mins[1] + maxs[1]) * 0.5;
-	center[2] = (mins[2] + maxs[2]) * 0.5;
-
-	// center axis
-	GLfloat vtx2[] =
-	{
-		mins[0], center[1], center[2],
-		maxs[0], center[1], center[2],
-		center[0], mins[1], center[2],
-		center[0], maxs[1], center[2],
-		center[0], center[1], mins[2],
-		center[0], center[1], maxs[2]
-	};
-	qglColor3f(1, 0.85, 0);
-	qglVertexPointer(3, GL_FLOAT, 0, vtx2);
-	qglDrawArrays(GL_LINES, 0, 6);
-	if (glcol)
-	{
-		qglEnableClientState(GL_COLOR_ARRAY);
-	}
-	if (text)
-	{
-		qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	}
+	Ren_Print("%i msec to draw all images\n", end - start);
 }
 
 /*
-=============
-RB_SwapBuffers
-=============
+ * @brief RB_DrawBounds
+ * @param[in,out] mins
+ * @param[in,out] maxs
+ *
+ * @note Unused.
+void RB_DrawBounds(vec3_t mins, vec3_t maxs)
+{
+    vec3_t center;
+
+    GL_Bind(tr.whiteImage);
+    GL_State(GLS_POLYMODE_LINE);
+
+    // OpenGLES Implementation
+    // box corners
+    GLboolean text  = qglIsEnabled(GL_TEXTURE_COORD_ARRAY);
+    GLboolean glcol = qglIsEnabled(GL_COLOR_ARRAY);
+    if (glcol)
+    {
+        qglDisableClientState(GL_COLOR_ARRAY);
+    }
+    if (text)
+    {
+        qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    GLfloat vtx1[] =
+    {
+        mins[0], mins[1], mins[2],
+        maxs[0], mins[1], mins[2],
+        mins[0], mins[1], mins[2],
+        mins[0], maxs[1], mins[2],
+        mins[0], mins[1], mins[2],
+        mins[0], mins[1], maxs[2],
+        maxs[0], maxs[1], maxs[2],
+        mins[0], maxs[1], maxs[2],
+        maxs[0], maxs[1], maxs[2],
+        maxs[0], mins[1], maxs[2],
+        maxs[0], maxs[1], maxs[2],
+        maxs[0], maxs[1], mins[2]
+    };
+    qglColor3f(1, 1, 1);
+    qglVertexPointer(3, GL_FLOAT, 0, vtx1);
+    qglDrawArrays(GL_LINES, 0, 12);
+    center[0] = (mins[0] + maxs[0]) * 0.5f;
+    center[1] = (mins[1] + maxs[1]) * 0.5f;
+    center[2] = (mins[2] + maxs[2]) * 0.5f;
+
+    // OpenGLES Implementation
+    // center axis
+    GLfloat vtx2[] =
+    {
+        mins[0], center[1], center[2],
+        maxs[0], center[1], center[2],
+        center[0], mins[1], center[2],
+        center[0], maxs[1], center[2],
+        center[0], center[1], mins[2],
+        center[0], center[1], maxs[2]
+    };
+    qglColor3f(1, 0.85, 0);
+    qglVertexPointer(3, GL_FLOAT, 0, vtx2);
+    qglDrawArrays(GL_LINES, 0, 6);
+    if (glcol)
+    {
+        qglEnableClientState(GL_COLOR_ARRAY);
+    }
+    if (text)
+    {
+        qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+}
 */
+
+/**
+ * @brief RB_SwapBuffers
+ * @param[in] data
+ * @return
+ */
 const void *RB_SwapBuffers(const void *data)
 {
 	const swapBuffersCommand_t *cmd;
@@ -1479,6 +1517,26 @@ const void *RB_SwapBuffers(const void *data)
 
 	cmd = ( const swapBuffersCommand_t * ) data;
 
+	// we measure overdraw by reading back the stencil buffer and
+	// counting up the number of increments that have happened
+	if (r_measureOverdraw->integer)
+	{
+		int           i;
+		long          sum = 0;
+		unsigned char *stencilReadback;
+
+		stencilReadback = ri.Hunk_AllocateTempMemory(glConfig.vidWidth * glConfig.vidHeight);
+		qglReadPixels(0, 0, glConfig.vidWidth, glConfig.vidHeight, GL_STENCIL_INDEX, GL_UNSIGNED_BYTE, stencilReadback);
+
+		for (i = 0; i < glConfig.vidWidth * glConfig.vidHeight; i++)
+		{
+			sum += stencilReadback[i];
+		}
+
+		backEnd.pc.c_overDraw += sum;
+		ri.Hunk_FreeTempMemory(stencilReadback);
+	}
+
 	if (!glState.finishCalled)
 	{
 		qglFinish();
@@ -1493,11 +1551,11 @@ const void *RB_SwapBuffers(const void *data)
 	return ( const void * ) (cmd + 1);
 }
 
-/*
-=============
-RB_RenderToTexture
-=============
-*/
+/**
+ * @brief RB_RenderToTexture
+ * @param[in] data
+ * @return
+ */
 const void *RB_RenderToTexture(const void *data)
 {
 	const renderToTextureCommand_t *cmd = ( const renderToTextureCommand_t * ) data;
@@ -1507,18 +1565,18 @@ const void *RB_RenderToTexture(const void *data)
 	GL_Bind(cmd->image);
 	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_LINEAR);
 	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_LINEAR);
-	qglTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+	qglTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
 	qglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cmd->x, cmd->y, cmd->w, cmd->h, 0);
 	//qglCopyTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, cmd->x, cmd->y, cmd->w, cmd->h );
 
 	return ( const void * ) (cmd + 1);
 }
 
-/*
-=============
-RB_Finish
-=============
-*/
+/**
+ * @brief RB_Finish
+ * @param[in] data
+ * @return
+ */
 const void *RB_Finish(const void *data)
 {
 	const renderFinishCommand_t *cmd = ( const renderFinishCommand_t * ) data;
@@ -1530,6 +1588,10 @@ const void *RB_Finish(const void *data)
 	return ( const void * ) (cmd + 1);
 }
 
+/**
+ * @brief RB_ExecuteRenderCommands
+ * @param[in] data
+ */
 void RB_ExecuteRenderCommands(const void *data)
 {
 	int t1, t2;

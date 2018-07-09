@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -56,6 +56,12 @@ static edgeDef_t edgeDefs[SHADER_MAX_VERTEXES][MAX_EDGE_DEFS];
 static int       numEdgeDefs[SHADER_MAX_VERTEXES];
 static int       facing[SHADER_MAX_INDEXES / 3];
 
+/**
+ * @brief R_AddEdgeDef
+ * @param[in] i1
+ * @param[in] i2
+ * @param[in] facing
+ */
 void R_AddEdgeDef(int i1, int i2, int facing)
 {
 	int c = numEdgeDefs[i1];
@@ -70,13 +76,16 @@ void R_AddEdgeDef(int i1, int i2, int facing)
 	numEdgeDefs[i1]++;
 }
 
+/**
+ * @brief R_RenderShadowEdges
+ */
 void R_RenderShadowEdges(void)
 {
 	int i;
 	int c, c2;
 	int j, k;
 	int i2;
-	int c_edges = 0, c_rejected = 0;
+	// int c_edges = 0, c_rejected = 0;  // TODO: remove ?
 	int hit[2];
 
 	// an edge is NOT a silhouette edge if its face doesn't face the light,
@@ -112,32 +121,32 @@ void R_RenderShadowEdges(void)
 			if (hit[1] == 0)
 			{
 				qglBegin(GL_TRIANGLE_STRIP);
-				qglVertex3fv(tess.xyz[i].v);
-				qglVertex3fv(tess.xyz[i + tess.numVertexes].v);
-				qglVertex3fv(tess.xyz[i2].v);
-				qglVertex3fv(tess.xyz[i2 + tess.numVertexes].v);
+				qglVertex3fv(tess.xyz[i]);
+				qglVertex3fv(tess.xyz[i + tess.numVertexes]);
+				qglVertex3fv(tess.xyz[i2]);
+				qglVertex3fv(tess.xyz[i2 + tess.numVertexes]);
 				qglEnd();
-				c_edges++;
+				// c_edges++;
 			}
+			/*
 			else
 			{
-				c_rejected++;
+			    c_rejected++;
 			}
+			*/
 		}
 	}
 }
 
-/*
-=================
-RB_ShadowTessEnd
-
-triangleFromEdge[ v1 ][ v2 ]
-
-  set triangle from edge( v1, v2, tri )
-  if ( facing[ triangleFromEdge[ v1 ][ v2 ] ] && !facing[ triangleFromEdge[ v2 ][ v1 ] ) {
-  }
-=================
-*/
+/**
+ * @brief RB_ShadowTessEnd
+ *
+ * @note triangleFromEdge[ v1 ][ v2 ]
+ *
+ * set triangle from edge( v1, v2, tri )
+ * if ( facing[ triangleFromEdge[ v1 ][ v2 ] ] && !facing[ triangleFromEdge[ v2 ][ v1 ] ) {
+ * }
+ */
 void RB_ShadowTessEnd(void)
 {
 	int    i;
@@ -145,7 +154,7 @@ void RB_ShadowTessEnd(void)
 	vec3_t lightDir;
 
 	// we can only do this if we have enough space in the vertex buffers
-	if (tess.numVertexes >= tess.maxShaderVerts / 2)
+	if (tess.numVertexes >= SHADER_MAX_VERTEXES / 2)
 	{
 		return;
 	}
@@ -160,11 +169,11 @@ void RB_ShadowTessEnd(void)
 	// project vertexes away from light direction
 	for (i = 0 ; i < tess.numVertexes ; i++)
 	{
-		VectorMA(tess.xyz[i].v, -512, lightDir, tess.xyz[i + tess.numVertexes].v);
+		VectorMA(tess.xyz[i], -512, lightDir, tess.xyz[i + tess.numVertexes]);
 	}
 
 	// decide which triangles face the light
-	memset(numEdgeDefs, 0, 4 * tess.numVertexes);
+	Com_Memset(numEdgeDefs, 0, 4 * tess.numVertexes);
 
 	numTris = tess.numIndexes / 3;
 
@@ -180,9 +189,9 @@ void RB_ShadowTessEnd(void)
 			i2 = tess.indexes[i * 3 + 1];
 			i3 = tess.indexes[i * 3 + 2];
 
-			v1 = tess.xyz[i1].v;
-			v2 = tess.xyz[i2].v;
-			v3 = tess.xyz[i3].v;
+			v1 = tess.xyz[i1];
+			v2 = tess.xyz[i2];
+			v3 = tess.xyz[i3];
 
 			VectorSubtract(v2, v1, d1);
 			VectorSubtract(v3, v1, d2);
@@ -249,16 +258,13 @@ void RB_ShadowTessEnd(void)
 	qglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }
 
-/*
-=================
-RB_ShadowFinish
-
-Darken everything that is is a shadow volume.
-We have to delay this until everything has been shadowed,
-because otherwise shadows from different body parts would
-overlap and double darken.
-=================
-*/
+/**
+ * @brief Darken everything that is is a shadow volume.
+ *
+ * @details We have to delay this until everything has been shadowed,
+ * because otherwise shadows from different body parts would
+ * overlap and double darken.
+ */
 void RB_ShadowFinish(void)
 {
 	if (r_shadows->integer != 2)
@@ -293,32 +299,35 @@ void RB_ShadowFinish(void)
 	qglDisable(GL_STENCIL_TEST);
 }
 
-/*
-=================
-RB_ProjectionShadowDeform
-
-=================
-*/
+/**
+ * @brief RB_ProjectionShadowDeform
+ */
 void RB_ProjectionShadowDeform(void)
 {
-	float  *xyz = ( float * ) tess.xyz;
+	float  *xyz = (float *)tess.xyz;
 	int    i;
 	float  h;
-	vec3_t ground = { backEnd.orientation.axis[0][2], backEnd.orientation.axis[1][2], backEnd.orientation.axis[2][2] };
+	vec3_t ground;
 	vec3_t light;
-	float  groundDist = backEnd.orientation.origin[2] - backEnd.currentEntity->e.shadowPlane;
+	float  groundDist;
 	float  d;
 	vec3_t lightDir;
+
+	ground[0] = backEnd.orientation.axis[0][2];
+	ground[1] = backEnd.orientation.axis[1][2];
+	ground[2] = backEnd.orientation.axis[2][2];
+
+	groundDist = backEnd.orientation.origin[2] - backEnd.currentEntity->e.shadowPlane;
 
 	VectorCopy(backEnd.currentEntity->lightDir, lightDir);
 	d = DotProduct(lightDir, ground);
 	// don't let the shadows get too long or go negative
-	if (d < 0.5)
+	if (d < 0.5f)
 	{
-		VectorMA(lightDir, (0.5 - d), ground, lightDir);
+		VectorMA(lightDir, (0.5f - d), ground, lightDir);
 		d = DotProduct(lightDir, ground);
 	}
-	d = 1.0 / d;
+	d = 1.0f / d;
 
 	light[0] = lightDir[0] * d;
 	light[1] = lightDir[1] * d;

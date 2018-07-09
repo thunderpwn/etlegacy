@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -37,8 +37,8 @@
 
 // Color/font info used for all overlays
 #define COLOR_BG            { 0.0f, 0.0f, 0.0f, 0.6f }
-#define COLOR_BG_TITLE      { 0.16, 0.2f, 0.17f, 0.8f }
-#define COLOR_BG_VIEW       { 0.16, 0.2f, 0.17f, 0.8f }
+#define COLOR_BG_TITLE      { 0.16f, 0.2f, 0.17f, 0.8f }
+#define COLOR_BG_VIEW       { 0.16f, 0.2f, 0.17f, 0.8f }
 #define COLOR_BORDER        { 0.5f, 0.5f, 0.5f, 0.5f }
 #define COLOR_BORDER_TITLE  { 0.1f, 0.1f, 0.1f, 0.2f }
 #define COLOR_BORDER_VIEW   { 0.2f, 0.2f, 0.2f, 0.4f }
@@ -48,23 +48,23 @@
 #define FONT_SUBHEADER      &cgs.media.limboFont1_lo
 #define FONT_TEXT           &cgs.media.limboFont2
 
-vec4_t color_bg_title = COLOR_BG_TITLE;
-vec4_t color_border1  = COLOR_BORDER;
-vec4_t color_bg       = COLOR_BG_VIEW;
-vec4_t color_border   = COLOR_BORDER_VIEW;
+const vec4_t color_bg_title = COLOR_BG_TITLE;
+const vec4_t color_border1  = COLOR_BORDER;
+const vec4_t color_bg       = COLOR_BG_VIEW;
+const vec4_t color_border   = COLOR_BORDER_VIEW;
 
-#define VD_X    4
-#define VD_Y    78
-#define VD_SCALE_X_HDR  0.25f
-#define VD_SCALE_Y_HDR  0.30f
-#define VD_SCALE_X_NAME 0.30f
-#define VD_SCALE_Y_NAME 0.30f
+// NOTE: Unused
+//#define VD_X    4
+//#define VD_Y    78
+//#define VD_SCALE_X_HDR  0.25f
+//#define VD_SCALE_Y_HDR  0.30f
+//#define VD_SCALE_X_NAME 0.30f
+//#define VD_SCALE_Y_NAME 0.30f
 
-/*
-======================
-CG_LoadingString
-======================
-*/
+/**
+ * @brief CG_LoadingString
+ * @param[in] s
+ */
 void CG_LoadingString(const char *s)
 {
 	Q_strncpyz(cg.infoScreenText, s, sizeof(cg.infoScreenText));
@@ -76,27 +76,28 @@ void CG_LoadingString(const char *s)
 	}
 }
 
-/*
-====================
-CG_DrawInformation
-
-Draw all the status / pacifier stuff during level loading
-====================
-*/
+/**
+ * @brief Draw all the status / pacifier stuff during level loading
+ * @param[in] forcerefresh
+ */
 void CG_DrawInformation(qboolean forcerefresh)
 {
-	static int lastcalled = 0;
-
-	if (lastcalled && (trap_Milliseconds() - lastcalled < 500))
-	{
-		return;
-	}
-	lastcalled = trap_Milliseconds();
+	static int nextcall = 0;
+	int        ms;
 
 	if (cg.snap)
 	{
 		return;     // we are in the world, no need to draw information
 	}
+
+	ms = trap_Milliseconds();
+
+	if (ms < nextcall)
+	{
+		return;
+	}
+
+	nextcall = ms + 250;
 
 	// loadpanel: erase the screen now, because otherwise the "awaiting challenge"-UI-screen is still visible behind the client-version of it (the one with the progressbar),..
 	// ..and we do not want a flickering screen (on widescreens).
@@ -128,6 +129,10 @@ void CG_DrawInformation(qboolean forcerefresh)
 	*/
 }
 
+/**
+ * @brief CG_ShowHelp_On
+ * @param[in,out] status
+ */
 void CG_ShowHelp_On(int *status)
 {
 	int milli = trap_Milliseconds();
@@ -144,6 +149,10 @@ void CG_ShowHelp_On(int *status)
 	*status = SHOW_ON;
 }
 
+/**
+ * @brief CG_ShowHelp_Off
+ * @param[in,out] status
+ */
 void CG_ShowHelp_Off(int *status)
 {
 	if (*status != SHOW_OFF)
@@ -163,6 +172,10 @@ void CG_ShowHelp_Off(int *status)
 	}
 }
 
+/**
+ * @brief CG_DemoControlButtonRender
+ * @param[in] button
+ */
 void CG_DemoControlButtonRender(panel_button_t *button)
 {
 	if (button->data[0])
@@ -186,6 +199,12 @@ void CG_DemoControlButtonRender(panel_button_t *button)
 	}
 }
 
+/**
+ * @brief CG_DemoControlButtonDown
+ * @param[in] button
+ * @param[in] key
+ * @return
+ */
 qboolean CG_DemoControlButtonDown(panel_button_t *button, int key)
 {
 	if (key != K_MOUSE1 && key != K_MOUSE2)
@@ -220,6 +239,13 @@ qboolean CG_DemoControlButtonDown(panel_button_t *button, int key)
 	return qtrue;
 }
 
+/**
+ * @brief CG_DemoControlButtonUp
+ * @param button - unused
+ * @param key - unused
+ * @note This function is empty and return always qfalse
+ * @return Always qfalse
+ */
 qboolean CG_DemoControlButtonUp(panel_button_t *button, int key)
 {
 	return qfalse;
@@ -231,11 +257,12 @@ panel_button_t demoSliderButton =
 	NULL,
 	{ 0,                       0,  0, 0 },
 	{ 0,                       0,  0, 0, 0, 0, 0, 0},
-	NULL,                      /* font     */
-	CG_DemoControlButtonDown,  /* keyDown  */
-	CG_DemoControlButtonUp,    /* keyUp    */
+	NULL,                      // font
+	CG_DemoControlButtonDown,  // keyDown
+	CG_DemoControlButtonUp,    // keyUp
 	CG_DemoControlButtonRender,
 	NULL,
+	0
 };
 
 panel_button_t demoRewindButton =
@@ -244,11 +271,12 @@ panel_button_t demoRewindButton =
 	"<<",
 	{ 0,                       0,  0, 0 },
 	{ 1,                       0,  0, 0, 0, 0, 0, 0},
-	NULL,                      /* font     */
-	CG_DemoControlButtonDown,  /* keyDown  */
-	CG_DemoControlButtonUp,    /* keyUp    */
+	NULL,                      // font
+	CG_DemoControlButtonDown,  // keyDown
+	CG_DemoControlButtonUp,    // keyUp
 	CG_DemoControlButtonRender,
 	NULL,
+	0
 };
 
 panel_button_t demoPauseButton =
@@ -257,11 +285,12 @@ panel_button_t demoPauseButton =
 	"||",
 	{ 0,                       0,  0, 0 },
 	{ 2,                       0,  0, 0, 0, 0, 0, 0},
-	NULL,                      /* font     */
-	CG_DemoControlButtonDown,  /* keyDown  */
-	CG_DemoControlButtonUp,    /* keyUp    */
+	NULL,                      // font
+	CG_DemoControlButtonDown,  // keyDown
+	CG_DemoControlButtonUp,    // keyUp
 	CG_DemoControlButtonRender,
 	NULL,
+	0
 };
 
 panel_button_t demoFFButton =
@@ -270,11 +299,12 @@ panel_button_t demoFFButton =
 	">>",
 	{ 0,                       0,  0, 0 },
 	{ 3,                       0,  0, 0, 0, 0, 0, 0},
-	NULL,                      /* font     */
-	CG_DemoControlButtonDown,  /* keyDown  */
-	CG_DemoControlButtonUp,    /* keyUp    */
+	NULL,                      // font
+	CG_DemoControlButtonDown,  // keyDown
+	CG_DemoControlButtonUp,    // keyUp
 	CG_DemoControlButtonRender,
 	NULL,
+	0
 };
 
 static panel_button_t *demoControlButtons[] =
@@ -286,15 +316,14 @@ static panel_button_t *demoControlButtons[] =
 	NULL
 };
 
-// Demo playback key catcher support
+/**
+ * @brief Demo playback key catcher support
+ * @param[in] key
+ * @param[in] down
+ */
 void CG_DemoClick(int key, qboolean down)
 {
 	int milli = trap_Milliseconds();
-
-#if FEATURE_EDV
-	int menuLevel = cgs.currentMenuLevel;
-	cgs.demoCamera.factor = 5;
-#endif
 
 	// Avoid active console keypress issues
 	if (!down && !cgs.fKeyPressed[key])
@@ -309,17 +338,20 @@ void CG_DemoClick(int key, qboolean down)
 		return;
 	}
 
-#if FEATURE_EDV 
+#ifdef FEATURE_EDV
+
+	cgs.demoCamera.factor = 5;
+
 	if (cg.demohelpWindow == SHOW_ON)
 	{
 		// pull up extended helpmenu
-		if (menuLevel == ML_MAIN && key == K_ALT)
+		if (cgs.currentMenuLevel == ML_MAIN && (key == K_LALT || key == K_RALT))
 		{
 			cgs.currentMenuLevel = ML_EDV;
 			return;
 		}
 		// return to main helpmenu
-		if (menuLevel == ML_EDV && key == K_BACKSPACE)
+		if (cgs.currentMenuLevel == ML_EDV && key == K_BACKSPACE)
 		{
 			// back to main menu
 			if (!down)
@@ -329,11 +361,7 @@ void CG_DemoClick(int key, qboolean down)
 			return;
 		}
 	}
-
-	// FIXME: fix the macros/keys - the following switches need some sorting ...
-	//        merge switches into one!
-	//        sync help/key window (see K_SPACE f.e.)
-	//        atm when FEATURE_EDV is enabled there is no key bound to call console cmd pausedemo
+#endif
 
 	switch (key)
 	{
@@ -364,126 +392,17 @@ void CG_DemoClick(int key, qboolean down)
 			CG_mvToggleView_f();            // Toggle a window for the client
 		}
 		return;
-#endif
-
-	// Third-person controls
-	case K_ENTER:
-		if (!down)
-		{
-			if (cgs.demoCamera.renderingFreeCam)
-			{
-				cgs.demoCamera.renderingFreeCam = qfalse;
-			}
-
-			trap_Cvar_Set("cg_thirdperson", ((cg_thirdPerson.integer == 0) ? "1" : "0"));
-		}
-		return;
-	case K_UPARROW:
-	case K_DOWNARROW:
-		// when not in thirdperson, arrowkeys should be bindable to +freecam_turnleft, ...
-		if (cg.renderingThirdPerson && !cgs.demoCamera.renderingFreeCam)
-		{
-			if (milli > cgs.thirdpersonUpdate)
-			{
-				float range = cg_thirdPersonRange.value;
-
-				cgs.thirdpersonUpdate = milli + DEMO_THIRDPERSONUPDATE;
-				if (key == K_UPARROW)
-				{
-					range -= ((range >= 4 * DEMO_RANGEDELTA) ? DEMO_RANGEDELTA : (range - DEMO_RANGEDELTA));
-				}
-				else
-				{
-					range += ((range >= 120 * DEMO_RANGEDELTA) ? 0 : DEMO_RANGEDELTA);
-				}
-				trap_Cvar_Set("cg_thirdPersonRange", va("%f", range));
-			}
-		}
-		else
-		{
-			CG_RunBinding(key, down);
-		}
-		return;
-	case K_RIGHTARROW:
-	case K_LEFTARROW:
-		if (cg.renderingThirdPerson && !cgs.demoCamera.renderingFreeCam)
-		{
-			if (milli > cgs.thirdpersonUpdate)
-			{
-				float angle = cg_thirdPersonAngle.value - DEMO_ANGLEDELTA;
-
-				cgs.thirdpersonUpdate = milli + DEMO_THIRDPERSONUPDATE;
-				if (key == K_RIGHTARROW)
-				{
-					if (angle < 0)
-					{
-						angle += 360.0f;
-					}
-				}
-				else
-				{
-					if (angle >= 360.0f)
-					{
-						angle -= 360.0f;
-					}
-				}
-				trap_Cvar_Set("cg_thirdPersonAngle", va("%f", angle));
-			}
-		}
-		else
-		{
-			CG_RunBinding(key, down);
-		}
-		return;
-    /*
-            case K_LEFTARROW:
-                    if (cg.renderingThirdPerson && !etpro_cgs.demoCamera.renderingFreeCam) {
-                            if(milli > cgs.thirdpersonUpdate) {
-                                    float angle = cg_thirdPersonAngle.value + DEMO_ANGLEDELTA;
-
-                                    cgs.thirdpersonUpdate = milli + DEMO_THIRDPERSONUPDATE;
-                                    if(angle >= 360.0f) angle -= 360.0f;
-                                    trap_Cvar_Set("cg_thirdPersonAngle", va("%f", angle));
-                            }
-                    } else {
-                            etpro_RunBinding(key, down);
-                    }
-                    return;
-    */
-	// Timescale controls
-	case K_KP_5:
-	//case K_KP_INS: // needed for "more options"
-	//case K_SPACE: // most everyone's favorite jump key, :x
-	case K_ESCAPE:  // escape also
-		if (!down)
-		{
-			trap_Cvar_Set("timescale", "1");
-			cgs.timescaleUpdate = cg.time + 1000;
-		}
-		return;
-	// Help info
-	case K_BACKSPACE:
-		if (!down)
-		{
-			if (cg.demohelpWindow != SHOW_ON)
-			{
-				CG_ShowHelp_On(&cg.demohelpWindow);
-			}
-			else
-			{
-				CG_ShowHelp_Off(&cg.demohelpWindow);
-			}
-		}
-		return;
+#endif // ifdef FEATURE_MULTIVIEW
+#ifdef FEATURE_EDV
 	case K_KP_ENTER:
 		if (!down)
 		{
-			if (cg.snap->ps.leanf && !cgs.demoCamera.renderingFreeCam)
+			if (cg.snap->ps.leanf != 0.f && !cgs.demoCamera.renderingFreeCam)
 			{
 				cgs.demoCamera.startLean = qtrue;
 			}
 
-			cgs.demoCamera.renderingFreeCam ^= 1;
+			cgs.demoCamera.renderingFreeCam ^= qtrue;
 
 			if (cgs.demoCamera.renderingFreeCam)
 			{
@@ -510,7 +429,7 @@ void CG_DemoClick(int key, qboolean down)
 		{
 			if (demo_weaponcam.integer & DWC_MORTAR)
 			{
-				trap_Cvar_Set("demo_weaponcam", va("%i", demo_weaponcam.integer &= ~DWC_MORTAR));	
+				trap_Cvar_Set("demo_weaponcam", va("%i", demo_weaponcam.integer &= ~DWC_MORTAR));
 			}
 			else
 			{
@@ -527,7 +446,7 @@ void CG_DemoClick(int key, qboolean down)
 			}
 			else
 			{
-				trap_Cvar_Set("demo_weaponcam", va("%i", demo_weaponcam.integer |= DWC_PANZER));	
+				trap_Cvar_Set("demo_weaponcam", va("%i", demo_weaponcam.integer |= DWC_PANZER));
 			}
 		}
 		return;
@@ -536,7 +455,7 @@ void CG_DemoClick(int key, qboolean down)
 		{
 			if (demo_weaponcam.integer & DWC_GRENADE)
 			{
-				trap_Cvar_Set("demo_weaponcam", va("%i", demo_weaponcam.integer &= ~DWC_GRENADE));	
+				trap_Cvar_Set("demo_weaponcam", va("%i", demo_weaponcam.integer &= ~DWC_GRENADE));
 			}
 			else
 			{
@@ -563,32 +482,124 @@ void CG_DemoClick(int key, qboolean down)
 			trap_Cvar_Set("demo_teamonlymissilecam", ((demo_teamonlymissilecam.integer == 0) ? "1" : "0"));
 		}
 		return;
-	case K_CTRL:
+	case K_LCTRL:
+	case K_RCTRL:
 		if (!down)
 		{
 			trap_Cvar_Set("demo_pvshint", ((demo_pvshint.integer == 0) ? "1" : "0"));
 		}
 		return;
-	default:
-		break;
-	}
-#endif
+#endif // ifdef FEATURE_EDV
 
-	switch (key)
-	{
-	case K_ESCAPE:
-		CG_ShowHelp_Off(&cg.demohelpWindow);
-		CG_keyOff_f();
-		return;
-	case K_TAB:
-		if (down)
+	// Third-person controls
+	case K_ENTER:
+		if (!down)
 		{
-			CG_ScoresDown_f();
+#ifdef FEATURE_EDV
+			if (cgs.demoCamera.renderingFreeCam)
+			{
+				cgs.demoCamera.renderingFreeCam = qfalse;
+			}
+#endif
+			trap_Cvar_Set("cg_thirdperson", ((cg_thirdPerson.integer == 0) ? "1" : "0"));
 		}
+		return;
+	case K_UPARROW:
+	case K_DOWNARROW:
+#ifdef FEATURE_EDV
+		// when not in thirdperson, arrowkeys should be bindable to +freecam_turnleft, ...
+		if (cg.renderingThirdPerson && !cgs.demoCamera.renderingFreeCam)
+#else
+		if (cg.renderingThirdPerson)
+#endif
+		{
+			if (milli > cgs.thirdpersonUpdate)
+			{
+				float range = cg_thirdPersonRange.value;
+
+				cgs.thirdpersonUpdate = milli + DEMO_THIRDPERSONUPDATE;
+				if (key == K_UPARROW)
+				{
+					range -= ((range >= 4 * DEMO_RANGEDELTA) ? DEMO_RANGEDELTA : (range - DEMO_RANGEDELTA));
+				}
+				else
+				{
+					range += ((range >= 120 * DEMO_RANGEDELTA) ? 0 : DEMO_RANGEDELTA);
+				}
+				trap_Cvar_Set("cg_thirdPersonRange", va("%f", range));
+			}
+		}
+#ifdef FEATURE_EDV
 		else
 		{
-			CG_ScoresUp_f();
+			CG_RunBinding(key, down);
 		}
+#endif
+		return;
+	case K_RIGHTARROW:
+	case K_LEFTARROW:
+#ifdef FEATURE_EDV
+		if (cg.renderingThirdPerson && !cgs.demoCamera.renderingFreeCam)
+#else
+		if (cg.renderingThirdPerson)
+#endif
+		{
+			if (milli > cgs.thirdpersonUpdate)
+			{
+				float angle = cg_thirdPersonAngle.value;
+
+				angle += (key == K_LEFTARROW ? DEMO_ANGLEDELTA : -DEMO_ANGLEDELTA);
+
+				cgs.thirdpersonUpdate = milli + DEMO_THIRDPERSONUPDATE;
+				if (key == K_RIGHTARROW)
+				{
+					if (angle < 0.f)
+					{
+						angle += 360.0f;
+					}
+				}
+				else
+				{
+					if (angle >= 360.0f)
+					{
+						angle -= 360.0f;
+					}
+				}
+				trap_Cvar_Set("cg_thirdPersonAngle", va("%f", angle));
+			}
+		}
+#ifdef FEATURE_EDV
+		else
+		{
+			CG_RunBinding(key, down);
+		}
+#endif
+		return;
+
+	case K_SPACE: // most everyone's favorite jump key, :x
+		if (!down)
+		{
+			trap_SendConsoleCommand("pausedemo");
+		}
+		return;
+
+	// Timescale controls
+	case K_KP_5:
+		//case K_KP_INS: // needed for "more options" --> FEATURE_EDV
+		if (!down)
+		{
+			trap_Cvar_Set("timescale", "1");
+			cgs.timescaleUpdate = cg.time + 1000;
+		}
+		return;
+	case K_ESCAPE:
+		if (!down)
+		{
+			trap_Cvar_Set("timescale", "1");
+			cgs.timescaleUpdate = cg.time + 1000;
+		}
+		CG_ShowHelp_Off(&cg.demohelpWindow);
+		CG_keyOff_f();
 		return;
 	// Help info
 	case K_BACKSPACE:
@@ -604,131 +615,26 @@ void CG_DemoClick(int key, qboolean down)
 			}
 		}
 		return;
-	// Screenshot keys
-	case K_F11:
-		if (!down)
+	case K_TAB:
+		if (down)
 		{
-			trap_SendConsoleCommand(va("screenshot%s\n", ((cg_useScreenshotJPEG.integer) ? "JPEG" : "")));
+			CG_ScoresDown_f();
 		}
-		return;
-	case K_F12:
-		if (!down)
+		else
 		{
-			CG_autoScreenShot_f();
+			CG_ScoresUp_f();
 		}
 		return;
 	// Window controls
-	case K_SHIFT:
-	case K_CTRL:
+	case K_LSHIFT:
+	case K_RSHIFT:
+  //case K_CTRL:
 	case K_MOUSE4:
 		cgs.fResize = down;
 		return;
 	case K_MOUSE1:
 		cgs.fSelect = down;
 		return;
-
-#ifndef FEATURE_EDV
-
-#ifdef FEATURE_MULTIVIEW
-	case K_MOUSE2:
-		if (!down)
-		{
-			CG_mvSwapViews_f();             // Swap the window with the main view
-		}
-		return;
-	case K_INS:
-	case K_KP_PGUP:
-		if (!down)
-		{
-			CG_mvShowView_f();              // Make a window for the client
-		}
-		return;
-	case K_DEL:
-	case K_KP_PGDN:
-		if (!down)
-		{
-			CG_mvHideView_f();              // Delete the window for the client
-		}
-		return;
-	case K_MOUSE3:
-		if (!down)
-		{
-			CG_mvToggleView_f();            // Toggle a window for the client
-		}
-		return;
-#endif
-
-	// Third-person controls
-	case K_ENTER:
-		if (!down)
-		{
-			trap_Cvar_Set("cg_thirdperson", ((cg_thirdPerson.integer == 0) ? "1" : "0"));
-		}
-		return;
-	case K_UPARROW:
-		if (milli > cgs.thirdpersonUpdate)
-		{
-			float range = cg_thirdPersonRange.value;
-
-			cgs.thirdpersonUpdate = milli + DEMO_THIRDPERSONUPDATE;
-			range                -= ((range >= 4 * DEMO_RANGEDELTA) ? DEMO_RANGEDELTA : (range - DEMO_RANGEDELTA));
-			trap_Cvar_Set("cg_thirdPersonRange", va("%f", range));
-		}
-		return;
-	case K_DOWNARROW:
-		if (milli > cgs.thirdpersonUpdate)
-		{
-			float range = cg_thirdPersonRange.value;
-
-			cgs.thirdpersonUpdate = milli + DEMO_THIRDPERSONUPDATE;
-			range                += ((range >= 120 * DEMO_RANGEDELTA) ? 0 : DEMO_RANGEDELTA);
-			trap_Cvar_Set("cg_thirdPersonRange", va("%f", range));
-		}
-		return;
-	case K_RIGHTARROW:
-		if (milli > cgs.thirdpersonUpdate)
-		{
-			float angle = cg_thirdPersonAngle.value - DEMO_ANGLEDELTA;
-
-			cgs.thirdpersonUpdate = milli + DEMO_THIRDPERSONUPDATE;
-			if (angle < 0)
-			{
-				angle += 360.0f;
-			}
-			trap_Cvar_Set("cg_thirdPersonAngle", va("%f", angle));
-		}
-		return;
-	case K_LEFTARROW:
-		if (milli > cgs.thirdpersonUpdate)
-		{
-			float angle = cg_thirdPersonAngle.value + DEMO_ANGLEDELTA;
-
-			cgs.thirdpersonUpdate = milli + DEMO_THIRDPERSONUPDATE;
-			if (angle >= 360.0f)
-			{
-				angle -= 360.0f;
-			}
-			trap_Cvar_Set("cg_thirdPersonAngle", va("%f", angle));
-		}
-		return;
-	// Timescale controls
-	case K_KP_5:
-	case K_KP_INS:
-		if (!down)
-		{
-			trap_Cvar_Set("timescale", "1");
-			cgs.timescaleUpdate = cg.time + 1000;
-		}
-		return;
-	case K_SPACE:
-		if (!down)
-		{
-			trap_SendConsoleCommand("pausedemo");
-		}
-		return;
-
-#endif // ifndef FEATURE_EDV
-
 	case K_KP_DOWNARROW:
 		if (!down)
 		{
@@ -743,14 +649,14 @@ void CG_DemoClick(int key, qboolean down)
 			}
 			else
 			{
-				tscale -= 1.0;
+				tscale -= 1.0f;
 			}
 			trap_Cvar_Set("timescale", va("%f", tscale));
 			cgs.timescaleUpdate = cg.time + (int)(1000.0f * tscale);
 		}
 		return;
 	case K_MWHEELDOWN:
-		if (!cgs.fKeyPressed[K_SHIFT])
+		if (!(cgs.fKeyPressed[K_RSHIFT] || cgs.fKeyPressed[K_LSHIFT]))
 		{
 			if (!down)
 			{
@@ -773,7 +679,7 @@ void CG_DemoClick(int key, qboolean down)
 		}
 		return;
 	case K_MWHEELUP:
-		if (!cgs.fKeyPressed[K_SHIFT])
+		if (!(cgs.fKeyPressed[K_RSHIFT] || cgs.fKeyPressed[K_LSHIFT]))
 		{
 			if (!down)
 			{
@@ -839,11 +745,24 @@ void CG_DemoClick(int key, qboolean down)
 			trap_Cvar_Set("cl_avidemo", demo_avifpsF5.string);
 		}
 		return;
-#if FEATURE_EDV
+	// Screenshot keys
+	case K_F11:
+		if (!down)
+		{
+			trap_SendConsoleCommand(va("screenshot%s\n", ((cg_useScreenshotJPEG.integer) ? "JPEG" : "")));
+		}
+		return;
+	case K_F12:
+		if (!down)
+		{
+			CG_autoScreenShot_f();
+		}
+		return;
 	default:
+#ifdef FEATURE_EDV
 		CG_RunBinding(key, down);
+#endif // ifdef FEATURE_EDV
 		break;
-#endif
 	}
 }
 
@@ -851,6 +770,10 @@ void CG_DemoClick(int key, qboolean down)
 
 extern vec4_t HUD_Border;
 
+/**
+ * @brief CG_ViewingDraw
+ * @return
+ */
 qboolean CG_ViewingDraw()
 {
 	if (cg.mvTotalClients < 1)
@@ -860,14 +783,14 @@ qboolean CG_ViewingDraw()
 	}
 	else
 	{
-		float fontScale  = cg_fontScaleSP.value;
-		int   y          = 146;
-		int   pID        = cg.mvCurrentMainview->mvInfo & MV_PID;
-		char  *viewInfo  = CG_TranslateString("Viewing");
-		char  *w         = cgs.clientinfo[pID].name;
-		int   charWidth  = CG_Text_Width_Ext("A", fontScale, 0, &cgs.media.limboFont2);
-		int   charHeight = CG_Text_Height_Ext("A", fontScale, 0, &cgs.media.limboFont2);
-		int   startClass = CG_Text_Width_Ext(viewInfo, fontScale, 0, &cgs.media.limboFont2) + charWidth;
+		float      fontScale  = cg_fontScaleSP.value;
+		int        y          = 146;
+		int        pID        = cg.mvCurrentMainview->mvInfo & MV_PID;
+		const char *viewInfo  = CG_TranslateString("Viewing");
+		char       *w         = cgs.clientinfo[pID].name;
+		int        charWidth  = CG_Text_Width_Ext("A", fontScale, 0, &cgs.media.limboFont2);
+		int        charHeight = CG_Text_Height_Ext("A", fontScale, 0, &cgs.media.limboFont2);
+		int        startClass = CG_Text_Width_Ext(viewInfo, fontScale, 0, &cgs.media.limboFont2) + charWidth;
 
 		// teamflags
 		if (cgs.clientinfo[pID].team == TEAM_ALLIES)
@@ -901,8 +824,11 @@ qboolean CG_ViewingDraw()
 
 //#define GS_X    166
 #define GS_Y    10
-#define GS_W    308
+#define GS_W    298
 
+/**
+ * @brief CG_GameStatsDraw
+ */
 void CG_GameStatsDraw(void)
 {
 	if (cgs.gamestats.show == SHOW_OFF)
@@ -935,7 +861,7 @@ void CG_GameStatsDraw(void)
 
 		// Text settings
 		int          tStyle   = ITEM_TEXTSTYLE_SHADOWED;
-		int          tSpacing = 9;      // Should derive from CG_Text_Height_Ext
+		int          tSpacing = 9;      // TODO: Should derive from CG_Text_Height_Ext
 		float        tScale   = 0.19f;
 		fontHelper_t *tFont   = FONT_TEXT;
 		vec4_t       tColor   = COLOR_TEXT; // text
@@ -950,15 +876,15 @@ void CG_GameStatsDraw(void)
 		    tSpacing * ((gs->cWeapons > 0) ? gs->cWeapons : 1) +
 		    tSpacing * ((gs->fHasStats) ? 7 : 0) +
 		    ((cgs.gametype == GT_WOLF_LMS) ? 0 :
-		     (
-		         4 + 2 * tSpacing +                                 // Rank/XP/Skill Rating
-		         1 + tSpacing +
-		         4 + 2 * tSpacing +                                 // Skill columns
-		         1 +                                                // Skillz
-		         tSpacing * ((gs->cSkills > 0) ? gs->cSkills : 1)
+			 (
+				 4 + 2 * tSpacing +                                 // Rank/XP/Skill Rating
+				 1 + tSpacing +
+				 4 + 2 * tSpacing +                                 // Skill columns
+				 1 +                                                // Skillz
+				 tSpacing * ((gs->cSkills > 0) ? gs->cSkills : 1)
 		     )
 		    ) +
-		    2;
+		    5;
 
 		// Fade-in effects
 		if (diff > 0.0f)
@@ -995,34 +921,30 @@ void CG_GameStatsDraw(void)
 		CG_FillRect(x + 1, y, GS_W - 2, tSpacing + 4, bgColorTitle);
 		CG_DrawRect(x + 1, y, GS_W - 2, tSpacing + 4, 1, borderColorTitle);
 
-		y += tSpacing;
+		y += 1 + tSpacing;
 		CG_Text_Paint_Ext(x + 4, y, hScale, hScaleY, hdrColor, CG_TranslateString("PLAYER STATS"), 0.0f, 0, hStyle, hFont);
-		y += 3;
-
-		y += 2;
+		y += 5;
 
 		// Weapon stats
-		y += 2;
 		CG_FillRect(x + 1, y, GS_W - 2, tSpacing + 3, bgColorTitle);
 		CG_DrawRect(x + 1, y, GS_W - 2, tSpacing + 3, 1, borderColorTitle);
 
 		y += 1 + tSpacing;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Weapon"), 0.0f, 0, hStyle2, hFont2);
-		x += 66;
+		x += 72;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Accuracy"), 0.0f, 0, hStyle2, hFont2);
-		x += 53;
+		x += 49;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Hits / Shots"), 0.0f, 0, hStyle2, hFont2);
-		x += 62;
+		x += 59;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Kills"), 0.0f, 0, hStyle2, hFont2);
-		x += 29;
+		x += 31;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Deaths"), 0.0f, 0, hStyle2, hFont2);
-		x += 40;
+		x += 37;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Headshots"), 0.0f, 0, hStyle2, hFont2);
 
 		x  = (Ccg_WideX(SCREEN_WIDTH) / 2) - (GS_W / 2);
 		y += 2;
 
-		y += 1;
 		if (gs->cWeapons == 0)
 		{
 			y += tSpacing;
@@ -1054,43 +976,40 @@ void CG_GameStatsDraw(void)
 		}
 
 		// Rank/XP info
-		y += tSpacing;
-		y += 2;
+		y += 2 + tSpacing;
 		CG_FillRect(x + 1, y, GS_W - 2, tSpacing + 3, bgColorTitle);
 		CG_DrawRect(x + 1, y, GS_W - 2, tSpacing + 3, 1, borderColorTitle);
 
 		y += 1 + tSpacing;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Rank"), 0.0f, 0, hStyle2, hFont2);
-		x += 122;
+		x += 120;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, "XP", 0.0f, 0, hStyle2, hFont2);
 #ifdef FEATURE_RATING
 		if (cgs.skillRating)
 		{
-			x += 100;
+			x += 96;
 			CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, "Skill Rating", 0.0f, 0, hStyle2, hFont2);
 		}
 #endif
 
 		x  = (Ccg_WideX(SCREEN_WIDTH) / 2) - (GS_W / 2);
-		y += 1;
-		y += tSpacing;
+		y += 1 + tSpacing;
 		CG_Text_Paint_Ext(x + 4, y, tScale, tScale, tColor, gs->strRank, 0.0f, 0, tStyle, tFont);
 
 		// Skill info
-		y += tSpacing;
-		y += 2;
+		y += 2 + tSpacing;
 		CG_FillRect(x + 1, y, GS_W - 2, tSpacing + 3, bgColorTitle);
 		CG_DrawRect(x + 1, y, GS_W - 2, tSpacing + 3, 1, borderColorTitle);
 
 		y += 1 + tSpacing;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Skills"), 0.0f, 0, hStyle2, hFont2);
-		x += 84;
+		x += 86;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Level"), 0.0f, 0, hStyle2, hFont2);
-		x += 76;
+		x += 74;
 		CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("XP / Next Level"), 0.0f, 0, hStyle2, hFont2);
 		if (cgs.gametype == GT_WOLF_CAMPAIGN)
 		{
-			x += 108;
+			x += 102;
 			CG_Text_Paint_Ext(x + 4, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Medals"), 0.0f, 0, hStyle2, hFont2);
 		}
 
@@ -1109,7 +1028,6 @@ void CG_GameStatsDraw(void)
 				y += tSpacing;
 				CG_Text_Paint_Ext(x + 4, y, tScale, tScale, tColor, gs->strSkillz[i], 0.0f, 0, tStyle, tFont);
 			}
-
 		}
 	}
 }
@@ -1118,6 +1036,9 @@ void CG_GameStatsDraw(void)
 #define TS_Y    -60     // spacing from bottom
 #define TS_W    308
 
+/**
+ * @brief CG_TopShotsDraw
+ */
 void CG_TopShotsDraw(void)
 {
 	if (cgs.topshots.show == SHOW_OFF)
@@ -1126,7 +1047,7 @@ void CG_TopShotsDraw(void)
 	}
 	else
 	{
-		int            x                = Ccg_WideX(SCREEN_WIDTH) + TS_X - TS_W, y = SCREEN_HEIGHT, h;
+		int            x = Ccg_WideX(SCREEN_WIDTH) + TS_X - TS_W, y = SCREEN_HEIGHT, h;
 		topshotStats_t *ts              = &cgs.topshots;
 		vec4_t         bgColor          = COLOR_BG; // window
 		vec4_t         borderColor      = COLOR_BORDER; // window
@@ -1161,7 +1082,8 @@ void CG_TopShotsDraw(void)
 		    2 + 2 + tSpacing + 2 +                          // Stats columns
 		    1 +                                             // Stats + extra
 		    tSpacing * ((ts->cWeapons > 0) ? ts->cWeapons : 1) +
-		    1;
+		    5;
+
 
 		// Fade-in effects
 		if (diff > 0.0f)
@@ -1202,29 +1124,28 @@ void CG_TopShotsDraw(void)
 		CG_FillRect(x + 1, y, TS_W - 2, tSpacing + 4, bgColorTitle);
 		CG_DrawRect(x + 1, y, TS_W - 2, tSpacing + 4, 1, borderColorTitle);
 
-		y += tSpacing;
+		y += 1 + tSpacing;
 		CG_Text_Paint_Ext(x + 4, y, hScale, hScaleY, hdrColor, CG_TranslateString("\"TOPSHOT\" ACCURACIES"), 0.0f, 0, hStyle, hFont);
-		y += 4;
 
 		// Weapon stats
-		y += 2;
+		y += 5;
 		CG_FillRect(x + 1, y, TS_W - 2, tSpacing + 3, bgColorTitle);
 		CG_DrawRect(x + 1, y, TS_W - 2, tSpacing + 3, 1, borderColorTitle);
 
 		x += 4;
 		y += 1 + tSpacing;
 		CG_Text_Paint_Ext(x, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Weapon"), 0.0f, 0, hStyle2, hFont2);
-		x += 60;
+		x += 66;
 		CG_Text_Paint_Ext(x, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Accuracy"), 0.0f, 0, hStyle2, hFont2);
-		x += 53;
+		x += 47;
 		CG_Text_Paint_Ext(x, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Hits / Shots"), 0.0f, 0, hStyle2, hFont2);
 		x += 62;
 		CG_Text_Paint_Ext(x, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Kills"), 0.0f, 0, hStyle2, hFont2);
-		x += 32;
+		x += 29;
 		CG_Text_Paint_Ext(x, y, hScale2, hScaleY2, hdrColor, CG_TranslateString("Player"), 0.0f, 0, hStyle2, hFont2);
 
 		x  = Ccg_WideX(SCREEN_WIDTH) + TS_X - TS_W + 4;
-		y += 1;
+		y += 2;
 
 		if (ts->cWeapons == 0)
 		{
@@ -1248,6 +1169,9 @@ void CG_TopShotsDraw(void)
 //#define OBJ_Y   -60     // spacing from bottom
 #define OBJ_W   308
 
+/**
+ * @brief CG_ObjectivesDraw
+ */
 void CG_ObjectivesDraw()
 {
 	const char *cs;
@@ -1431,7 +1355,7 @@ void CG_ObjectivesDraw()
 		h = 2 + tSpacing + 2 +                                  // Header
 		    1 +
 		    tSpacing * (((lines + count - 1) > 0) ? (lines + count - 1) : 1) +
-		    1 + 2;
+		    2 + tSpacing;
 
 		// Fade-in effects
 		if (diff > 0.0f)
@@ -1472,10 +1396,10 @@ void CG_ObjectivesDraw()
 		CG_FillRect(x + 1, y, OBJ_W - 2, tSpacing + 4, bgColorTitle);
 		CG_DrawRect(x + 1, y, OBJ_W - 2, tSpacing + 4, 1, borderColorTitle);
 
-		y += tSpacing;
+		y += 1 + tSpacing;
 		CG_Text_Paint_Ext(x + 4, y, hScale, hScaleY, hdrColor, CG_TranslateString("OBJECTIVES"), 0.0f, 0, hStyle, hFont);
 
-		y += 4;
+		y += 5;
 
 		if (!count)
 		{
@@ -1572,7 +1496,7 @@ void CG_ObjectivesDraw()
 			if (temp[0] && count > 0)
 			{
 				count--;
-				y += tSpacing;
+				//y += tSpacing;
 			}
 		}
 		else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_ALLIES)
@@ -1682,6 +1606,22 @@ void CG_ObjectivesDraw()
 #define DH_Y    -60     // spacing from bottom
 #define DH_W    148
 
+/**
+ * @brief CG_DrawDemoControls
+ * @param[in] x
+ * @param[in] y
+ * @param[in] w
+ * @param[in] borderColor
+ * @param[in] bgColor
+ * @param[in] tSpacing
+ * @param[in] bgColorTitle
+ * @param[in] borderColorTitle
+ * @param[in] hScale
+ * @param[in] hScaleY
+ * @param[in] hdrColor
+ * @param[in] hStyle
+ * @param[in] hFont
+ */
 void CG_DrawDemoControls(int x, int y, int w, vec4_t borderColor, vec4_t bgColor, int tSpacing, vec4_t bgColorTitle, vec4_t borderColorTitle, float hScale, float hScaleY, vec4_t hdrColor, int hStyle, fontHelper_t *hFont)
 {
 	static panel_button_text_t demoControlTxt;
@@ -1727,17 +1667,20 @@ void CG_DrawDemoControls(int x, int y, int w, vec4_t borderColor, vec4_t bgColor
 	}
 }
 
+/**
+ * @brief CG_DemoHelpDraw
+ */
 void CG_DemoHelpDraw(void)
 {
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 #define ONOFF(x) ((x) ? ("ON") : ("OFF"))
-	char *freecam     = ONOFF(cgs.demoCamera.renderingFreeCam);
-	char *panzercam   = ONOFF(demo_weaponcam.integer & DWC_PANZER);
-	char *mortarcam   = ONOFF(demo_weaponcam.integer & DWC_MORTAR);
-	char *grenadecam  = ONOFF(demo_weaponcam.integer & DWC_GRENADE);
-	char *dynamitecam = ONOFF(demo_weaponcam.integer & DWC_DYNAMITE);
-	char *teamonly    = ONOFF(demo_teamonlymissilecam.integer);
-	char *pvshint     = ONOFF(demo_pvshint.integer);
+	const char *freecam     = ONOFF(cgs.demoCamera.renderingFreeCam);
+	const char *panzercam   = ONOFF(demo_weaponcam.integer & DWC_PANZER);
+	const char *mortarcam   = ONOFF(demo_weaponcam.integer & DWC_MORTAR);
+	const char *grenadecam  = ONOFF(demo_weaponcam.integer & DWC_GRENADE);
+	const char *dynamitecam = ONOFF(demo_weaponcam.integer & DWC_DYNAMITE);
+	const char *teamonly    = ONOFF(demo_teamonlymissilecam.integer);
+	const char *pvshint     = ONOFF(demo_pvshint.integer);
 #endif
 
 	if (cg.demohelpWindow == SHOW_OFF)
@@ -1756,11 +1699,12 @@ void CG_DemoHelpDraw(void)
 			"^7KP_LEFT   ^3slow down (-)",
 			"^7KP_UP     ^3speed up (++)",
 			"^7KP_RIGHT  ^3speed up (+)",
-			"^7SPACE     ^3normal speed",
+			"^7KP_5      ^3normal speed",
+			"^7SPACE     ^3pause demo",
 			NULL,
 			"^7ENTER     ^3External view",
 			"^7LFT/RGHT  ^3Change angle",
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 			"^nUP/DOWN   ^mMove in/out",
 			NULL,
 			//"^nKP_ENTER  ^mToggle freecam"
@@ -1771,7 +1715,7 @@ void CG_DemoHelpDraw(void)
 
 		};
 
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 		const char *edvhelp[] =
 		{
 			va("^nKP_ENTER  ^mFreecam    ^m%s", freecam),
@@ -1798,8 +1742,8 @@ void CG_DemoHelpDraw(void)
 			"^7KP_PGDN   ^3Close a view"
 		};
 #endif
-
-		int i, x, y = SCREEN_HEIGHT, w, h;
+		unsigned int i;
+		int          x, y = SCREEN_HEIGHT, w, h;
 
 		vec4_t bgColor     = COLOR_BG;              // window
 		vec4_t borderColor = COLOR_BORDER;          // window
@@ -1823,18 +1767,18 @@ void CG_DemoHelpDraw(void)
 
 		float diff = cg.fadeTime - trap_Milliseconds();
 
-#if FEATURE_EDV
-		int menuLevel = cgs.currentMenuLevel;
+#ifdef FEATURE_EDV
+		mlType_t menuLevel = cgs.currentMenuLevel;
 #endif
 
 // the ifdef's are very painfull here
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 		// FIXME: Should compute this beforehand
 		w = DH_W + (
 #ifdef FEATURE_MULTIVIEW
-		    (cg.mvTotalClients > 1) ? 12 :
+			(cg.mvTotalClients > 1) ? 12 :
 #endif
-		    0);
+			0);
 		x = Ccg_WideX(SCREEN_WIDTH) + 3 * DH_X - w;
 
 		if (menuLevel == ML_MAIN)
@@ -1848,7 +1792,7 @@ void CG_DemoHelpDraw(void)
 #endif
 			                );
 		}
-		else if (menuLevel == ML_EDV)
+		else //if(menuLevel == ML_EDV)
 		{
 			h = tSpacing + 9 +
 			    tSpacing * (2 +
@@ -1864,9 +1808,9 @@ void CG_DemoHelpDraw(void)
 		// FIXME: Should compute this beforehand
 		w = DH_W + (
 #ifdef FEATURE_MULTIVIEW
-		    (cg.mvTotalClients > 1) ? 12 :
+			(cg.mvTotalClients > 1) ? 12 :
 #endif
-		    0);
+			0);
 		x = Ccg_WideX(SCREEN_WIDTH) + 3 * DH_X - w;
 		h = tSpacing + 9 +
 		    tSpacing * (2 +
@@ -1931,7 +1875,7 @@ void CG_DemoHelpDraw(void)
 
 		y += 3;
 
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 		if (menuLevel == ML_MAIN)
 		{
 #endif
@@ -1942,10 +1886,10 @@ void CG_DemoHelpDraw(void)
 			y += tSpacing;
 			if (help[i] != NULL)
 			{
-				CG_Text_Paint_Ext(x, y, tScale, tScale, tColor, (char *)help[i], 0.0f, 0, tStyle, tFont);
+				CG_Text_Paint_Ext(x, y, tScale, tScale, tColor, help[i], 0.0f, 0, tStyle, tFont);
 			}
 		}
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 	}
 	else if (menuLevel == ML_EDV)
 	{
@@ -1955,13 +1899,13 @@ void CG_DemoHelpDraw(void)
 			y += tSpacing;
 			if (help[i] != NULL)
 			{
-				CG_Text_Paint_Ext(x, y, tScale, tScale, tColor, (char *)edvhelp[i], 0.0f, 0, tStyle, tFont);
+				CG_Text_Paint_Ext(x, y, tScale, tScale, tColor, edvhelp[i], 0.0f, 0, tStyle, tFont);
 			}
 		}
 	}
 #endif
 
-#if FEATURE_MULTIVIEW
+#ifdef FEATURE_MULTIVIEW
 		if (cg.mvTotalClients > 1)
 		{
 			for (i = 0; i < ARRAY_LEN(mvhelp); i++)
@@ -1969,19 +1913,19 @@ void CG_DemoHelpDraw(void)
 				y += tSpacing;
 				if (mvhelp[i] != NULL)
 				{
-					CG_Text_Paint_Ext(x, y, tScale, tScale, tColor, (char *)mvhelp[i], 0.0f, 0, tStyle, tFont);
+					CG_Text_Paint_Ext(x, y, tScale, tScale, tColor, mvhelp[i], 0.0f, 0, tStyle, tFont);
 				}
 			}
 		}
 #endif
 
 		y += tSpacing * 2;
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 		if (menuLevel == ML_MAIN)
 		{
 #endif
 		CG_Text_Paint_Ext(x, y, tScale, tScale, tColor, CG_TranslateString("^7BACKSPACE ^3help on/off"), 0.0f, 0, tStyle, tFont);
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 	}
 	else if (menuLevel == ML_EDV)
 	{
@@ -1992,7 +1936,14 @@ void CG_DemoHelpDraw(void)
 	}
 }
 
-char *CG_getBindKeyName(const char *cmd, char *buf, int len)
+/**
+ * @brief CG_getBindKeyName
+ * @param[in] cmd
+ * @param[out] buf
+ * @param[in] len
+ * @return
+ */
+char *CG_getBindKeyName(const char *cmd, char *buf, size_t len)
 {
 	int j;
 
@@ -2019,13 +1970,16 @@ char *CG_getBindKeyName(const char *cmd, char *buf, int len)
 #ifdef FEATURE_MULTIVIEW
 typedef struct
 {
-	char *cmd;
-	char *info;
+	const char *cmd;
+	const char *info;
 } helpType_t;
 
-#define SH_X    8       // spacing from left
-#define SH_Y    155     // spacing from top
+#define SH_X    8       ///< spacing from left
+#define SH_Y    155     ///< spacing from top
 
+/**
+ * @brief CG_SpecHelpDraw
+ */
 void CG_SpecHelpDraw(void)
 {
 	if (cg.spechelpWindow == SHOW_OFF)
@@ -2046,7 +2000,8 @@ void CG_SpecHelpDraw(void)
 			{ "spechelp", "help on/off"        }
 		};
 
-		int i, x, y = SCREEN_HEIGHT, w, h;
+		unsigned int i;
+		int x, y = SCREEN_HEIGHT, w, h;
 		int len, maxlen = 0;
 		char format[MAX_STRING_TOKENS], buf[MAX_STRING_TOKENS];
 		char *lines[16];
@@ -2073,14 +2028,13 @@ void CG_SpecHelpDraw(void)
 
 		float diff = cg.fadeTime - trap_Milliseconds();
 
-
 		// FIXME: Should compute all this stuff beforehand
 		// Compute required width
 		for (i = 0; i < sizeof(help) / sizeof(helpType_t); i++)
 		{
 			if (help[i].cmd != NULL)
 			{
-				len = strlen(CG_getBindKeyName(help[i].cmd, buf, sizeof(buf)));
+				len = (int)strlen(CG_getBindKeyName(help[i].cmd, buf, sizeof(buf)));
 				if (len > maxlen)
 				{
 					maxlen = len;
@@ -2168,6 +2122,9 @@ void CG_SpecHelpDraw(void)
 }
 #endif
 
+/**
+ * @brief CG_DrawOverlays
+ */
 void CG_DrawOverlays(void)
 {
 	CG_GameStatsDraw();
@@ -2176,7 +2133,7 @@ void CG_DrawOverlays(void)
 #ifdef FEATURE_MULTIVIEW
 	CG_SpecHelpDraw();
 #endif
-#if FEATURE_EDV
+#ifdef FEATURE_EDV
 	if (cg.demoPlayback && cg_predefineddemokeys.integer)
 #else
 	if (cg.demoPlayback)

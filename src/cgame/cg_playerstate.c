@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -39,11 +39,12 @@
 
 #include "cg_local.h"
 
-/*
-==============
-CG_DamageFeedback
-==============
-*/
+/**
+ * @brief CG_DamageFeedback
+ * @param[in] yawByte
+ * @param[in] pitchByte
+ * @param[in] damage
+ */
 void CG_DamageFeedback(int yawByte, int pitchByte, int damage)
 {
 	float        kick;
@@ -64,7 +65,7 @@ void CG_DamageFeedback(int yawByte, int pitchByte, int damage)
 	}
 	else
 	{
-		scale = 40.0 / health;
+		scale = 40.0f / health;
 	}
 	kick = damage * scale;
 
@@ -105,8 +106,8 @@ void CG_DamageFeedback(int yawByte, int pitchByte, int damage)
 	{
 		float left, front, up, dist;
 		// positional
-		float pitch = pitchByte / 255.0 * 360;
-		float yaw   = yawByte / 255.0 * 360;
+		float pitch = pitchByte / 255.0f * 360;
+		float yaw   = yawByte / 255.0f * 360;
 
 		angles[PITCH] = pitch;
 		angles[YAW]   = yaw;
@@ -123,40 +124,40 @@ void CG_DamageFeedback(int yawByte, int pitchByte, int damage)
 		dir[1] = left;
 		dir[2] = 0;
 		dist   = VectorLength(dir);
-		if (dist < 0.1)
+		if (dist < 0.1f)
 		{
-			dist = 0.1;
+			dist = 0.1f;
 		}
 
 		cg.v_dmg_roll = kick * left;
 
 		cg.v_dmg_pitch = -kick * front;
 
-		if (front <= 0.1)
+		if (front <= 0.1f)
 		{
-			front = 0.1;
+			front = 0.1f;
 		}
-		vd->damageX = crandom() * 0.3 + -left / front;
-		vd->damageY = crandom() * 0.3 + up / dist;
+		vd->damageX = crandom() * 0.3f + -left / front;
+		vd->damageY = crandom() * 0.3f + up / dist;
 	}
 
 	// clamp the position
-	if (vd->damageX > 1.0)
+	if (vd->damageX > 1.0f)
 	{
-		vd->damageX = 1.0;
+		vd->damageX = 1.0f;
 	}
-	if (vd->damageX < -1.0)
+	if (vd->damageX < -1.0f)
 	{
-		vd->damageX = -1.0;
+		vd->damageX = -1.0f;
 	}
 
-	if (vd->damageY > 1.0)
+	if (vd->damageY > 1.0f)
 	{
-		vd->damageY = 1.0;
+		vd->damageY = 1.0f;
 	}
-	if (vd->damageY < -1.0)
+	if (vd->damageY < -1.0f)
 	{
-		vd->damageY = -1.0;
+		vd->damageY = -1.0f;
 	}
 
 	// don't let the screen flashes vary as much
@@ -167,18 +168,15 @@ void CG_DamageFeedback(int yawByte, int pitchByte, int damage)
 	vd->damageValue    = kick;
 	cg.v_dmg_time      = cg.time + DAMAGE_TIME;
 	vd->damageTime     = cg.snap->serverTime;
-	vd->damageDuration = kick * 50 * (1 + 2 * (!vd->damageX && !vd->damageY));
+	vd->damageDuration = (int)(kick * 50 * (1 + 2 * (!vd->damageX && !vd->damageY)));
 	cg.damageTime      = cg.snap->serverTime;
 	cg.damageIndex     = slot;
 }
 
-/*
-================
-CG_Respawn
-
-A respawn happened this snapshot
-================
-*/
+/**
+ * @brief A respawn happened this snapshot
+ * @param[in] revived
+ */
 void CG_Respawn(qboolean revived)
 {
 	static int oldTeam = -1;
@@ -189,7 +187,7 @@ void CG_Respawn(qboolean revived)
 	cg.thisFrameTeleport = qtrue;
 
 	// need to reset client-side weapon animations
-	cg.predictedPlayerState.weapAnim    = ((cg.predictedPlayerState.weapAnim & ANIM_TOGGLEBIT) ^ ANIM_TOGGLEBIT) | PM_IdleAnimForWeapon(cg.snap->ps.weapon);      // reset weapon animations
+	cg.predictedPlayerState.weapAnim    = ((cg.predictedPlayerState.weapAnim & ANIM_TOGGLEBIT) ^ ANIM_TOGGLEBIT) | GetWeaponTableData(cg.snap->ps.weapon)->idleAnim;      // reset weapon animations
 	cg.predictedPlayerState.weaponstate = WEAPON_READY; // hmm, set this?  what to?
 
 	// display weapons available
@@ -200,11 +198,12 @@ void CG_Respawn(qboolean revived)
 
 	// select the weapon the server says we are using
 	cg.weaponSelect = cg.snap->ps.weapon;
+
 	// clear even more things on respawn
 	cg.zoomedBinoc = qfalse;
-	cg.zoomedScope = qfalse;
-	cg.zoomTime    = 0;
-	cg.zoomval     = 0;
+	cg.zoomed      = qfalse;
+	cg.zoomTime = 0;
+	cg.zoomval  = 0;
 
 	trap_SendConsoleCommand("-zoom\n");
 	cg.binocZoomTime = 0;
@@ -212,30 +211,25 @@ void CG_Respawn(qboolean revived)
 	// ensure scoped weapons are reset after revive
 	if (revived)
 	{
-		if (cg.snap->ps.weapon == WP_FG42SCOPE)
+		if (GetWeaponTableData(cg.snap->ps.weapon)->isScoped)
 		{
-			CG_FinishWeaponChange(WP_FG42SCOPE, WP_FG42);
-		}
-		if (cg.snap->ps.weapon == WP_GARAND_SCOPE)
-		{
-			CG_FinishWeaponChange(WP_GARAND_SCOPE, WP_GARAND);
-		}
-		if (cg.snap->ps.weapon == WP_K43_SCOPE)
-		{
-			CG_FinishWeaponChange(WP_K43_SCOPE, WP_K43);
+			CG_FinishWeaponChange(cg.snap->ps.weapon, GetWeaponTableData(cg.snap->ps.weapon)->weapAlts);
 		}
 	}
 
 	// clear pmext
-	memset(&cg.pmext, 0, sizeof(cg.pmext));
+	Com_Memset(&cg.pmext, 0, sizeof(cg.pmext));
 
-	cg.pmext.bAutoReload = (cg_autoReload.integer > 0);
+	cg.pmext.bAutoReload = (qboolean)(cg_autoReload.integer > 0);
 
 	cg.pmext.sprintTime = SPRINTTIME;
 
 	if (!revived)
 	{
 		cgs.limboLoadoutSelected = qfalse;
+
+		// reset switch back weapon
+		cg.switchbackWeapon = WP_NONE;
 	}
 
 	// Saves the state of sidearm (riflenade weapon is considered as one too)
@@ -245,7 +239,7 @@ void CG_Respawn(qboolean revived)
 	{
 		cg.pmext.silencedSideArm = 1;
 	}
-	else if (cg.predictedPlayerState.weapon == WP_GPG40 || cg.predictedPlayerState.weapon == WP_M7)
+	else if (GetWeaponTableData(cg.predictedPlayerState.weapon)->isRiflenade)
 	{
 		cg.pmext.silencedSideArm = 2;
 	}
@@ -271,6 +265,11 @@ void CG_Respawn(qboolean revived)
 	}
 }
 
+/**
+ * @brief CG_CheckPlayerstateEvents
+ * @param[in] ps
+ * @param[in] ops
+ */
 void CG_CheckPlayerstateEvents(playerState_t *ps, playerState_t *ops)
 {
 	int       i;
@@ -307,10 +306,10 @@ void CG_CheckPlayerstateEvents(playerState_t *ps, playerState_t *ops)
 	}
 }
 
-/* unused
-==================
-CG_CheckChangedPredictableEvents
-==================
+/*
+ * @brief CG_CheckChangedPredictableEvents
+ * @param ps
+ * @note Unused
 void CG_CheckChangedPredictableEvents(playerState_t *ps)
 {
     int       i;
@@ -346,11 +345,11 @@ void CG_CheckChangedPredictableEvents(playerState_t *ps)
 }
 */
 
-/*
-==================
-CG_CheckLocalSounds
-==================
-*/
+/**
+ * @brief CG_CheckLocalSounds
+ * @param[in] ps
+ * @param[in] ops
+ */
 void CG_CheckLocalSounds(playerState_t *ps, playerState_t *ops)
 {
 	// health changes of more than -1 should make pain sounds
@@ -484,14 +483,14 @@ void CG_CheckLocalSounds(playerState_t *ps, playerState_t *ops)
 	}
 }
 
-/*
-===============
-CG_TransitionPlayerState
-===============
-*/
+/**
+ * @brief CG_TransitionPlayerState
+ * @param[in] ps
+ * @param[in] ops
+ */
 void CG_TransitionPlayerState(playerState_t *ps, playerState_t *ops)
 {
-#if FEATURE_MULTIVIEW
+#ifdef FEATURE_MULTIVIEW
 	// MV client handling
 	if (cg.mvTotalClients > 0)
 	{
@@ -536,7 +535,7 @@ void CG_TransitionPlayerState(playerState_t *ps, playerState_t *ops)
 	}
 	else
 	{
-		if (cg.weaponFireTime > 500 && cg.weaponFireTime)
+		if (cg.weaponFireTime > 500 /*&& cg.weaponFireTime*/)
 		{
 			cg.lastFiredWeaponTime = cg.time;
 		}
@@ -577,6 +576,10 @@ void CG_TransitionPlayerState(playerState_t *ps, playerState_t *ops)
 				trap_SendConsoleCommand("-zoom\n");
 			}
 		}
+		else if (GetWeaponTableData(ps->weapon)->isScoped)
+		{
+			CG_FinishWeaponChange(ps->weapon, GetWeaponTableData(ps->weapon)->weapAlts);
+		}
 
 		if (!(ops->eFlags & EF_PRONE_MOVING))
 		{
@@ -593,10 +596,16 @@ void CG_TransitionPlayerState(playerState_t *ps, playerState_t *ops)
 
 	if (!(ps->eFlags & EF_PRONE) && (ops->eFlags & EF_PRONE))
 	{
-		if (cg.weaponSelect == WP_MOBILE_MG42_SET || cg.weaponSelect == WP_MOBILE_BROWNING_SET)
+		if (GetWeaponTableData(cg.weaponSelect)->isMGSet)
 		{
 			CG_FinishWeaponChange(cg.weaponSelect, ps->nextWeapon);
 		}
+	}
+
+	// don't let players run with rifles -- speed 80 == crouch, 128 == walk, 256 == run until player start to don't run
+	if (GetWeaponTableData(ps->weapon)->isScoped && VectorLength(ps->velocity) > 127)
+	{
+		CG_FinishWeaponChange(ps->weapon, GetWeaponTableData(ps->weapon)->weapAlts);
 	}
 
 	// run events

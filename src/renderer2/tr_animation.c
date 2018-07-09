@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -31,23 +31,23 @@
  */
 /**
  * @file renderer2/tr_animation.c
+ *
+ * @brief All bones should be an identity orientation to display the mesh exactly
+ * as it is specified.
+ *
+ * For all other frames, the bones represent the transformation from the
+ * orientation of the bone in the base frame to the orientation in this
+ * frame.
  */
 
 #include "tr_local.h"
 
-/*
-===========================================================================
-All bones should be an identity orientation to display the mesh exactly
-as it is specified.
-
-For all other frames, the bones represent the transformation from the
-orientation of the bone in the base frame to the orientation in this
-frame.
-===========================================================================
-*/
-
 #if defined(USE_REFENTITY_ANIMATIONSYSTEM)
 
+/**
+ * @brief R_AllocAnimation
+ * @return
+ */
 static skelAnimation_t *R_AllocAnimation(void)
 {
 	skelAnimation_t *anim;
@@ -65,11 +65,9 @@ static skelAnimation_t *R_AllocAnimation(void)
 	return anim;
 }
 
-/*
-===============
-R_InitAnimations
-===============
-*/
+/**
+ * @brief R_InitAnimations
+ */
 void R_InitAnimations(void)
 {
 	skelAnimation_t *anim;
@@ -82,6 +80,14 @@ void R_InitAnimations(void)
 	strcpy(anim->name, "<default animation>");
 }
 
+/**
+ * @brief R_LoadMD5Anim
+ * @param[out] skelAnim
+ * @param[out] buffer
+ * @param bufferSize - unused
+ * @param[in] name
+ * @return
+ */
 static qboolean R_LoadMD5Anim(skelAnimation_t *skelAnim, byte *buffer, int bufferSize, const char *name)
 {
 	int            i, j;
@@ -385,6 +391,11 @@ static qboolean R_LoadMD5Anim(skelAnimation_t *skelAnim, byte *buffer, int buffe
 	return qtrue;
 }
 
+/**
+ * @brief GetChunkHeader
+ * @param[in] s
+ * @param[out] chunkHeader
+ */
 static void GetChunkHeader(memStream_t *s, axChunkHeader_t *chunkHeader)
 {
 	int i;
@@ -399,6 +410,11 @@ static void GetChunkHeader(memStream_t *s, axChunkHeader_t *chunkHeader)
 	chunkHeader->numData  = MemStreamGetLong(s);
 }
 
+/**
+ * @brief PrintChunkHeader
+ * @param chunkHeader - unused
+ * @note Disable
+ */
 static void PrintChunkHeader(axChunkHeader_t *chunkHeader)
 {
 #if 0
@@ -410,6 +426,11 @@ static void PrintChunkHeader(axChunkHeader_t *chunkHeader)
 #endif
 }
 
+/**
+ * @brief GetBone
+ * @param[in] s
+ * @param[out] bone
+ */
 static void GetBone(memStream_t *s, axBone_t *bone)
 {
 	int i;
@@ -431,6 +452,14 @@ static void GetBone(memStream_t *s, axBone_t *bone)
 	bone->zSize = MemStreamGetFloat(s);
 }
 
+/**
+ * @brief R_LoadPSA
+ * @param[in,out] skelAnim
+ * @param[out] buffer
+ * @param[in] bufferSize
+ * @param[out] name
+ * @return
+ */
 static qboolean R_LoadPSA(skelAnimation_t *skelAnim, byte *buffer, int bufferSize, const char *name)
 {
 	int               i, j, k;
@@ -447,6 +476,13 @@ static qboolean R_LoadPSA(skelAnimation_t *skelAnim, byte *buffer, int bufferSiz
 	growList_t        extraAnims;
 
 	stream = AllocMemStream(buffer, bufferSize);
+
+	if (stream == NULL)
+	{
+		Ren_Warning("R_LoadPSA: can't allocate memory\n");
+		return qfalse;
+	}
+
 	GetChunkHeader(stream, &chunkHeader);
 
 	// check indent again
@@ -470,7 +506,7 @@ static qboolean R_LoadPSA(skelAnimation_t *skelAnim, byte *buffer, int bufferSiz
 
 	if (chunkHeader.dataSize != sizeof(axReferenceBone_t))
 	{
-		Ren_Warning("R_LoadPSA: '%s' has wrong chunk dataSize ('%i' should be '%zu')\n", name, chunkHeader.dataSize, sizeof(axReferenceBone_t));
+		Ren_Warning("R_LoadPSA: '%s' has wrong chunk dataSize ('%i' should be '%lu')\n", name, chunkHeader.dataSize, (unsigned long) sizeof(axReferenceBone_t));
 		FreeMemStream(stream);
 		return qfalse;
 	}
@@ -494,7 +530,7 @@ static qboolean R_LoadPSA(skelAnimation_t *skelAnim, byte *buffer, int bufferSiz
 	refBones = (axReferenceBone_t *)ri.Hunk_Alloc(numReferenceBones * sizeof(axReferenceBone_t), h_low);
 	for (i = 0, refBone = refBones; i < numReferenceBones; i++, refBone++)
 	{
-		MemStreamRead(stream, refBone->name, sizeof(refBone->name));
+		(void) MemStreamRead(stream, refBone->name, sizeof(refBone->name));
 
 		refBone->flags       = MemStreamGetLong(stream);
 		refBone->numChildren = MemStreamGetLong(stream);
@@ -544,7 +580,7 @@ static qboolean R_LoadPSA(skelAnimation_t *skelAnim, byte *buffer, int bufferSiz
 
 	if (chunkHeader.dataSize != sizeof(axAnimationInfo_t))
 	{
-		Ren_Warning("R_LoadPSA: '%s' has wrong chunk dataSize ('%i' should be '%zu')\n", name, chunkHeader.dataSize, sizeof(axAnimationInfo_t));
+		Ren_Warning("R_LoadPSA: '%s' has wrong chunk dataSize ('%i' should be '%lu')\n", name, chunkHeader.dataSize, (unsigned long) sizeof(axAnimationInfo_t));
 		FreeMemStream(stream);
 		return qfalse;
 	}
@@ -583,13 +619,14 @@ static qboolean R_LoadPSA(skelAnimation_t *skelAnim, byte *buffer, int bufferSiz
 
 		animInfo = &psa->info;
 
-		MemStreamRead(stream, animInfo->name, sizeof(animInfo->name));
-		MemStreamRead(stream, animInfo->group, sizeof(animInfo->group));
+		(void) MemStreamRead(stream, animInfo->name, sizeof(animInfo->name));
+		(void) MemStreamRead(stream, animInfo->group, sizeof(animInfo->group));
 
 		animInfo->numBones = MemStreamGetLong(stream);
 
 		if (animInfo->numBones != numReferenceBones)
 		{
+			FreeMemStream(stream);
 			Ren_Drop("R_LoadPSA: axAnimationInfo_t contains different number than reference bones exist: %i != %i for anim '%s'", animInfo->numBones, numReferenceBones, name);
 		}
 
@@ -649,7 +686,7 @@ static qboolean R_LoadPSA(skelAnimation_t *skelAnim, byte *buffer, int bufferSiz
 
 	if (chunkHeader.dataSize != sizeof(axAnimationKey_t))
 	{
-		Ren_Warning("R_LoadPSA: '%s' has wrong chunk dataSize ('%i' should be '%zu')\n", name, chunkHeader.dataSize, sizeof(axAnimationKey_t));
+		Ren_Warning("R_LoadPSA: '%s' has wrong chunk dataSize ('%i' should be '%lu')\n", name, chunkHeader.dataSize, (unsigned long) sizeof(axAnimationKey_t));
 		FreeMemStream(stream);
 		return qfalse;
 	}
@@ -704,11 +741,11 @@ static qboolean R_LoadPSA(skelAnimation_t *skelAnim, byte *buffer, int bufferSiz
 	return qtrue;
 }
 
-/*
-===============
-RE_RegisterAnimation
-===============
-*/
+/**
+ * @brief RE_RegisterAnimation
+ * @param[in] name
+ * @return
+ */
 qhandle_t RE_RegisterAnimation(const char *name)
 {
 	qhandle_t       hAnim;
@@ -805,31 +842,29 @@ qhandle_t RE_RegisterAnimation(const char *name)
 	return anim->index;
 }
 
-/*
-================
-R_GetAnimationByHandle
-================
-*/
-skelAnimation_t *R_GetAnimationByHandle(qhandle_t index)
+/**
+ * @brief R_GetAnimationByHandle
+ * @param[in] hAnim
+ * @return
+ */
+skelAnimation_t *R_GetAnimationByHandle(qhandle_t hAnim)
 {
 	skelAnimation_t *anim;
 
 	// out of range gets the default animation
-	if (index < 1 || index >= tr.numAnimations)
+	if (hAnim < 1 || hAnim >= tr.numAnimations)
 	{
 		return tr.animations[0];
 	}
 
-	anim = tr.animations[index];
+	anim = tr.animations[hAnim];
 
 	return anim;
 }
 
-/*
-================
-R_AnimationList_f
-================
-*/
+/**
+ * @brief R_AnimationList_f
+ */
 void R_AnimationList_f(void)
 {
 	int             i;
@@ -851,16 +886,12 @@ void R_AnimationList_f(void)
 	Ren_Print("%8i : Total animations\n", tr.numAnimations);
 }
 
-/*
-=============
-R_CullMD5
-=============
-*/
+/**
+ * @brief R_CullMD5
+ * @param[in,out] ent
+ */
 static void R_CullMD5(trRefEntity_t *ent)
 {
-	int   i;
-	float boundsRadius;
-
 	if (ent->e.skeleton.type == SK_INVALID)
 	{
 		// no properly set skeleton so use the bounding box by the model instead by the animations
@@ -871,17 +902,20 @@ static void R_CullMD5(trRefEntity_t *ent)
 	}
 	else
 	{
+		int i;
+
 		// copy a bounding box in the current coordinate system provided by skeleton
 		for (i = 0; i < 3; i++)
 		{
-			ent->localBounds[0][i] = ent->e.skeleton.bounds[0][i];
-			ent->localBounds[1][i] = ent->e.skeleton.bounds[1][i];
+			ent->localBounds[0][i] = ent->e.skeleton.bounds[0][i]; // FIXME: * ent->e.skeleton.scale
+			ent->localBounds[1][i] = ent->e.skeleton.bounds[1][i]; // FIXME: * ent->e.skeleton.scale
 		}
 	}
 
-	boundsRadius = RadiusFromBounds(ent->localBounds[0], ent->localBounds[1]);
+	// set up world bounds for light intersection tests
+	R_SetupEntityWorldBounds(ent);
 
-	switch (R_CullPointAndRadius(ent->e.origin, boundsRadius))
+	switch (R_CullBox(ent->worldBounds))
 	{
 	case CULL_IN:
 		tr.pc.c_box_cull_md5_in++;
@@ -899,11 +933,10 @@ static void R_CullMD5(trRefEntity_t *ent)
 	}
 }
 
-/*
-==============
-R_AddMD5Surfaces
-==============
-*/
+/**
+ * @brief R_AddMD5Surfaces
+ * @param[in] ent
+ */
 void R_AddMD5Surfaces(trRefEntity_t *ent)
 {
 	md5Model_t   *model = tr.currentModel->md5;
@@ -916,13 +949,11 @@ void R_AddMD5Surfaces(trRefEntity_t *ent)
 	// cull the entire model if merged bounding box of both frames
 	// is outside the view frustum
 	R_CullMD5(ent);
+	
 	if (ent->cull == CULL_OUT)
 	{
 		return;
 	}
-
-	// set up world bounds for light intersection tests
-	R_SetupEntityWorldBounds(ent);
 
 	// set up lighting now that we know we aren't culled
 	if (!personalModel || r_shadows->integer > SHADOWING_BLOB)
@@ -952,10 +983,9 @@ void R_AddMD5Surfaces(trRefEntity_t *ent)
 				// match the surface name to something in the skin file
 				shader = tr.defaultShader;
 
-				// FIXME: replace MD3_MAX_SURFACES for skin_t::surfaces
-				if (i >= 0 && i < skin->numSurfaces && skin->surfaces[i])
+				if (i >= 0 && i < skin->numSurfaces && skin->surfaces)
 				{
-					shader = skin->surfaces[i]->shader;
+					shader = skin->surfaces[i].shader;
 				}
 				if (shader == tr.defaultShader)
 				{
@@ -1003,11 +1033,10 @@ void R_AddMD5Surfaces(trRefEntity_t *ent)
 				// match the surface name to something in the skin file
 				shader = tr.defaultShader;
 
-				// FIXME: replace MD3_MAX_SURFACES for skin_t::surfaces
 				//if(i >= 0 && i < skin->numSurfaces && skin->surfaces[i])
-				if (vboSurface->skinIndex >= 0 && vboSurface->skinIndex < skin->numSurfaces && skin->surfaces[vboSurface->skinIndex])
+				if (vboSurface->skinIndex >= 0 && vboSurface->skinIndex < skin->numSurfaces && skin->surfaces)
 				{
-					shader = skin->surfaces[vboSurface->skinIndex]->shader;
+					shader = skin->surfaces[vboSurface->skinIndex].shader;
 				}
 
 				if (shader == tr.defaultShader)
@@ -1033,11 +1062,11 @@ void R_AddMD5Surfaces(trRefEntity_t *ent)
 	}
 }
 
-/*
-=================
-R_AddMD5Interactions
-=================
-*/
+/**
+ * @brief R_AddMD5Interactions
+ * @param[in] ent
+ * @param[in] light
+ */
 void R_AddMD5Interactions(trRefEntity_t *ent, trRefLight_t *light)
 {
 	int               i;
@@ -1123,10 +1152,9 @@ void R_AddMD5Interactions(trRefEntity_t *ent, trRefLight_t *light)
 				// match the surface name to something in the skin file
 				shader = tr.defaultShader;
 
-				// FIXME: replace MD3_MAX_SURFACES for skin_t::surfaces
-				if (i >= 0 && i < skin->numSurfaces && skin->surfaces[i])
+				if (i >= 0 && i < skin->numSurfaces && skin->surfaces)
 				{
-					shader = skin->surfaces[i]->shader;
+					shader = skin->surfaces[i].shader;
 				}
 				if (shader == tr.defaultShader)
 				{
@@ -1181,10 +1209,9 @@ void R_AddMD5Interactions(trRefEntity_t *ent, trRefLight_t *light)
 				// match the surface name to something in the skin file
 				shader = tr.defaultShader;
 
-				// FIXME: replace MD3_MAX_SURFACES for skin_t::surfaces
-				if (i >= 0 && i < skin->numSurfaces && skin->surfaces[i])
+				if (i >= 0 && i < skin->numSurfaces && skin->surfaces)
 				{
-					shader = skin->surfaces[i]->shader;
+					shader = skin->surfaces[i].shader;
 				}
 				if (shader == tr.defaultShader)
 				{
@@ -1216,14 +1243,14 @@ void R_AddMD5Interactions(trRefEntity_t *ent, trRefLight_t *light)
 	}
 }
 
-/*
-==============
-RE_CheckSkeleton
-
-check if the skeleton bones are the same in the model and animation
-and copy the parentIndex entries into the refSkeleton_t
-==============
-*/
+/**
+ * @brief Check if the skeleton bones are the same in the model and animation
+ * and copy the parentIndex entries into the refSkeleton_t
+ * @param[out] skel
+ * @param[in] hModel
+ * @param[in] hAnim
+ * @return
+ */
 int RE_CheckSkeleton(refSkeleton_t *skel, qhandle_t hModel, qhandle_t hAnim)
 {
 	int             i;
@@ -1308,11 +1335,16 @@ int RE_CheckSkeleton(refSkeleton_t *skel, qhandle_t hModel, qhandle_t hAnim)
 	return qfalse;
 }
 
-/*
-==============
-RE_BuildSkeleton
-==============
-*/
+/**
+ * @brief RE_BuildSkeleton
+ * @param[out] skel
+ * @param[in] hAnim
+ * @param[in] startFrame
+ * @param[in] endFrame
+ * @param[in] frac
+ * @param[in] clearOrigin
+ * @return
+ */
 int RE_BuildSkeleton(refSkeleton_t *skel, qhandle_t hAnim, int startFrame, int endFrame, float frac, qboolean clearOrigin)
 {
 	skelAnimation_t *skelAnim;
@@ -1544,11 +1576,13 @@ int RE_BuildSkeleton(refSkeleton_t *skel, qhandle_t hAnim, int startFrame, int e
 	return qfalse;
 }
 
-/*
-==============
-RE_BlendSkeleton
-==============
-*/
+/**
+ * @brief RE_BlendSkeleton
+ * @param[in] skel
+ * @param[in] blend
+ * @param[in] frac
+ * @return
+ */
 int RE_BlendSkeleton(refSkeleton_t *skel, const refSkeleton_t *blend, float frac)
 {
 	int    i;
@@ -1584,11 +1618,13 @@ int RE_BlendSkeleton(refSkeleton_t *skel, const refSkeleton_t *blend, float frac
 	return qtrue;
 }
 
-/*
-==============
-RE_AnimNumFrames
-==============
-*/
+/**
+ * @brief RE_AnimNumFrames
+ * @param[in] hAnim
+ * @return
+ *
+ * @todo Unused ?
+ */
 int RE_AnimNumFrames(qhandle_t hAnim)
 {
 	skelAnimation_t *anim;
@@ -1608,11 +1644,13 @@ int RE_AnimNumFrames(qhandle_t hAnim)
 	return 0;
 }
 
-/*
-==============
-RE_AnimFrameRate
-==============
-*/
+/**
+ * @brief RE_AnimFrameRate
+ * @param[in] hAnim
+ * @return
+ *
+ * @todo Unused ?
+ */
 int RE_AnimFrameRate(qhandle_t hAnim)
 {
 	skelAnimation_t *anim;

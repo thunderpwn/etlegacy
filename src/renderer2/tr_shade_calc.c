@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -35,8 +35,13 @@
 
 #include "tr_local.h"
 
-#define WAVEVALUE(table, base, amplitude, phase, freq)  ((base) + table[Q_ftol((((phase) + backEnd.refdef.floatTime * (freq)) *FUNCTABLE_SIZE)) & FUNCTABLE_MASK] * (amplitude))
+#define WAVEVALUE(table, base, amplitude, phase, freq)  ((base) + table[(int64_t)((((phase) + backEnd.refdef.floatTime * (freq)) *FUNCTABLE_SIZE)) & FUNCTABLE_MASK] * (amplitude))
 
+/**
+ * @brief TableForFunc
+ * @param[in] func
+ * @return
+ */
 static float *TableForFunc(genFunc_t func)
 {
 	switch (func)
@@ -51,6 +56,8 @@ static float *TableForFunc(genFunc_t func)
 		return tr.sawToothTable;
 	case GF_INVERSE_SAWTOOTH:
 		return tr.inverseSawToothTable;
+	case GF_NOISE:
+		return tr.noiseTable;
 	case GF_NONE:
 	default:
 		break;
@@ -61,15 +68,16 @@ static float *TableForFunc(genFunc_t func)
 	return NULL;
 #else
 	// FIXME
-	//Ren_Warning("TableForFunc called with invalid function '%d' in shader '%s'\n", func, tess.surfaceShader->name);
+	Ren_Warning("TableForFunc called with invalid function '%d' in shader '%s'\n", func, tess.surfaceShader->name);
 	return tr.sinTable;
 #endif
 }
 
-/*
- EvalWaveForm
- Evaluates a given waveForm_t, referencing backEnd.refdef.time directly
-*/
+/**
+ * @brief Evaluates a given waveForm_t, referencing backEnd.refdef.time directly
+ * @param[in] wf
+ * @return
+ */
 float RB_EvalWaveForm(const waveForm_t *wf)
 {
 	float *table;
@@ -79,6 +87,11 @@ float RB_EvalWaveForm(const waveForm_t *wf)
 	return WAVEVALUE(table, wf->base, wf->amplitude, wf->phase, wf->frequency);
 }
 
+/**
+ * @brief RB_EvalWaveFormClamped
+ * @param[in] wf
+ * @return
+ */
 float RB_EvalWaveFormClamped(const waveForm_t *wf)
 {
 	float glow = RB_EvalWaveForm(wf);
@@ -96,6 +109,11 @@ float RB_EvalWaveFormClamped(const waveForm_t *wf)
 	return glow;
 }
 
+/**
+ * @brief GetOpValue
+ * @param[in] op
+ * @return
+ */
 static float GetOpValue(const expOperation_t *op)
 {
 	float value;
@@ -217,6 +235,12 @@ static float GetOpValue(const expOperation_t *op)
 	return value;
 }
 
+/**
+ * @brief RB_EvalExpression
+ * @param[in] exp
+ * @param[in] defaultValue
+ * @return
+ */
 float RB_EvalExpression(const expression_t *exp, float defaultValue)
 {
 #if 1
@@ -444,22 +468,23 @@ DEFORMATIONS
 ====================================================================
 */
 
-/*
-========================
-RB_CalcDeformVertexes
-========================
-*/
+/**
+ * @brief RB_CalcDeformVertexes
+ * @param[in,out] ds
+ */
 void RB_CalcDeformVertexes(deformStage_t *ds)
 {
-	int    i;
-	vec3_t offset;
-	float  scale, off, dot;
-	float  *xyz    = (float *)tess.xyz;
-	float  *normal = (float *)tess.normals;
-	float  *table;
+	unsigned int i;
+	vec3_t       offset;
+	float        scale;
+	float        *xyz    = (float *)tess.xyz;
+	float        *normal = (float *)tess.normals;
+	float        *table;
 
 	if (ds->deformationWave.frequency < 0)
 	{
+		float    off;
+		float    dot;
 		qboolean inverse = qfalse;
 		vec3_t   worldUp;
 
@@ -479,7 +504,7 @@ void RB_CalcDeformVertexes(deformStage_t *ds)
 			VectorCopy(backEnd.currentEntity->e.fireRiseDir, worldUp);
 		}
 		// don't go so far if sideways, since they must be moving
-		VectorScale(worldUp, 0.4 + 0.6 * Q_fabs(backEnd.currentEntity->e.fireRiseDir[2]), worldUp);
+		VectorScale(worldUp, 0.4f + 0.6f * Q_fabs(backEnd.currentEntity->e.fireRiseDir[2]), worldUp);
 
 		ds->deformationWave.frequency *= -1;
 		if (ds->deformationWave.frequency > 999)
@@ -516,7 +541,7 @@ void RB_CalcDeformVertexes(deformStage_t *ds)
 		}
 		ds->deformationWave.frequency *= -1;
 	}
-	else if (ds->deformationWave.frequency == 0)
+	else if (ds->deformationWave.frequency == 0.f)
 	{
 		scale = RB_EvalWaveForm(&ds->deformationWave);
 
@@ -531,11 +556,13 @@ void RB_CalcDeformVertexes(deformStage_t *ds)
 	}
 	else
 	{
+		float off;
+
 		table = TableForFunc(ds->deformationWave.func);
 
 		for (i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4)
 		{
-			float off = (xyz[0] + xyz[1] + xyz[2]) * ds->deformationSpread;
+			off = (xyz[0] + xyz[1] + xyz[2]) * ds->deformationSpread;
 
 			scale = WAVEVALUE(table, ds->deformationWave.base,
 			                  ds->deformationWave.amplitude, ds->deformationWave.phase + off, ds->deformationWave.frequency);
@@ -549,33 +576,30 @@ void RB_CalcDeformVertexes(deformStage_t *ds)
 	}
 }
 
-/*
-=========================
-RB_CalcDeformNormals
-
-Wiggle the normals for wavy environment mapping
-=========================
-*/
+/**
+ * @brief Wiggle the normals for wavy environment mapping
+ * @param[in] ds
+ */
 void RB_CalcDeformNormals(deformStage_t *ds)
 {
-	int   i;
-	float scale;
-	float *xyz    = (float *)tess.xyz;
-	float *normal = (float *)tess.normals;
+	unsigned int i;
+	double       scale;
+	float        *xyz    = (float *)tess.xyz;
+	float        *normal = (float *)tess.normals;
 
 	for (i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4)
 	{
-		scale = 0.98f;
+		scale = 0.98;
 		scale = R_NoiseGet4f(xyz[0] * scale, xyz[1] * scale, xyz[2] * scale,
 		                     backEnd.refdef.floatTime * ds->deformationWave.frequency);
 		normal[0] += ds->deformationWave.amplitude * scale;
 
-		scale = 0.98f;
+		scale = 0.98;
 		scale = R_NoiseGet4f(100 + xyz[0] * scale, xyz[1] * scale, xyz[2] * scale,
 		                     backEnd.refdef.floatTime * ds->deformationWave.frequency);
 		normal[1] += ds->deformationWave.amplitude * scale;
 
-		scale = 0.98f;
+		scale = 0.98;
 		scale = R_NoiseGet4f(200 + xyz[0] * scale, xyz[1] * scale, xyz[2] * scale,
 		                     backEnd.refdef.floatTime * ds->deformationWave.frequency);
 		normal[2] += ds->deformationWave.amplitude * scale;
@@ -584,23 +608,23 @@ void RB_CalcDeformNormals(deformStage_t *ds)
 	}
 }
 
-/*
-========================
-RB_CalcBulgeVertexes
-========================
-*/
+/**
+ * @brief RB_CalcBulgeVertexes
+ * @param[in] ds
+ */
 void RB_CalcBulgeVertexes(deformStage_t *ds)
 {
-	int         i, off;
-	const float *st     = (const float *)tess.texCoords[0];
-	float       *xyz    = (float *)tess.xyz;
-	float       *normal = (float *)tess.normals;
-	float       now     = backEnd.refdef.time * ds->bulgeSpeed * 0.001f;
-	float       scale;
+	unsigned int i;
+	const float  *st     = (const float *)tess.texCoords[0];
+	float        *xyz    = (float *)tess.xyz;
+	float        *normal = (float *)tess.normals;
+	double       now     = backEnd.refdef.time * 0.001 * ds->bulgeSpeed;
+	int64_t      off;
+	float        scale;
 
 	for (i = 0; i < tess.numVertexes; i++, xyz += 4, st += 4, normal += 4)
 	{
-		off = (float)(FUNCTABLE_SIZE / (M_PI * 2)) * (st[0] * ds->bulgeWidth + now);
+		off = (FUNCTABLE_SIZE / (M_PI * 2)) * (st[0] * ds->bulgeWidth + now);
 
 		scale = tr.sinTable[off & FUNCTABLE_MASK] * ds->bulgeHeight;
 
@@ -610,20 +634,17 @@ void RB_CalcBulgeVertexes(deformStage_t *ds)
 	}
 }
 
-/*
-======================
-RB_CalcMoveVertexes
-
-A deformation that can move an entire surface along a wave path
-======================
-*/
+/**
+ * @brief A deformation that can move an entire surface along a wave path
+ * @param[in] ds
+ */
 void RB_CalcMoveVertexes(deformStage_t *ds)
 {
-	int    i;
-	float  *xyz;
-	float  *table;
-	float  scale;
-	vec3_t offset;
+	unsigned int i;
+	float        *xyz;
+	float        *table;
+	float        scale;
+	vec3_t       offset;
 
 	table = TableForFunc(ds->deformationWave.func);
 
@@ -639,13 +660,10 @@ void RB_CalcMoveVertexes(deformStage_t *ds)
 	}
 }
 
-/*
-=============
-DeformText
-
-Change a polygon into a bunch of text polygons
-=============
-*/
+/**
+ * @brief Change a polygon into a bunch of text polygons
+ * @param[in] text
+ */
 void DeformText(const char *text)
 {
 	int    i;
@@ -715,11 +733,11 @@ void DeformText(const char *text)
 	}
 }
 
-/*
-==================
-GlobalVectorToLocal
-==================
-*/
+/**
+ * @brief GlobalVectorToLocal
+ * @param[in] in
+ * @param[out] out
+ */
 static void GlobalVectorToLocal(const vec3_t in, vec3_t out)
 {
 	out[0] = DotProduct(in, backEnd.orientation.axis[0]);
@@ -727,14 +745,10 @@ static void GlobalVectorToLocal(const vec3_t in, vec3_t out)
 	out[2] = DotProduct(in, backEnd.orientation.axis[2]);
 }
 
-/*
-=====================
-AutospriteDeform
-
-Assuming all the triangles for this shader are independant
-quads, rebuild them as forward facing sprites
-=====================
-*/
+/**
+ * @brief Assuming all the triangles for this shader are independant
+ * quads, rebuild them as forward facing sprites
+ */
 static void AutospriteDeform(void)
 {
 	int    i;
@@ -796,7 +810,7 @@ static void AutospriteDeform(void)
 			float axisLength;
 
 			axisLength = VectorLength(backEnd.currentEntity->e.axis[0]);
-			if (!axisLength)
+			if (axisLength == 0.f)
 			{
 				axisLength = 0;
 			}
@@ -812,13 +826,6 @@ static void AutospriteDeform(void)
 	}
 }
 
-/*
-=====================
-Autosprite2Deform
-
-Autosprite2 will pivot a rectangular quad along the center of its long axis
-=====================
-*/
 int edgeVerts[6][2] =
 {
 	{ 0, 1 },
@@ -829,6 +836,9 @@ int edgeVerts[6][2] =
 	{ 2, 3 }
 };
 
+/**
+ * @brief Autosprite2 will pivot a rectangular quad along the center of its long axis
+ */
 static void Autosprite2Deform(void)
 {
 	int    i, j, k;
@@ -949,12 +959,16 @@ static void Autosprite2Deform(void)
 	}
 }
 
+/**
+ * @brief ShaderRequiresCPUDeforms
+ * @param[in] shader
+ * @return
+ */
 qboolean ShaderRequiresCPUDeforms(const shader_t *shader)
 {
 	if (shader->numDeforms)
 	{
-		int      i;
-		qboolean cpuDeforms = qfalse;
+		int i;
 
 		for (i = 0; i < shader->numDeforms; i++)
 		{
@@ -964,25 +978,22 @@ qboolean ShaderRequiresCPUDeforms(const shader_t *shader)
 			{
 			case DEFORM_WAVE:
 			case DEFORM_BULGE:
+				// need CPU deforms at high level-times to avoid floating point percision loss
+				return (backEnd.refdef.floatTime != (float)backEnd.refdef.floatTime);
 			case DEFORM_MOVE:
 				break;
 			default:
-				cpuDeforms = qtrue;
-				break;
+				return qtrue;
 			}
 		}
-
-		return cpuDeforms;
 	}
 
 	return qfalse;
 }
 
-/*
-=====================
-Tess_DeformGeometry
-=====================
-*/
+/**
+ * @brief Tess_DeformGeometry
+ */
 void Tess_DeformGeometry(void)
 {
 	int           i;
@@ -1057,11 +1068,11 @@ TEX COORDS
 ====================================================================
 */
 
-/*
-===============
-RB_CalcTexMatrix
-===============
-*/
+/**
+ * @brief RB_CalcTexMatrix
+ * @param[in] bundle
+ * @param[in] matrix
+ */
 void RB_CalcTexMatrix(const textureBundle_t *bundle, mat4_t matrix)
 {
 	int   j;
@@ -1086,7 +1097,7 @@ void RB_CalcTexMatrix(const textureBundle_t *bundle, mat4_t matrix)
 			y = (wf->phase + backEnd.refdef.floatTime * wf->frequency);
 
 			MatrixMultiplyScale(matrix, 1 + (wf->amplitude * sin(y) + wf->base) * x,
-			                    1 + (wf->amplitude * sin(y + 0.25) + wf->base) * x, 0.0);
+			                    1 + (wf->amplitude * sin(y + 0.25f) + wf->base) * x, 0.0);
 			break;
 		}
 		case TMOD_ENTITY_TRANSLATE:

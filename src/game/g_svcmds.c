@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -97,6 +97,12 @@ static ipFilterList_t ipMaxLivesFilters;
 static ipGUID_t guidMaxLivesFilters[MAX_IPFILTERS];
 static int      numMaxLivesFilters = 0;
 
+/**
+ * @brief StringToFilter
+ * @param[in,out] s
+ * @param[out] f
+ * @return
+ */
 qboolean StringToFilter(const char *s, ipFilter_t *f)
 {
 	char num[128];
@@ -150,6 +156,10 @@ qboolean StringToFilter(const char *s, ipFilter_t *f)
 	return qtrue;
 }
 
+/**
+ * @brief UpdateIPBans
+ * @param[in] ipFilterList
+ */
 static void UpdateIPBans(ipFilterList_t *ipFilterList)
 {
 	byte b[4];
@@ -195,6 +205,9 @@ static void UpdateIPBans(ipFilterList_t *ipFilterList)
 	trap_Cvar_Set(ipFilterList->cvarIPList, iplist_final);
 }
 
+/**
+ * @brief PrintMaxLivesGUID
+ */
 void PrintMaxLivesGUID(void)
 {
 	int i;
@@ -206,12 +219,18 @@ void PrintMaxLivesGUID(void)
 	G_LogPrintf("--- End of list\n");
 }
 
+/**
+ * @brief G_FilterPacket
+ * @param[in] ipFilterList
+ * @param[in] from
+ * @return
+ */
 qboolean G_FilterPacket(ipFilterList_t *ipFilterList, char *from)
 {
 	int      i = 0;
 	unsigned in;
-	byte     m[4];
-	char     *p = from;
+	byte     m[4] = { 0 };
+	char     *p   = from;
 
 	while (*p && i < 4)
 	{
@@ -225,7 +244,8 @@ qboolean G_FilterPacket(ipFilterList_t *ipFilterList, char *from)
 		{
 			break;
 		}
-		i++, p++;
+		i++;
+		p++;
 	}
 
 	in = *(unsigned *)m;
@@ -241,11 +261,21 @@ qboolean G_FilterPacket(ipFilterList_t *ipFilterList, char *from)
 	return g_filterBan.integer == 0;
 }
 
+/**
+ * @brief G_FilterIPBanPacket
+ * @param[in] from
+ * @return
+ */
 qboolean G_FilterIPBanPacket(char *from)
 {
 	return(G_FilterPacket(&ipFilters, from));
 }
 
+/**
+ * @brief G_FilterMaxLivesIPPacket
+ * @param[in] from
+ * @return
+ */
 qboolean G_FilterMaxLivesIPPacket(char *from)
 {
 	return(G_FilterPacket(&ipMaxLivesFilters, from));
@@ -253,6 +283,8 @@ qboolean G_FilterMaxLivesIPPacket(char *from)
 
 /**
  * @brief Check to see if the user is trying to sneak back in with g_enforcemaxlives enabled
+ *
+ * @param[in] from
  */
 qboolean G_FilterMaxLivesPacket(char *from)
 {
@@ -268,6 +300,11 @@ qboolean G_FilterMaxLivesPacket(char *from)
 	return 0;
 }
 
+/**
+ * @brief AddIP
+ * @param[in] ipFilterList
+ * @param[in] str
+ */
 void AddIP(ipFilterList_t *ipFilterList, const char *str)
 {
 	int i;
@@ -298,21 +335,31 @@ void AddIP(ipFilterList_t *ipFilterList, const char *str)
 	UpdateIPBans(ipFilterList);
 }
 
+/**
+ * @brief AddIPBan
+ * @param[in] str
+ */
 void AddIPBan(const char *str)
 {
 	AddIP(&ipFilters, str);
 }
 
+/**
+ * @brief AddMaxLivesBan
+ * @param[in] str
+ */
 void AddMaxLivesBan(const char *str)
 {
 	AddIP(&ipMaxLivesFilters, str);
 }
 
 /**
- * @brief with g_enforcemaxlives enabled, this adds a client GUID to a list
+ * @brief >ith g_enforcemaxlives enabled, this adds a client GUID to a list
  * that prevents them from quitting and reconnecting
+ *
+ * @param[in] str
  */
-void AddMaxLivesGUID(char *str)
+void AddMaxLivesGUID(const char *str)
 {
 	if (numMaxLivesFilters == MAX_IPFILTERS)
 	{
@@ -323,6 +370,9 @@ void AddMaxLivesGUID(char *str)
 	numMaxLivesFilters++;
 }
 
+/**
+ * @brief G_ProcessIPBans
+ */
 void G_ProcessIPBans(void)
 {
 	char *s, *t;
@@ -350,6 +400,9 @@ void G_ProcessIPBans(void)
 	}
 }
 
+/**
+ * @brief Svcmd_AddIP_f
+ */
 void Svcmd_AddIP_f(void)
 {
 	char str[MAX_TOKEN_CHARS];
@@ -365,6 +418,9 @@ void Svcmd_AddIP_f(void)
 	AddIP(&ipFilters, str);
 }
 
+/**
+ * @brief Svcmd_RemoveIP_f
+ */
 void Svcmd_RemoveIP_f(void)
 {
 	ipFilter_t f;
@@ -417,8 +473,10 @@ void ClearMaxLivesBans()
 	Q_strncpyz(ipMaxLivesFilters.cvarIPList, "g_maxlivesbanIPs", sizeof(ipMaxLivesFilters.cvarIPList));
 }
 
-// names of enume entityType_t for Svcmd_EntityList_f
-char *enttypenames[] =
+/**
+ * @var names of enum entityType_t for Svcmd_EntityList_f
+ */
+const char *enttypenames[] =
 {
 	"ET_GENERAL",
 	"ET_PLAYER",
@@ -428,50 +486,50 @@ char *enttypenames[] =
 	"ET_BEAM",
 	"ET_PORTAL",
 	"ET_SPEAKER",
-	"ET_PUSH_TRIGGER",
+	"unused ent type",              // ET_PUSH_TRIGGER
 	"ET_TELEPORT_TRIGGER",
 	"ET_INVISIBLE",
-	"ET_CONCUSSIVE_TRIGGER",
+	"unused ent type",              // ET_CONCUSSIVE_TRIGGER
 	"ET_OID_TRIGGER",
 	"ET_EXPLOSIVE_INDICATOR",
 
 	"ET_EXPLOSIVE",
-	"ET_EF_SPOTLIGHT",             // unused
+	"unused ent type",              // ET_EF_SPOTLIGHT
 	"ET_ALARMBOX",
 	"ET_CORONA",
 	"ET_TRAP",
 
 	"ET_GAMEMODEL",
-	"ET_FOOTLOCKER",
+	"unused ent type",              // ET_FOOTLOCKER
 
 	"ET_FLAMEBARREL",
-	"ET_FP_PARTS",
+	"unused ent type",              // ET_FP_PARTS
 
-	"ET_FIRE_COLUMN",
-	"ET_FIRE_COLUMN_SMOKE",
+	"unused ent type",              // ET_FIRE_COLUMN
+	"unused ent type",              // ET_FIRE_COLUMN_SMOKE
 	"ET_RAMJET",
 
 	"ET_FLAMETHROWER_CHUNK",
 
-	"ET_EXPLO_PART",
+	"unused ent type",              // ET_EXPLO_PART
 
 	"ET_PROP",
 
-	"ET_AI_EFFECT",
+	"unused ent type",              // ET_AI_EFFECT
 
 	"ET_CAMERA",
-	"ET_MOVERSCALED",
+	"unused ent type",              // ET_MOVERSCALED
 
 	"ET_CONSTRUCTIBLE_INDICATOR",
 	"ET_CONSTRUCTIBLE",
 	"ET_CONSTRUCTIBLE_MARKER",
-	"ET_BOMB",
-	"ET_WAYPOINT",
+	"unused ent type",              // ET_BOMB
+	"unused ent type",              // ET_WAYPOINT
 	"ET_BEAM_2",
 	"ET_TANK_INDICATOR",
 	"ET_TANK_INDICATOR_DEAD",
 
-	"ET_BOTGOAL_INDICATOR",
+	"unused ent type",              // ET_BOTGOAL_INDICATOR
 	"ET_CORPSE",
 	"ET_SMOKER",
 
@@ -488,10 +546,10 @@ char *enttypenames[] =
 	"ET_HEALER",
 	"ET_SUPPLIER",
 
-	"ET_LANDMINE_HINT",
-	"ET_ATTRACTOR_HINT",
-	"ET_SNIPER_HINT",
-	"ET_LANDMINESPOT_HINT",
+	"unused ent type",             // ET_LANDMINE_HINT
+	"unused ent type",             // ET_ATTRACTOR_HINT
+	"unused ent type",             // ET_SNIPER_HINT
+	"unused ent type",             // ET_LANDMINESPOT_HINT
 
 	"ET_COMMANDMAP_MARKER",
 
@@ -502,8 +560,8 @@ char *enttypenames[] =
 
 /**
  * @brief prints a list of used - or when any param is added for all entities with following info
- *        - entnum
- *        - entity type OR event
+ *        - entnum (color red -> neverFree)
+ *        - entity type OR event OR freed
  *        - classname
  *        - neverFree
  */
@@ -513,24 +571,33 @@ void Svcmd_EntityList_f(void)
 	gentity_t *check = g_entities;
 	char      line[128];
 
+	G_Printf("^7 No.: ^3Type^7/^2Event^7/(freed)          ^7Classname                 ^1Target                        ^2Targetname                    ^2TNH\n");
+
 	for (e = 0; e < MAX_GENTITIES ; e++, check++)
 	{
 		if (!check->inuse)
 		{
 			if (trap_Argc() > 1)
 			{
-				G_Printf("^2%4i: %s %s\n", e, check->classname, check->targetname);
+				G_Printf("^2%4i:^7 %s %s\n", e, check->classname, check->targetname);
 			}
 			entsFree++;
 			continue;
 		}
 
-		memset(line, 0, sizeof(line));
+		Com_Memset(line, 0, sizeof(line));
 
 		// print the ents which are in use
 		//Q_strcat(line, sizeof(line), va("^7%4i: ", e));
 
-		Com_sprintf(line, 128, "^7%4i: ", e);
+		if (check->neverFree)
+		{
+			Com_sprintf(line, 128, "^1%4i: ", e);
+		}
+		else
+		{
+			Com_sprintf(line, 128, "^7%4i: ", e);
+		}
 
 		if (check->s.eType <= ET_EVENTS) // print events
 		{
@@ -543,7 +610,7 @@ void Svcmd_EntityList_f(void)
 
 		if (check->classname)
 		{
-			G_Printf("%s %-25s ^1%s^7\n", line, check->classname, check->targetname);
+			G_Printf("%s %-25s ^1%-29s ^2%-29s^7 %i\n", line, check->classname, check->target, check->targetname, check->targetnamehash);
 		}
 		else
 		{
@@ -553,10 +620,16 @@ void Svcmd_EntityList_f(void)
 	G_Printf("^2%4i: num_entities - %4i: entities not in use\n", level.num_entities, entsFree);
 }
 
-// note: if a player is called '3' and there are only 2 players
-// on the server (clientnum 0 and 1)
-// this function will say 'client 3 is not connected'
-// solution: first check for usernames, if none is found, check for slotnumbers
+/**
+ * @brief ClientForString
+ * @param[in] s
+ * @return
+ *
+ * @note If a player is called '3' and there are only 2 players
+ * on the server (clientnum 0 and 1)
+ * this function will say 'client 3 is not connected'
+ * solution: first check for usernames, if none is found, check for slotnumbers
+ */
 gclient_t *ClientForString(const char *s)
 {
 	gclient_t *cl;
@@ -601,14 +674,23 @@ gclient_t *ClientForString(const char *s)
 	return NULL;
 }
 
+/**
+ * @brief G_Is_SV_Running
+ * @return
+ */
 static qboolean G_Is_SV_Running(void)
 {
 	char cvar[MAX_TOKEN_CHARS];
 
 	trap_Cvar_VariableStringBuffer("sv_running", cvar, sizeof(cvar));
-	return (qboolean)atoi(cvar);
+	return (qboolean)(atoi(cvar));
 }
 
+/**
+ * @brief G_GetPlayerByNum
+ * @param[in] clientNum
+ * @return
+ */
 gclient_t *G_GetPlayerByNum(int clientNum)
 {
 	gclient_t *cl;
@@ -642,7 +724,12 @@ gclient_t *G_GetPlayerByNum(int clientNum)
 	return cl;
 }
 
-gclient_t *G_GetPlayerByName(char *name)
+/**
+ * @brief G_GetPlayerByName
+ * @param[in] name
+ * @return
+ */
+gclient_t *G_GetPlayerByName(const char *name)
 {
 	int       i;
 	gclient_t *cl;
@@ -683,7 +770,8 @@ gclient_t *G_GetPlayerByName(char *name)
 }
 
 /**
- * <code>forceteam \<player\> \<team\></code>
+ * @brief Svcmd_ForceTeam_f
+ * @details <code>forceteam \<player\> \<team\></code>
  */
 void Svcmd_ForceTeam_f(void)
 {
@@ -700,7 +788,7 @@ void Svcmd_ForceTeam_f(void)
 
 	// set the team
 	trap_Argv(2, str, sizeof(str));
-	SetTeam(&g_entities[cl - level.clients], str, qfalse, cl->sess.playerWeapon, cl->sess.playerWeapon2, qtrue);
+	SetTeam(&g_entities[cl - level.clients], str, qtrue, cl->sess.playerWeapon, cl->sess.playerWeapon2, qtrue);
 }
 
 /**
@@ -734,7 +822,9 @@ void Svcmd_StartMatch_f(void)
 }
 
 /**
- * @brief multiuse now for both map restarts and total match resets
+ * @brief Multi-use now for both map restarts and total match resets
+ * @param[in] fDoReset
+ * @param[in] fDoRestart
  */
 void Svcmd_ResetMatch_f(qboolean fDoReset, qboolean fDoRestart)
 {
@@ -780,16 +870,16 @@ void Svcmd_SwapTeams_f(void)
 
 /**
  * @brief randomly places players on teams
- * @param restart
+ * @param[in] restart
  */
-void Svcmd_ShuffleTeams_f(qboolean restart)
+void Svcmd_ShuffleTeamsXP_f(qboolean restart)
 {
 	if (restart)
 	{
 		G_resetRoundState();
 	}
 
-	G_shuffleTeams();
+	G_shuffleTeamsXP();
 
 	if ((g_gamestate.integer == GS_INITIALIZE) ||
 	    (g_gamestate.integer == GS_WARMUP) ||
@@ -804,6 +894,37 @@ void Svcmd_ShuffleTeams_f(qboolean restart)
 	}
 }
 
+#ifdef FEATURE_RATING
+/**
+ * @brief randomly places players on teams
+ * @param[in] restart
+ */
+void Svcmd_ShuffleTeamsSR_f(qboolean restart)
+{
+	if (restart)
+	{
+		G_resetRoundState();
+	}
+
+	G_shuffleTeamsSR();
+
+	if ((g_gamestate.integer == GS_INITIALIZE) ||
+	    (g_gamestate.integer == GS_WARMUP) ||
+	    (g_gamestate.integer == GS_RESET))
+	{
+		return;
+	}
+	if (restart)
+	{
+		G_resetModeState();
+		Svcmd_ResetMatch_f(qfalse, qtrue);
+	}
+}
+#endif
+
+/**
+ * @brief Svcmd_Campaign_f
+ */
 void Svcmd_Campaign_f(void)
 {
 	char             str[MAX_TOKEN_CHARS];
@@ -817,13 +938,13 @@ void Svcmd_Campaign_f(void)
 	{
 		campaign = &g_campaigns[i];
 
-		if (!Q_stricmp(campaign->shortname, str))
+		if (campaign && !Q_stricmp(campaign->shortname, str))
 		{
 			break;
 		}
 	}
 
-	if (i == level.campaignCount || !(campaign->typeBits & (1 << GT_WOLF)))
+	if (i == level.campaignCount || !campaign || !(campaign->typeBits & (1 << GT_WOLF)))
 	{
 		G_Printf("Can't find campaign '%s'\n", str);
 		return;
@@ -840,6 +961,9 @@ void Svcmd_Campaign_f(void)
 	trap_SendConsoleCommand(EXEC_APPEND, va("map %s\n", campaign->mapnames[0]));
 }
 
+/**
+ * @brief Svcmd_ListCampaigns_f
+ */
 void Svcmd_ListCampaigns_f(void)
 {
 	int i, mpCampaigns = 0;
@@ -873,9 +997,13 @@ void Svcmd_ListCampaigns_f(void)
 
 // modified from maddoc sp func
 extern void ReviveEntity(gentity_t *ent, gentity_t *traceEnt);
-extern int FindClientByName(char *name);
+extern int FindClientByName(const char *name);
 
-void Svcmd_RevivePlayer(char *name)
+/**
+ * @brief Svcmd_RevivePlayer
+ * @param[in] name
+ */
+void Svcmd_RevivePlayer(const char *name)
 {
 	int       clientNum;
 	gentity_t *player;
@@ -932,13 +1060,13 @@ static void Svcmd_Gib(void)
 			{
 				continue;
 			}
-			G_Damage(vic, NULL, NULL, NULL, NULL, 500, 0, MOD_UNKNOWN);
+			G_Damage(vic, NULL, NULL, NULL, NULL, GIB_DAMAGE(vic->health), 0, MOD_UNKNOWN);
 			count++;
 		}
 
 		if (count > 0)
 		{
-			CPx(-1, va("cp \"^9%d players gibbed.\"", count));
+			CPx(-1, va("cp \"^3%d^7 players gibbed.\"", count));
 		}
 		else
 		{
@@ -962,7 +1090,7 @@ static void Svcmd_Gib(void)
 		return;
 	}
 
-	G_Damage(vic, NULL, NULL, NULL, NULL, 500, 0, MOD_UNKNOWN);
+	G_Damage(vic, NULL, NULL, NULL, NULL, GIB_DAMAGE(vic->health), 0, MOD_UNKNOWN);
 
 	CPx(-1, va("cp \"^7%s^7 was gibbed.\"", vic->client->pers.netname));
 
@@ -1008,13 +1136,13 @@ static void Svcmd_Die(void)
 			{
 				continue;
 			}
-			G_Damage(vic, NULL, NULL, NULL, NULL, 140, 0, MOD_UNKNOWN);
+			G_Damage(vic, NULL, NULL, NULL, NULL, vic->health, 0, MOD_UNKNOWN);
 			count++;
 		}
 
 		if (count > 0)
 		{
-			CPx(-1, va("cp \"^9%d players died.\"", count));
+			CPx(-1, va("cp \"^3%d^7 players died.\"", count));
 		}
 		else
 		{
@@ -1039,12 +1167,93 @@ static void Svcmd_Die(void)
 		return;
 	}
 
-	G_Damage(vic, NULL, NULL, NULL, NULL, 140, 0, MOD_UNKNOWN);
+	G_Damage(vic, NULL, NULL, NULL, NULL, vic->health, 0, MOD_UNKNOWN);
 
 	CPx(-1, va("cp \"^7%s^7 died.\"", vic->client->pers.netname));
 
 	return;
 }
+
+#ifdef LEGACY_DEBUG
+extern animStringItem_t animEventTypesStr[];
+
+/**
+ * @brief Test anim events
+ *
+ * @note Script anim events are not first person view set cg_thirdperson 1
+ */
+static void Svcmd_PlayerAnimEvent(void)
+{
+	int       pids[MAX_CLIENTS];
+	char      name[MAX_NAME_LENGTH], err[MAX_STRING_CHARS], anim[3];
+	gentity_t *vic;
+	qboolean  doAll = qfalse;
+
+	// ignore in intermission
+	if (level.intermissiontime)
+	{
+		G_Printf("ae command not allowed during intermission.\n");
+		return;
+	}
+
+	if (trap_Argc() < 2)
+	{
+		doAll = qtrue;
+	}
+
+	trap_Argv(1, name, sizeof(name));
+	trap_Argv(2, anim, sizeof(anim));
+
+	if (!Q_stricmp(name, "-1") || doAll)
+	{
+		int it, count = 0;
+
+		for (it = 0; it < level.numConnectedClients; it++)
+		{
+			vic = g_entities + level.sortedClients[it];
+			if (!(vic->client->sess.sessionTeam == TEAM_AXIS ||
+			      vic->client->sess.sessionTeam == TEAM_ALLIES))
+			{
+				continue;
+			}
+			BG_AnimScriptEvent(&vic->client->ps, vic->client->pers.character->animModelInfo, (scriptAnimEventTypes_t)(atoi(anim)), qfalse, qtrue);
+			count++;
+		}
+
+		if (count > 0)
+		{
+			CPx(-1, (va("cp \"^3%d^7 anim event %s.\"", count, animEventTypesStr[atoi(anim)].string)));
+		}
+		else
+		{
+			G_Printf("There is no player for ae command.\n");
+		}
+
+		return;
+	}
+
+	if (ClientNumbersFromString(name, pids) != 1)
+	{
+		G_MatchOnePlayer(pids, err, sizeof(err));
+		G_Printf("Error - can't execute ae command - %s.\n", err);
+		return;
+	}
+	vic = &g_entities[pids[0]];
+
+	if (!(vic->client->sess.sessionTeam == TEAM_AXIS ||
+	      vic->client->sess.sessionTeam == TEAM_ALLIES))
+	{
+		G_Printf("Player must be on a team for ae command.\n");
+		return;
+	}
+
+	BG_AnimScriptEvent(&vic->client->ps, vic->client->pers.character->animModelInfo, (scriptAnimEventTypes_t)(atoi(anim)), qfalse, qtrue);
+
+	CPx(-1, (va("cp \"^7%s^7 anim event %s.\"", vic->client->pers.netname, animEventTypesStr[atoi(anim)].string)));
+
+	return;
+}
+#endif
 
 /**
  * @brief freeze command - freezes players
@@ -1100,7 +1309,7 @@ static void Svcmd_Freeze(void)
 
 		if (count > 0)
 		{
-			CPx(-1, va("cp \"^9%d players are frozen.\"", count));
+			CPx(-1, va("cp \"^3%d^7 players are frozen.\"", count));
 		}
 		else
 		{
@@ -1179,7 +1388,7 @@ static void Svcmd_Unfreeze(void)
 
 		if (count > 0)
 		{
-			CPx(-1, va("cp \"^9%d players are unfrozen.\"", count));
+			CPx(-1, va("cp \"^3%d^7 players are unfrozen.\"", count));
 		}
 		else
 		{
@@ -1261,7 +1470,7 @@ static void Svcmd_Burn(void)
 
 		if (count > 0)
 		{
-			CPx(-1, va("cp \"^9%d players burned.\"", count));
+			CPx(-1, va("cp \"^3%d^7 players burned.\"", count));
 		}
 		else
 		{
@@ -1292,13 +1501,19 @@ static void Svcmd_Burn(void)
 	return;
 }
 
-// FIXME/note:
-// beside the pip command EV_SPARKS and EV_SPARKS_ELECTRIC
-// aren't used for real ... we may delete these events
-// EV_SPARKS_ELECTRIC doesn't seem to work anyway
+/**
+ * @brief G_Pip
+ * @param[in] vic
+ *
+ * @todo FIXME: beside the pip command EV_SPARKS and EV_SPARKS_ELECTRIC
+ * aren't used for real ... we may delete these events
+ * EV_SPARKS_ELECTRIC doesn't seem to work anyway
+ */
 static void G_Pip(gentity_t *vic)
 {
-	gentity_t *pip = G_TempEntity(vic->r.currentOrigin, EV_SPARKS);
+	gentity_t *pip;
+
+	pip = G_TempEntity(vic->r.currentOrigin, EV_SPARKS);
 
 	VectorCopy(vic->r.currentOrigin, pip->s.origin);
 	VectorCopy(vic->r.currentAngles, pip->s.angles);
@@ -1357,7 +1572,7 @@ static void Svcmd_Pip(void)
 
 		if (count > 0)
 		{
-			CPx(-1, va("cp \"^9%d players pipped.\"", count));
+			CPx(-1, va("cp \"^3%d^7 players pipped.\"", count));
 		}
 		else
 		{
@@ -1387,6 +1602,10 @@ static void Svcmd_Pip(void)
 	return;
 }
 
+/**
+ * @brief Svcmd_Fling
+ * @param[in] flingType
+ */
 static void Svcmd_Fling(int flingType) // 0 = fling, 1 = throw, 2 = launch
 {
 	int       pids[MAX_CLIENTS];
@@ -1446,7 +1665,7 @@ static void Svcmd_Fling(int flingType) // 0 = fling, 1 = throw, 2 = launch
 
 		if (count > 0)
 		{
-			CPx(-1, va("cp \"^9%d players %s.\"", count, pastTense));
+			CPx(-1, va("cp \"^3%d^7 players %s.\"", count, pastTense));
 		}
 		else
 		{
@@ -1477,8 +1696,8 @@ static void Svcmd_Fling(int flingType) // 0 = fling, 1 = throw, 2 = launch
 	return;
 }
 
-// change into qfalse if you want to use the qagame banning system
-// which makes it possible to unban IP addresses
+///> change into qfalse if you want to use the qagame banning system
+///> which makes it possible to unban IP addresses
 #define USE_ENGINE_BANLIST qtrue
 
 /**
@@ -1533,12 +1752,6 @@ static void Svcmd_Kick_f(void)
 
 				if (timeout != -1)
 				{
-					char *ip;
-					char userinfo[MAX_INFO_STRING];
-
-					trap_GetUserinfo(cl->ps.clientNum, userinfo, sizeof(userinfo));
-					ip = Info_ValueForKey(userinfo, "ip");
-
 					// use engine banning system, mods may choose to use their own banlist
 					if (USE_ENGINE_BANLIST)
 					{
@@ -1558,6 +1771,11 @@ static void Svcmd_Kick_f(void)
 						// kick but dont ban bots, they arent that lame
 						if (!(g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT))
 						{
+							char *ip;
+							char userinfo[MAX_INFO_STRING];
+
+							trap_GetUserinfo(cl->ps.clientNum, userinfo, sizeof(userinfo));
+							ip = Info_ValueForKey(userinfo, "ip");
 							AddIPBan(ip);
 						}
 					}
@@ -1582,12 +1800,6 @@ static void Svcmd_Kick_f(void)
 
 		if (timeout != -1)
 		{
-			char *ip;
-			char userinfo[MAX_INFO_STRING];
-
-			trap_GetUserinfo(cl->ps.clientNum, userinfo, sizeof(userinfo));
-			ip = Info_ValueForKey(userinfo, "ip");
-
 			// use engine banning system, mods may choose to use their own banlist
 			if (USE_ENGINE_BANLIST)
 			{
@@ -1605,6 +1817,11 @@ static void Svcmd_Kick_f(void)
 				// kick but dont ban bots, they arent that lame
 				if (!(g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT))
 				{
+					char *ip;
+					char userinfo[MAX_INFO_STRING];
+
+					trap_GetUserinfo(cl->ps.clientNum, userinfo, sizeof(userinfo));
+					ip = Info_ValueForKey(userinfo, "ip");
 					AddIPBan(ip);
 				}
 			}
@@ -1666,12 +1883,9 @@ static void Svcmd_KickNum_f(void)
 		return;
 	}
 
-	trap_GetUserinfo(cl->ps.clientNum, userinfo, sizeof(userinfo));
-	ip = Info_ValueForKey(userinfo, "ip");
 	// use engine banning system, mods may choose to use their own banlist
 	if (USE_ENGINE_BANLIST)
 	{
-
 		// kick but dont ban bots, they arent that lame
 		if ((g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT))
 		{
@@ -1686,11 +1900,16 @@ static void Svcmd_KickNum_f(void)
 		// kick but dont ban bots, they arent that lame
 		if (!(g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT))
 		{
+			trap_GetUserinfo(cl->ps.clientNum, userinfo, sizeof(userinfo));
+			ip = Info_ValueForKey(userinfo, "ip");
 			AddIPBan(ip);
 		}
 	}
 }
 
+/**
+ * @brief G_UpdateSvCvars
+ */
 void G_UpdateSvCvars(void)
 {
 	char cs[MAX_INFO_STRING];
@@ -1733,7 +1952,7 @@ void CC_svcvar(void)
 
 	if (trap_Argc() <= 3)
 	{
-		G_Printf("usage: sv_cvar <cvar name> <mode> <value1> <value2>\nexamples: sv_cvar cg_hitsounds EQ 1\n          sv_cvar cl_maxpackets IN 60 100\n");
+		G_Printf("usage: sv_cvar <cvar name> <mode> <value1> <value2>\nexamples: sv_cvar cg_hitsounds EQ 1\n          sv_cvar cl_maxpackets IN 60 125\n");
 		return;
 	}
 	trap_Argv(1, cvarName, sizeof(cvarName));
@@ -1830,6 +2049,9 @@ void CC_svcvar(void)
 
 char *ConcatArgs(int start);
 
+/**
+ * @brief CC_loadconfig
+ */
 void CC_loadconfig(void)
 {
 	char scriptName[MAX_QPATH];
@@ -1843,10 +2065,13 @@ void CC_loadconfig(void)
 	trap_Argv(1, scriptName, sizeof(scriptName));
 
 	trap_SetConfigstring(CS_CONFIGNAME, "");
-	memset(&level.config, 0, sizeof(config_t));
+	Com_Memset(&level.config, 0, sizeof(config_t));
 	G_configSet(scriptName);
 }
 
+/**
+ * @brief Svcmd_CSInfo_f
+ */
 void Svcmd_CSInfo_f(void)
 {
 	int      i = 0, j;
@@ -1890,7 +2115,7 @@ void Svcmd_CSInfo_f(void)
 	for (i = 0; i < MAX_CONFIGSTRINGS; i++)
 	{
 		trap_GetConfigstring(i, cs, sizeof(cs));
-		size   = strlen(cs);
+		size   = (int) strlen(cs);
 		total += size;
 		if (size == 0)
 		{
@@ -2116,7 +2341,11 @@ void Svcmd_CSInfo_f(void)
 
 		if (arg1)
 		{
-			if ((arg1numeric && value == i) || (!arg1numeric && !Q_stricmp(valuestr, str)))
+			if (valuestr[0] == '*')
+			{
+				G_Printf("%-4i %-8i %-22s %s\n", i, size, str, cs); // note: this might not print the full content see CS 1 or 2
+			}
+			else if ((arg1numeric && value == i) || (!arg1numeric && !Q_stricmp(valuestr, str)))
 			{
 				G_Printf("%-4i %-8i %s\n", i, size, str);
 				// value 239 is taken from SBP()
@@ -2136,6 +2365,10 @@ void Svcmd_CSInfo_f(void)
 	G_Printf("--------------------------------------------\nTotal CONFIGSTRING Length: %i\n", total);
 }
 
+/**
+ * @brief ConsoleCommand
+ * @return
+ */
 qboolean ConsoleCommand(void)
 {
 	char cmd[MAX_TOKEN_CHARS];
@@ -2148,214 +2381,253 @@ qboolean ConsoleCommand(void)
 		G_LuaStatus(NULL);
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "lua_api") == 0)
+	else if (!Q_stricmp(cmd, "lua_restart"))
+	{
+		G_LuaShutdown();
+		G_LuaInit();
+		return qtrue;
+	}
+	else if (Q_stricmp(cmd, "lua_api") == 0)
 	{
 		G_LuaStackDump();
 		return qtrue;
 	}
 	// *LUA* API callbacks
-	if (G_LuaHook_ConsoleCommand(cmd))
+	else if (G_LuaHook_ConsoleCommand(cmd))
 	{
 		return qtrue;
 	}
+	else
 #endif
 	if (Q_stricmp(cmd, "entitylist") == 0)
 	{
 		Svcmd_EntityList_f();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "csinfo") == 0)
+	else if (Q_stricmp(cmd, "csinfo") == 0)
 	{
 		Svcmd_CSInfo_f();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "forceteam") == 0)
+	else if (Q_stricmp(cmd, "forceteam") == 0)
 	{
 		Svcmd_ForceTeam_f();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "game_memory") == 0)
+	else if (Q_stricmp(cmd, "game_memory") == 0)
 	{
 		Svcmd_GameMem_f();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "addip") == 0)
+	else if (Q_stricmp(cmd, "addip") == 0)
 	{
 		Svcmd_AddIP_f();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "removeip") == 0)
+	else if (Q_stricmp(cmd, "removeip") == 0)
 	{
 		Svcmd_RemoveIP_f();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "listip") == 0)
+	else if (Q_stricmp(cmd, "listip") == 0)
 	{
 		trap_SendConsoleCommand(EXEC_INSERT, "g_banIPs\n");
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "listmaxlivesip") == 0)
+	else if (Q_stricmp(cmd, "listmaxlivesip") == 0)
 	{
 		PrintMaxLivesGUID();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "start_match") == 0)
+	else if (Q_stricmp(cmd, "start_match") == 0)
 	{
 		Svcmd_StartMatch_f();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "reset_match") == 0)
+	else if (Q_stricmp(cmd, "reset_match") == 0)
 	{
 		Svcmd_ResetMatch_f(qtrue, qtrue);
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "swap_teams") == 0)
+	else if (Q_stricmp(cmd, "swap_teams") == 0)
 	{
 		Svcmd_SwapTeams_f();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "shuffle_teams") == 0)
+	else if (Q_stricmp(cmd, "shuffle_teams") == 0)
 	{
-		Svcmd_ShuffleTeams_f(qtrue);
+		Svcmd_ShuffleTeamsXP_f(qtrue);
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "shuffle_teams_norestart") == 0)
+	else if (Q_stricmp(cmd, "shuffle_teams_norestart") == 0)
 	{
-		Svcmd_ShuffleTeams_f(qfalse);
+		Svcmd_ShuffleTeamsXP_f(qfalse);
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "makeReferee") == 0)
+#ifdef FEATURE_RATING
+	else if (Q_stricmp(cmd, "shuffle_teams_sr") == 0)
+	{
+		Svcmd_ShuffleTeamsSR_f(qtrue);
+		return qtrue;
+	}
+	else if (Q_stricmp(cmd, "shuffle_teams_sr_norestart") == 0)
+	{
+		Svcmd_ShuffleTeamsSR_f(qfalse);
+		return qtrue;
+	}
+#endif
+	else if (Q_stricmp(cmd, "makeReferee") == 0)
 	{
 		G_MakeReferee();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "removeReferee") == 0)
+	else if (Q_stricmp(cmd, "removeReferee") == 0)
 	{
 		G_RemoveReferee();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "mute") == 0)
+	else if (Q_stricmp(cmd, "mute") == 0)
 	{
 		G_MuteClient();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "unmute") == 0)
+	else if (Q_stricmp(cmd, "unmute") == 0)
 	{
 		G_UnMuteClient();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "ban") == 0)
+	else if (Q_stricmp(cmd, "ban") == 0)
 	{
 		G_PlayerBan();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "campaign") == 0)
+	else if (Q_stricmp(cmd, "campaign") == 0)
 	{
 		Svcmd_Campaign_f();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "listcampaigns") == 0)
+	else if (Q_stricmp(cmd, "listcampaigns") == 0)
 	{
 		Svcmd_ListCampaigns_f();
 		return qtrue;
 	}
-	if (Q_stricmp(cmd, "revive") == 0)
+	else if (Q_stricmp(cmd, "revive") == 0)
 	{
 		trap_Argv(1, cmd, sizeof(cmd));
 		Svcmd_RevivePlayer(cmd);
 		return qtrue;
 	}
 	// moved from engine
-	if (!Q_stricmp(cmd, "kick"))
+	else if (!Q_stricmp(cmd, "kick"))
 	{
 		Svcmd_Kick_f();
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "clientkick"))
+	else if (!Q_stricmp(cmd, "clientkick"))
 	{
 		Svcmd_KickNum_f();
 		return qtrue;
 	}
 #ifdef FEATURE_OMNIBOT
-	if (!Q_stricmp(cmd, "bot"))
+	else if (!Q_stricmp(cmd, "bot"))
 	{
 		Bot_Interface_ConsoleCommand();
 		return qtrue;
 	}
 #endif
-	if (!Q_stricmp(cmd, "cp"))
+	else if (!Q_stricmp(cmd, "cp"))
 	{
 		trap_SendServerCommand(-1, va("cp \"%s\"", Q_AddCR(ConcatArgs(1))));
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "reloadConfig"))
+	else if (!Q_stricmp(cmd, "reloadConfig"))
 	{
 		trap_SetConfigstring(CS_CONFIGNAME, "");
-		memset(&level.config, 0, sizeof(config_t));
+		Com_Memset(&level.config, 0, sizeof(config_t));
 		G_configSet(g_customConfig.string);
 
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "loadConfig"))
+	else if (!Q_stricmp(cmd, "loadConfig"))
 	{
 		CC_loadconfig();
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "sv_cvarempty"))
+	else if (!Q_stricmp(cmd, "sv_cvarempty"))
 	{
-		memset(level.svCvars, 0, sizeof(level.svCvars));
+		Com_Memset(level.svCvars, 0, sizeof(level.svCvars));
 		level.svCvarsCount = 0;
 		G_UpdateSvCvars();
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "sv_cvar"))
+	else if (!Q_stricmp(cmd, "sv_cvar"))
 	{
 		CC_svcvar();
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "playsound") || !Q_stricmp(cmd, "playsound_env"))
+	else if (!Q_stricmp(cmd, "playsound") || !Q_stricmp(cmd, "playsound_env"))
 	{
 		G_PlaySound_Cmd();
 		return qtrue;
 	}
-	//if (g_cheats.integer)
-	//{
-	if (!Q_stricmp(cmd, "gib"))
+	else if (!Q_stricmp(cmd, "gib"))
 	{
 		Svcmd_Gib();
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "die"))
+	else if (!Q_stricmp(cmd, "die"))
 	{
 		Svcmd_Die();
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "freeze"))
+	else if (!Q_stricmp(cmd, "freeze"))
 	{
 		Svcmd_Freeze();
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "unfreeze"))
+	else if (!Q_stricmp(cmd, "unfreeze"))
 	{
 		Svcmd_Unfreeze();
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "burn"))
+	else if (!Q_stricmp(cmd, "burn"))
 	{
 		Svcmd_Burn();
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "pip"))
+	else if (!Q_stricmp(cmd, "pip"))
 	{
 		Svcmd_Pip();
 		return qtrue;
 	}
-	if (!Q_stricmp(cmd, "throw"))
+	else if (!Q_stricmp(cmd, "throw"))
 	{
 		Svcmd_Fling(1);
 		return qtrue;
 	}
-	//}
+#ifdef LEGACY_DEBUG
+	else if (!Q_stricmp(cmd, "ae"))
+	{
+		//ae <playername> <animEvent>
+		Svcmd_PlayerAnimEvent();
+		return qtrue;
+	}
+#endif
+	else if (!Q_stricmp(cmd, "ref")) // console also gets ref commands
+	{
+		if (!level.fLocalHost)
+		{
+			return qfalse;
+		}
+
+		//G_refCommandCheck expects the next argument (warn, pause, lock,..)
+		trap_Argv(1, cmd, sizeof(cmd));
+		if (!G_refCommandCheck(NULL, cmd))
+		{
+			G_refHelp_cmd(NULL);
+		}
+		return qtrue;
+	}
 
 	if (g_dedicated.integer)
 	{
@@ -2370,18 +2642,6 @@ qboolean ConsoleCommand(void)
 		if (!Q_stricmp(cmd, "chat"))
 		{
 			trap_SendServerCommand(-1, va("chat \"console: %s\"", Q_AddCR(ConcatArgs(1))));
-			return qtrue;
-		}
-
-		// console also gets ref commands
-		if (!level.fLocalHost && Q_stricmp(cmd, "ref") == 0)
-		{
-			//G_refCommandCheck expects the next argument (warn, pause, lock,..)
-			trap_Argv(1, cmd, sizeof(cmd));
-			if (!G_refCommandCheck(NULL, cmd))
-			{
-				G_refHelp_cmd(NULL);
-			}
 			return qtrue;
 		}
 

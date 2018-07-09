@@ -19,7 +19,7 @@ uniform sampler2D u_ShadowMap0;
 uniform samplerCube u_ShadowMap;
 #endif
 
-uniform sampler2D u_RandomMap;      // random normals
+//uniform sampler2D u_RandomMap;      // random normals
 
 uniform vec3 u_ViewOrigin;
 
@@ -102,7 +102,7 @@ vec3 RandomVec3(vec2 uv)
 	dir = normalize(vec3(cos(angle), sin(angle), r));
 #else
 	// dir = texture2D(u_NoiseMap, gl_FragCoord.st * r_FBufScale).rgb;
-	dir = normalize(2.0 * (texture2D(u_RandomMap, uv).xyz - 0.5));
+	//dir = normalize(2.0 * (texture2D(u_RandomMap, uv).xyz - 0.5));
 #endif
 
 	return dir;
@@ -138,11 +138,11 @@ float ChebyshevUpperBound(vec2 shadowMoments, float vertexDistance, float minVar
 	float d    = vertexDistance - shadowDistance;
 	float pMax = variance / (variance + (d * d));
 
-	/*
+/*
 	#if defined(r_LightBleedReduction)
 	pMax = smoothstep(r_LightBleedReduction, 1.0, pMax);
 	#endif
-	*/
+*/
 
 	// one-tailed Chebyshev with k > 0
 	return (vertexDistance <= shadowDistance ? 1.0 : pMax);
@@ -994,8 +994,9 @@ void    main()
 	// transform normal into world space
 	N = normalize(tangentToWorldMatrix * N);
 
+	vec3 R = reflect(-L, N);
 
-#else // USE_NORMAL_MAPPING
+#else // else USE_NORMAL_MAPPING 
 
 	vec3 N;
 #if defined(TWOSIDED)
@@ -1009,7 +1010,7 @@ void    main()
 		N = normalize(var_Normal.xyz);
 	}
 
-#endif // USE_NORMAL_MAPPING
+#endif // end USE_NORMAL_MAPPING
 
 	// compute the light term
 #if defined(r_WrapAroundLighting)
@@ -1041,9 +1042,9 @@ void    main()
 
 #if defined(USE_NORMAL_MAPPING)
 	// compute the specular term
-	vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * u_LightColor * pow(clamp(dot(N, H), 0.0, 1.0), r_SpecularExponent) * r_SpecularScale;
+	//vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * u_LightColor * pow(clamp(dot(N, H), 0.0, 1.0), r_SpecularExponent) * r_SpecularScale;
+	vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * u_LightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 #endif
-
 
 
 	// compute light attenuation

@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -30,6 +30,7 @@
  */
 /**
  * @file qgl.h
+ * @brief Used for vanilla and GLES renderer. Renderer2 doesn't include qgl.h anymore.
  */
 
 #ifndef INCLUDE_QGL_H

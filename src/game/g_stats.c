@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -38,6 +38,11 @@
 #include "g_lua.h"
 #endif
 
+/**
+ * @brief G_LogDeath
+ * @param[in,out] ent
+ * @param[in] weap
+ */
 void G_LogDeath(gentity_t *ent, weapon_t weap)
 {
 	if (!ent->client)
@@ -48,6 +53,11 @@ void G_LogDeath(gentity_t *ent, weapon_t weap)
 	ent->client->pers.playerStats.weaponStats[weap].killedby++;
 }
 
+/**
+ * @brief G_LogKill
+ * @param[in,out] ent
+ * @param[in] weap
+ */
 void G_LogKill(gentity_t *ent, weapon_t weap)
 {
 	if (!ent->client)
@@ -58,6 +68,11 @@ void G_LogKill(gentity_t *ent, weapon_t weap)
 	ent->client->pers.playerStats.weaponStats[weap].kills++;
 }
 
+/**
+ * @brief G_LogTeamKill
+ * @param[in,out] ent
+ * @param[in] weap
+ */
 void G_LogTeamKill(gentity_t *ent, weapon_t weap)
 {
 	if (!ent->client)
@@ -68,6 +83,11 @@ void G_LogTeamKill(gentity_t *ent, weapon_t weap)
 	ent->client->pers.playerStats.weaponStats[weap].teamkills++;
 }
 
+/**
+ * @brief G_LogRegionHit
+ * @param[in,out] ent
+ * @param[in] hr
+ */
 void G_LogRegionHit(gentity_t *ent, hitRegion_t hr)
 {
 	if (!ent->client)
@@ -77,6 +97,10 @@ void G_LogRegionHit(gentity_t *ent, hitRegion_t hr)
 	ent->client->pers.playerStats.hitRegions[hr]++;
 }
 
+/**
+ * @brief G_PrintAccuracyLog
+ * @param[in] ent
+ */
 void G_PrintAccuracyLog(gentity_t *ent)
 {
 	int  i;
@@ -86,7 +110,7 @@ void G_PrintAccuracyLog(gentity_t *ent)
 
 	for (i = WP_KNIFE; i < WP_NUM_WEAPONS; i++)
 	{
-		if (BG_WeapStatForWeapon(i) == WS_MAX)
+		if (GetWeaponTableData(i)->indexWeaponStat == WS_MAX)
 		{
 			continue;
 		}
@@ -115,6 +139,10 @@ void G_PrintAccuracyLog(gentity_t *ent)
 	trap_SendServerCommand(ent - g_entities, buffer);
 }
 
+/**
+ * @brief G_SetPlayerScore
+ * @param[in,out] client
+ */
 void G_SetPlayerScore(gclient_t *client)
 {
 	int i;
@@ -125,6 +153,11 @@ void G_SetPlayerScore(gclient_t *client)
 	}
 }
 
+/**
+ * @brief G_SetPlayerSkill
+ * @param[in,out] client
+ * @param[in] skill
+ */
 void G_SetPlayerSkill(gclient_t *client, skillType_t skill)
 {
 	int i;
@@ -139,7 +172,7 @@ void G_SetPlayerSkill(gclient_t *client, skillType_t skill)
 
 	for (i = NUM_SKILL_LEVELS - 1; i >= 0; i--)
 	{
-		if (skillLevels[skill][i] != -1 && client->sess.skillpoints[skill] >= skillLevels[skill][i])
+		if (GetSkillTableData(skill)->skillLevels[i] != -1 && client->sess.skillpoints[skill] >= GetSkillTableData(skill)->skillLevels[i])
 		{
 			client->sess.skill[skill] = i;
 			break;
@@ -149,9 +182,13 @@ void G_SetPlayerSkill(gclient_t *client, skillType_t skill)
 	G_SetPlayerScore(client);
 }
 
-extern qboolean AddWeaponToPlayer(gclient_t *client, weapon_t weapon, int ammo, int ammoclip, qboolean setcurrent);
+extern void AddWeaponToPlayer(gclient_t *client, weapon_t weapon, int ammo, int ammoclip, qboolean setcurrent);
 
-// Local func to actual do skill upgrade, used by both MP skill system, and SP scripted skill system
+/**
+ * @brief Local func to actual do skill upgrade, used by both MP skill system, and SP scripted skill system
+ * @param[in,out] ent
+ * @param[in] skill
+ */
 void G_UpgradeSkill(gentity_t *ent, skillType_t skill)
 {
 	int i;
@@ -180,6 +217,19 @@ void G_UpgradeSkill(gentity_t *ent, skillType_t skill)
 
 	G_DebugAddSkillLevel(ent, skill);
 
+#ifdef FEATURE_RATING
+	if (g_skillRating.integer)
+	{
+		ent->client->sess.rank = (int)(MAX(ent->client->sess.mu - 3 * ent->client->sess.sigma, 0.f) / (2 * MU) * NUM_EXPERIENCE_LEVELS);
+
+		if (ent->client->sess.rank > 10)
+		{
+			ent->client->sess.rank = 10;
+		}
+	}
+	else
+	{
+#endif
 	if (i == SK_NUM_SKILLS)
 	{
 		// increase rank
@@ -205,23 +255,29 @@ void G_UpgradeSkill(gentity_t *ent, skillType_t skill)
 			ent->client->sess.rank = 10;
 		}
 	}
+#ifdef FEATURE_RATING
+}
+#endif
 
 	ClientUserinfoChanged(ent - g_entities);
 
 	// Give em rightaway
 	if (skill == SK_BATTLE_SENSE && ent->client->sess.skill[skill] == 1)
 	{
-		if (AddWeaponToPlayer(ent->client, WP_BINOCULARS, 1, 0, qfalse))
-		{
-			ent->client->ps.stats[STAT_KEYS] |= (1 << INV_BINOCS);
-		}
+		AddWeaponToPlayer(ent->client, WP_BINOCULARS, 1, 0, qfalse);
 	}
 	else if (skill == SK_FIRST_AID && ent->client->sess.playerType == PC_MEDIC && ent->client->sess.skill[skill] == 4)
 	{
-		AddWeaponToPlayer(ent->client, WP_MEDIC_ADRENALINE, ent->client->ps.ammo[BG_FindAmmoForWeapon(WP_MEDIC_ADRENALINE)], ent->client->ps.ammoclip[BG_FindClipForWeapon(WP_MEDIC_ADRENALINE)], qfalse);
+		AddWeaponToPlayer(ent->client, WP_MEDIC_ADRENALINE, ent->client->ps.ammo[GetWeaponTableData(WP_MEDIC_ADRENALINE)->ammoIndex], ent->client->ps.ammoclip[GetWeaponTableData(WP_MEDIC_ADRENALINE)->clipIndex], qfalse);
 	}
 }
 
+/**
+ * @brief G_LoseSkillPoints
+ * @param[in,out] ent
+ * @param[in] skill
+ * @param[in] points
+ */
 void G_LoseSkillPoints(gentity_t *ent, skillType_t skill, float points)
 {
 	int   oldskill;
@@ -257,15 +313,22 @@ void G_LoseSkillPoints(gentity_t *ent, skillType_t skill, float points)
 	if (oldskill != ent->client->sess.skill[skill])
 	{
 		ent->client->sess.skill[skill]       = oldskill;
-		ent->client->sess.skillpoints[skill] = skillLevels[skill][oldskill];
+		ent->client->sess.skillpoints[skill] = GetSkillTableData(skill)->skillLevels[oldskill];
 	}
 
-	G_Printf("%s ^7just lost %.0f skill points for skill %s\n", ent->client->pers.netname, oldskillpoints - ent->client->sess.skillpoints[skill], skillNames[skill]);
+	G_Printf("%s ^7just lost %.0f skill points for skill %s\n", ent->client->pers.netname, (double)(oldskillpoints - ent->client->sess.skillpoints[skill]), GetSkillTableData(skill)->skillNames);
 
 	level.teamScores[ent->client->ps.persistant[PERS_TEAM]]        -= oldskillpoints - ent->client->sess.skillpoints[skill];
 	level.teamXP[skill][ent->client->sess.sessionTeam - TEAM_AXIS] -= oldskillpoints - ent->client->sess.skillpoints[skill];
+
+	// prepare scoreboard
+	CalculateRanks();
 }
 
+/**
+ * @brief G_ResetXP
+ * @param[in,out] ent
+ */
 void G_ResetXP(gentity_t *ent)
 {
 	int i = 0;
@@ -277,7 +340,13 @@ void G_ResetXP(gentity_t *ent)
 		return;
 	}
 
-	ent->client->sess.rank = 0;
+#ifdef FEATURE_RATING
+	if (!g_skillRating.integer)
+#endif
+	{
+		ent->client->sess.rank = 0;
+	}
+
 	for (i = 0; i < SK_NUM_SKILLS; i++)
 	{
 		ent->client->sess.skillpoints[i] = 0.0f;
@@ -290,8 +359,8 @@ void G_ResetXP(gentity_t *ent)
 
 	// zero out all weapons and grab the default weapons for a player of this XP level.
 	// backup..
-	memcpy(ammo, ent->client->ps.ammo, sizeof(ammo));
-	memcpy(ammoclip, ent->client->ps.ammoclip, sizeof(ammoclip));
+	Com_Memcpy(ammo, ent->client->ps.ammo, sizeof(ammo));
+	Com_Memcpy(ammoclip, ent->client->ps.ammoclip, sizeof(ammoclip));
 	oldWeapon = ent->client->ps.weapon;
 	// Check weapon validity, maybe dump some weapons for this (now) unskilled player..
 	// It also sets the (possibly new) amounts of ammo for weapons.
@@ -331,6 +400,12 @@ void G_ResetXP(gentity_t *ent)
 	ClientUserinfoChanged(ent - g_entities);
 }
 
+/**
+ * @brief G_AddSkillPoints
+ * @param[in,out] ent
+ * @param[in] skill
+ * @param[in] points
+ */
 void G_AddSkillPoints(gentity_t *ent, skillType_t skill, float points)
 {
 	int oldskill;
@@ -372,10 +447,17 @@ void G_AddSkillPoints(gentity_t *ent, skillType_t skill, float points)
 		// call the new func that encapsulates the skill giving behavior
 		G_UpgradeSkill(ent, skill);
 	}
+
+	// prepare scoreboard
+	CalculateRanks();
 }
 
 /**
  * @brief Loose skill for evil tkers :E
+ * @param[in] tker
+ * @param[in] mod
+ * @param hr - unused
+ * @param splash - unused
  */
 void G_LoseKillSkillPoints(gentity_t *tker, meansOfDeath_t mod, hitRegion_t hr, qboolean splash)
 {
@@ -384,266 +466,100 @@ void G_LoseKillSkillPoints(gentity_t *tker, meansOfDeath_t mod, hitRegion_t hr, 
 		return;
 	}
 
-	switch (mod)
+	if (GetMODTableData(mod)->skillType < SK_NUM_SKILLS)
 	{
-	// light weapons
-	case MOD_KNIFE:
-	case MOD_KNIFE_KABAR:
-	case MOD_LUGER:
-	case MOD_COLT:
-	case MOD_MP40:
-	case MOD_THOMPSON:
-	case MOD_STEN:
-	case MOD_GARAND:
-	case MOD_SILENCER:
-	case MOD_FG42:
-	case MOD_CARBINE:
-	case MOD_KAR98:
-	case MOD_SILENCED_COLT:
-	case MOD_K43:
-	// akimbo weapons lose score now as well
-	case MOD_AKIMBO_COLT:
-	case MOD_AKIMBO_LUGER:
-	case MOD_AKIMBO_SILENCEDCOLT:
-	case MOD_AKIMBO_SILENCEDLUGER:
-	case MOD_GRENADE_LAUNCHER:
-	case MOD_GRENADE_PINEAPPLE:
-	// airstrike marker kills
-	case MOD_SMOKEGRENADE:
-		G_LoseSkillPoints(tker, SK_LIGHT_WEAPONS, 3.f);
-		//G_DebugAddSkillPoints( attacker, SK_LIGHT_WEAPONS, 2.f, "kill" );
-		break;
-
-	// scoped weapons
-	case MOD_GARAND_SCOPE:
-	case MOD_K43_SCOPE:
-	case MOD_FG42SCOPE:
-	case MOD_SATCHEL:
-		G_LoseSkillPoints(tker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f);
-		//G_DebugAddSkillPoints( attacker, SK_LIGHT_WEAPONS, 2.f, "legshot kill" );
-		break;
-
-	case MOD_MOBILE_MG42:
-	case MOD_MOBILE_BROWNING:
-	case MOD_MACHINEGUN:
-	case MOD_BROWNING:
-	case MOD_MG42:
-	case MOD_PANZERFAUST:
-	case MOD_BAZOOKA:
-	case MOD_FLAMETHROWER:
-	case MOD_MORTAR:
-	case MOD_MORTAR2:
-		G_LoseSkillPoints(tker, SK_HEAVY_WEAPONS, 3.f);
-		//G_DebugAddSkillPoints( attacker, SK_HEAVY_WEAPONS, 3.f, "emplaced mg42 kill" );
-		break;
-
-	case MOD_DYNAMITE:
-	case MOD_LANDMINE:
-	case MOD_GPG40:
-	case MOD_M7:
-		G_LoseSkillPoints(tker, SK_EXPLOSIVES_AND_CONSTRUCTION, 3.f);
-		//G_DebugAddSkillPoints( attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 4.f, "dynamite or landmine kill" );
-		break;
-
-	case MOD_ARTY:
-	case MOD_AIRSTRIKE:
-		G_LoseSkillPoints(tker, SK_SIGNALS, 3.f);
-		//G_DebugAddSkillPoints( attacker, SK_SIGNALS, 4.f, "artillery kill" );
-		break;
-
-	case MOD_SHOVE:
-		G_LoseSkillPoints(tker, SK_BATTLE_SENSE, 5.f);
-		break;
-
-	// no skills for anything else
-	default:
-		break;
+		G_LoseSkillPoints(tker, GetMODTableData(mod)->skillType, GetMODTableData(mod)->defaultKillPoints);
 	}
+
+	// prepare scoreboard
+	CalculateRanks();
 }
 
+/**
+ * @brief G_AddKillSkillPoints
+ * @param[in] attacker
+ * @param[in] mod
+ * @param[in] hr
+ * @param[in] splash
+ */
 void G_AddKillSkillPoints(gentity_t *attacker, meansOfDeath_t mod, hitRegion_t hr, qboolean splash)
 {
+	float       points;
+	skillType_t skillType;
+	const char  *reason;
+
 	if (!attacker->client)
 	{
 		return;
 	}
 
-	switch (mod)
+	if (GetMODTableData(mod)->hasHitRegion)
 	{
-	// light weapons
-	case MOD_KNIFE:
-	case MOD_KNIFE_KABAR:
-		G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "knife kill");
-		break;
+		points = GetMODTableData(mod)->hitRegionKillPoints[hr];
 
-	case MOD_LUGER:
-	case MOD_COLT:
-	case MOD_MP40:
-	case MOD_THOMPSON:
-	case MOD_STEN:
-	case MOD_GARAND:
-	case MOD_SILENCER:
-	case MOD_FG42:
-	case MOD_CARBINE:
-	case MOD_KAR98:
-	case MOD_SILENCED_COLT:
-	case MOD_K43:
-	case MOD_AKIMBO_COLT:
-	case MOD_AKIMBO_LUGER:
-	case MOD_AKIMBO_SILENCEDCOLT:
-	case MOD_AKIMBO_SILENCEDLUGER:
 		switch (hr)
 		{
-		case HR_HEAD:   G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 5.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 5.f, "headshot kill"); break;
-		case HR_ARMS:   G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "armshot kill"); break;
-		case HR_BODY:   G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "bodyshot kill"); break;
-		case HR_LEGS:   G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "legshot kill");  break;
-		default:        G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "kill"); break;               // for weapons that don't have localized damage
+		case HR_HEAD: reason = va("%s headshot kill", GetMODTableData(mod)->debugReasonMsg); break;
+		case HR_ARMS: reason = va("%s armshot kill", GetMODTableData(mod)->debugReasonMsg); break;
+		case HR_BODY: reason = va("%s bodyshot kill", GetMODTableData(mod)->debugReasonMsg); break;
+		case HR_LEGS: reason = va("%s legshot kill", GetMODTableData(mod)->debugReasonMsg); break;
+		default:      reason = va("%s kill", GetMODTableData(mod)->debugReasonMsg); break; // for weapons that don't have localized damage, should not happen
 		}
-		break;
-
-	// heavy weapons
-	case MOD_MOBILE_MG42:
-	case MOD_MOBILE_BROWNING:
-		G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "mobile machinegun kill");
-		break;
-
-	// scoped weapons
-	case MOD_GARAND_SCOPE:
-	case MOD_K43_SCOPE:
-	case MOD_FG42SCOPE:
-		switch (hr)
-		{
-		case HR_HEAD:   G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 5.f); G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 5.f, "headshot kill"); break;
-		case HR_ARMS:   G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 2.f, "armshot kill"); break;
-		case HR_BODY:   G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f, "bodyshot kill"); break;
-		case HR_LEGS:   G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 2.f, "legshot kill"); break;
-		default:        G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f, "kill"); break;             // for weapons that don't have localized damage
-		}
-		break;
-
-	// misc weapons (individual handling)
-	case MOD_SATCHEL:
-		G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 5.f);
-		G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 5.f, "satchel charge kill");
-		break;
-
-	case MOD_MACHINEGUN:
-	case MOD_BROWNING:
-	case MOD_MG42:
-		G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "emplaced machinegun kill");
-		break;
-
-	case MOD_PANZERFAUST:
-	case MOD_BAZOOKA:
-		if (splash)
-		{
-			G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-			G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "rocket launcher splash damage kill");
-		}
-		else
-		{
-			G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-			G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "rocket launcher direct hit kill");
-		}
-		break;
-	case MOD_FLAMETHROWER:
-		G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "flamethrower kill");
-		break;
-	case MOD_MORTAR:
-	case MOD_MORTAR2:
-		if (splash)
-		{
-			G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-			G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "mortar splash damage kill");
-		}
-		else
-		{
-			G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-			G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "mortar direct hit kill");
-		}
-		break;
-	case MOD_GRENADE_LAUNCHER:
-	case MOD_GRENADE_PINEAPPLE:
-	// airstrike marker kills
-	case MOD_SMOKEGRENADE:
-		G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "hand grenade kill");
-		break;
-	case MOD_DYNAMITE:
-	case MOD_LANDMINE:
-		G_AddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 4.f);
-		G_DebugAddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 4.f, "dynamite or landmine kill");
-		break;
-	case MOD_ARTY:
-		G_AddSkillPoints(attacker, SK_SIGNALS, 4.f);
-		G_DebugAddSkillPoints(attacker, SK_SIGNALS, 4.f, "artillery kill");
-		break;
-	case MOD_AIRSTRIKE:
-		G_AddSkillPoints(attacker, SK_SIGNALS, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_SIGNALS, 3.f, "airstrike kill");
-		break;
-	case MOD_GPG40:
-	case MOD_M7:
-		G_AddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 3.f, "rifle grenade kill");
-		break;
-
-	case MOD_SHOVE:
-		G_AddSkillPoints(attacker, SK_BATTLE_SENSE, 5.f);
-		G_DebugAddSkillPoints(attacker, SK_BATTLE_SENSE, 5.f, "shove kill");
-		break;
-
-	// no skills for anything else
-	default:
-		break;
 	}
+	else if (splash)
+	{
+		points = GetMODTableData(mod)->splashKillPoints;
+
+		reason = va("%s splash damage kill", GetMODTableData(mod)->debugReasonMsg);
+	}
+	else
+	{
+		points = GetMODTableData(mod)->defaultKillPoints;
+
+		if (GetMODTableData(mod)->isExplosive)
+		{
+			reason = va("%s direct damage kill", GetMODTableData(mod)->debugReasonMsg);
+		}
+		else
+		{
+			reason = va("%s kill", GetMODTableData(mod)->debugReasonMsg);
+		}
+	}
+
+	skillType = GetMODTableData(mod)->skillType;
+
+	G_AddSkillPoints(attacker, skillType, points);
+	G_DebugAddSkillPoints(attacker, skillType, points, reason);
+
+	// prepare scoreboard
+	CalculateRanks();
 }
 
+/**
+ * @brief G_AddKillSkillPointsForDestruction
+ * @param[in] attacker
+ * @param[in] mod
+ * @param[in] constructibleStats
+ */
 void G_AddKillSkillPointsForDestruction(gentity_t *attacker, meansOfDeath_t mod, g_constructible_stats_t *constructibleStats)
 {
-	switch (mod)
+	if (GetMODTableData(mod)->skillType < SK_NUM_SKILLS)
 	{
-	case MOD_GRENADE_LAUNCHER:
-	case MOD_GRENADE_PINEAPPLE:
-		G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, constructibleStats->destructxpbonus);
-		G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
-		break;
-	case MOD_GPG40:
-	case MOD_M7:
-	case MOD_DYNAMITE:
-	case MOD_LANDMINE:
-		G_AddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, constructibleStats->destructxpbonus);
-		G_DebugAddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
-		break;
-	case MOD_PANZERFAUST:
-	case MOD_BAZOOKA:
-	case MOD_MORTAR:
-	case MOD_MORTAR2:
-		G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, constructibleStats->destructxpbonus);
-		G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
-		break;
-	case MOD_ARTY:
-	case MOD_AIRSTRIKE:
-		G_AddSkillPoints(attacker, SK_SIGNALS, constructibleStats->destructxpbonus);
-		G_DebugAddSkillPoints(attacker, SK_SIGNALS, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
-		break;
-	case MOD_SATCHEL:
-		G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, constructibleStats->destructxpbonus);
-		G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
-		break;
-	default:
-		break;
+		G_AddSkillPoints(attacker, GetMODTableData(mod)->skillType, constructibleStats->destructxpbonus);
+		G_DebugAddSkillPoints(attacker, GetMODTableData(mod)->skillType, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
 	}
+
+	// prepare scoreboard
+	CalculateRanks();
 }
 
 /////// SKILL DEBUGGING ///////
 
 static fileHandle_t skillDebugLog = -1;
 
+/**
+ * @brief G_DebugOpenSkillLog
+ */
 void G_DebugOpenSkillLog(void)
 {
 	vmCvar_t mapname;
@@ -672,6 +588,9 @@ void G_DebugOpenSkillLog(void)
 	trap_FS_Write(s, strlen(s), skillDebugLog);
 }
 
+/**
+ * @brief G_DebugCloseSkillLog
+ */
 void G_DebugCloseSkillLog(void)
 {
 	qtime_t ct;
@@ -691,6 +610,11 @@ void G_DebugCloseSkillLog(void)
 	trap_FS_FCloseFile(skillDebugLog);
 }
 
+/**
+ * @brief G_DebugAddSkillLevel
+ * @param[in] ent
+ * @param[in] skill
+ */
 void G_DebugAddSkillLevel(gentity_t *ent, skillType_t skill)
 {
 	qtime_t ct;
@@ -701,7 +625,7 @@ void G_DebugAddSkillLevel(gentity_t *ent, skillType_t skill)
 	}
 
 	trap_SendServerCommand(ent - g_entities, va("sdbg \"^%c(SK: %2i XP: %.0f) %s: You raised your skill level to %i.\"\n",
-	                                            COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], skillNames[skill], ent->client->sess.skill[skill]));
+	                                            COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], GetSkillTableData(skill)->skillNames, ent->client->sess.skill[skill]));
 
 	trap_RealTime(&ct);
 
@@ -709,11 +633,18 @@ void G_DebugAddSkillLevel(gentity_t *ent, skillType_t skill)
 	{
 		char *s = va("%02d:%02d:%02d : ^%c(SK: %2i XP: %.0f) %s: %s raised in skill level to %i.\n",
 		             ct.tm_hour, ct.tm_min, ct.tm_sec,
-		             COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], skillNames[skill], ent->client->pers.netname, ent->client->sess.skill[skill]);
+		             COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], GetSkillTableData(skill)->skillNames, ent->client->pers.netname, ent->client->sess.skill[skill]);
 		trap_FS_Write(s, strlen(s), skillDebugLog);
 	}
 }
 
+/**
+ * @brief G_DebugAddSkillPoints
+ * @param[in] ent
+ * @param[in] skill
+ * @param[in] points
+ * @param[in] reason
+ */
 void G_DebugAddSkillPoints(gentity_t *ent, skillType_t skill, float points, const char *reason)
 {
 	qtime_t ct;
@@ -724,7 +655,7 @@ void G_DebugAddSkillPoints(gentity_t *ent, skillType_t skill, float points, cons
 	}
 
 	trap_SendServerCommand(ent - g_entities, va("sdbg \"^%c(SK: %2i XP: %.0f) %s: You gained %.0fXP, reason: %s.\"\n",
-	                                            COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], skillNames[skill], points, reason));
+	                                            COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], GetSkillTableData(skill)->skillNames, points, reason));
 
 	trap_RealTime(&ct);
 
@@ -732,21 +663,24 @@ void G_DebugAddSkillPoints(gentity_t *ent, skillType_t skill, float points, cons
 	{
 		char *s = va("%02d:%02d:%02d : ^%c(SK: %2i XP: %.0f) %s: %s gained %.0fXP, reason: %s.\n",
 		             ct.tm_hour, ct.tm_min, ct.tm_sec,
-		             COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], skillNames[skill], ent->client->pers.netname, points, reason);
+		             COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], GetSkillTableData(skill)->skillNames, ent->client->pers.netname, points, reason);
 		trap_FS_Write(s, strlen(s), skillDebugLog);
 	}
 }
 
-// - send name, team and value when there is a winner - else empty string
-// and TEAM_FREE = 0 (client structure is only used for awards!)
-// - connectedClients have a team but keep the check for TEAM_FREE
-// ... we'll never know for sure, connectedClients are determined in CalculateRanks
+/**
+ * @brief - send name, team and value when there is a winner - else empty string
+ * and TEAM_FREE = 0 (client structure is only used for awards!)
+ * - connectedClients have a team but keep the check for TEAM_FREE
+ * ... we'll never know for sure, connectedClients are determined in CalculateRanks
+ */
 void G_BuildEndgameStats(void)
 {
 	char      buffer[1024];
 	int       i, j;
 	gclient_t *best = NULL;
-	int       bestClientNum;
+	int       bestClientNum = -1;
+	float     mapXP, bestMapXP = 0.f;
 
 	G_CalcClientAccuracies();
 
@@ -757,79 +691,16 @@ void G_BuildEndgameStats(void)
 
 	*buffer = '\0';
 
-	// highest fragger - check kills, then damage given
-	for (i = 0; i < level.numConnectedClients; i++)
-	{
-		gclient_t *cl = &level.clients[level.sortedClients[i]];
-		if (cl->sess.sessionTeam == TEAM_FREE)
-		{
-			continue;
-		}
-		if (cl->sess.kills <= 0)
-		{
-			continue;
-		}
-		if (!best || cl->sess.kills > best->sess.kills)
-		{
-			best          = cl;
-			bestClientNum = level.sortedClients[i];
-		}
-		else if (cl->sess.kills == best->sess.kills && cl->sess.damage_given > best->sess.damage_given)
-		{
-			best          = cl;
-			bestClientNum = level.sortedClients[i];
-		}
-	}
-	if (best)
-	{
-		best->hasaward = qtrue;
-		Q_strcat(buffer, 1024, va("%i %i %i ", bestClientNum, best->sess.kills, best->sess.sessionTeam));
-	}
-	else
-	{
-		Q_strcat(buffer, 1024, "-1 0 0 ");
-	}
-
-	best = NULL;
-
-	// highest experience points - check XP
-	for (i = 0; i < level.numConnectedClients; i++)
-	{
-		gclient_t *cl = &level.clients[level.sortedClients[i]];
-		if (cl->sess.sessionTeam == TEAM_FREE)
-		{
-			continue;
-		}
-		if (cl->ps.persistant[PERS_SCORE] <= 0)
-		{
-			continue;
-		}
-		if (!best || cl->ps.persistant[PERS_SCORE] > best->ps.persistant[PERS_SCORE])
-		{
-			best          = cl;
-			bestClientNum = level.sortedClients[i];
-		}
-	}
-	if (best)
-	{
-		best->hasaward = qtrue;
-		Q_strcat(buffer, 1024, va("%i %i %i ", bestClientNum, best->ps.persistant[PERS_SCORE], best->sess.sessionTeam));
-	}
-	else
-	{
-		Q_strcat(buffer, 1024, "-1 0 0 ");
-	}
-
-	best = NULL;
-
 	// highest ranking officer - check rank, then medals and XP
 	for (i = 0; i < level.numConnectedClients; i++)
 	{
 		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
 		if (cl->sess.sessionTeam == TEAM_FREE)
 		{
 			continue;
 		}
+
 		if (!best || cl->sess.rank > best->sess.rank)
 		{
 			best          = cl;
@@ -846,6 +717,7 @@ void G_BuildEndgameStats(void)
 			bestClientNum = level.sortedClients[i];
 		}
 	}
+
 	if (best)
 	{
 		best->hasaward = qtrue;
@@ -858,18 +730,124 @@ void G_BuildEndgameStats(void)
 
 	best = NULL;
 
-	// most highly decorated - check medals then XP
+#ifdef FEATURE_RATING
+	// highest rated player - check skill rating
 	for (i = 0; i < level.numConnectedClients; i++)
 	{
 		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
 		if (cl->sess.sessionTeam == TEAM_FREE)
 		{
 			continue;
 		}
+
+		if (cl->sess.mu - 3 * cl->sess.sigma <= 0)
+		{
+			continue;
+		}
+
+		if (!best || (cl->sess.mu - 3 * cl->sess.sigma) > (best->sess.mu - 3 * best->sess.sigma))
+		{
+			best          = cl;
+			bestClientNum = level.sortedClients[i];
+		}
+	}
+
+	if (best)
+	{
+		best->hasaward = qtrue;
+		Q_strcat(buffer, 1024, va("%i %.2f %i ", bestClientNum, MIN(best->sess.mu - 3 * best->sess.sigma, 50.f), best->sess.sessionTeam));
+	}
+	else
+	{
+		Q_strcat(buffer, 1024, "-1 0 0 ");
+	}
+
+	best = NULL;
+#endif
+
+	// highest experience points - check XP (total in campaign, otherwise this map only then total XP)
+	for (i = 0; i < level.numConnectedClients; i++)
+	{
+		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
+		if (cl->sess.sessionTeam == TEAM_FREE)
+		{
+			continue;
+		}
+
+		if (cl->ps.persistant[PERS_SCORE] <= 0)
+		{
+			continue;
+		}
+
+		if (g_gametype.integer == GT_WOLF_CAMPAIGN)
+		{
+			if (!best || cl->ps.persistant[PERS_SCORE] > best->ps.persistant[PERS_SCORE])
+			{
+				best          = cl;
+				bestClientNum = level.sortedClients[i];
+			}
+		}
+		else
+		{
+			mapXP = 0.f;
+
+			for (j = 0; j < SK_NUM_SKILLS; j++)
+			{
+				mapXP += (cl->sess.skillpoints[j] - cl->sess.startskillpoints[j]);
+			}
+
+			if (!best || mapXP > bestMapXP)
+			{
+				best          = cl;
+				bestMapXP     = mapXP;
+				bestClientNum = level.sortedClients[i];
+			}
+			else if (mapXP == bestMapXP && cl->ps.persistant[PERS_SCORE] > best->ps.persistant[PERS_SCORE])
+			{
+				best          = cl;
+				bestMapXP     = mapXP;
+				bestClientNum = level.sortedClients[i];
+			}
+		}
+	}
+
+	if (best)
+	{
+		best->hasaward = qtrue;
+
+		if (g_gametype.integer == GT_WOLF_CAMPAIGN)
+		{
+			Q_strcat(buffer, 1024, va("%i %i %i ", bestClientNum, best->ps.persistant[PERS_SCORE], best->sess.sessionTeam));
+		}
+		else
+		{
+			Q_strcat(buffer, 1024, va("%i %i %i ", bestClientNum, (int)bestMapXP, best->sess.sessionTeam));
+		}
+	}
+	else
+	{
+		Q_strcat(buffer, 1024, "-1 0 0 ");
+	}
+
+	best = NULL;
+
+	// most highly decorated - check medals then XP
+	for (i = 0; i < level.numConnectedClients; i++)
+	{
+		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
+		if (cl->sess.sessionTeam == TEAM_FREE)
+		{
+			continue;
+		}
+
 		if (cl->medals <= 0)
 		{
 			continue;
 		}
+
 		if (!best || cl->medals > best->medals)
 		{
 			best          = cl;
@@ -881,6 +859,7 @@ void G_BuildEndgameStats(void)
 			bestClientNum = level.sortedClients[i];
 		}
 	}
+
 	if (best)
 	{
 		best->hasaward = qtrue;
@@ -891,6 +870,45 @@ void G_BuildEndgameStats(void)
 		Q_strcat(buffer, 1024, "-1 0 0 ");
 	}
 
+	// highest fragger - check kills, then damage given
+	for (i = 0; i < level.numConnectedClients; i++)
+	{
+		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
+		if (cl->sess.sessionTeam == TEAM_FREE)
+		{
+			continue;
+		}
+
+		if (cl->sess.kills <= 0)
+		{
+			continue;
+		}
+
+		if (!best || cl->sess.kills > best->sess.kills)
+		{
+			best          = cl;
+			bestClientNum = level.sortedClients[i];
+		}
+		else if (cl->sess.kills == best->sess.kills && cl->sess.damage_given > best->sess.damage_given)
+		{
+			best          = cl;
+			bestClientNum = level.sortedClients[i];
+		}
+	}
+
+	if (best)
+	{
+		best->hasaward = qtrue;
+		Q_strcat(buffer, 1024, va("%i %i %i ", bestClientNum, best->sess.kills, best->sess.sessionTeam));
+	}
+	else
+	{
+		Q_strcat(buffer, 1024, "-1 0 0 ");
+	}
+
+	best = NULL;
+
 	// highest skills - check skills points (this map only, min lvl 1)
 	for (i = 0; i < SK_NUM_SKILLS; i++)
 	{
@@ -899,24 +917,29 @@ void G_BuildEndgameStats(void)
 		for (j = 0; j < level.numConnectedClients; j++)
 		{
 			gclient_t *cl = &level.clients[level.sortedClients[j]];
+
 			if (cl->sess.sessionTeam == TEAM_FREE)
 			{
 				continue;
 			}
+
 			if ((cl->sess.skillpoints[i] - cl->sess.startskillpoints[i]) <= 0)
 			{
 				continue;
 			}
+
 			if (cl->sess.skill[i] < 1)
 			{
 				continue;
 			}
+
 			if (!best || (cl->sess.skillpoints[i] - cl->sess.startskillpoints[i]) > (best->sess.skillpoints[i] - best->sess.startskillpoints[i]))
 			{
 				best          = cl;
 				bestClientNum = level.sortedClients[j];
 			}
 		}
+
 		if (best)
 		{
 			best->hasaward = qtrue;
@@ -934,24 +957,28 @@ void G_BuildEndgameStats(void)
 	for (i = 0; i < level.numConnectedClients; i++)
 	{
 		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
 		if (cl->sess.sessionTeam == TEAM_FREE)
 		{
 			continue;
 		}
+
 		if (cl->acc <= 0)
 		{
 			continue;
 		}
+
 		if (!best || cl->acc > best->acc)
 		{
 			best          = cl;
 			bestClientNum = level.sortedClients[i];
 		}
 	}
+
 	if (best)
 	{
 		best->hasaward = qtrue;
-		Q_strcat(buffer, 1024, va("%i %.1f %i ", bestClientNum, best->acc < 100.f ? best->acc : 100.f, best->sess.sessionTeam));
+		Q_strcat(buffer, 1024, va("%i %.2f %i ", bestClientNum, best->acc < 100.f ? (double)best->acc : 100., best->sess.sessionTeam));
 	}
 	else
 	{
@@ -964,24 +991,28 @@ void G_BuildEndgameStats(void)
 	for (i = 0; i < level.numConnectedClients; i++)
 	{
 		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
 		if (cl->sess.sessionTeam == TEAM_FREE)
 		{
 			continue;
 		}
+
 		if (cl->hspct <= 0)
 		{
 			continue;
 		}
+
 		if (!best || cl->hspct > best->hspct)
 		{
 			best          = cl;
 			bestClientNum = level.sortedClients[i];
 		}
 	}
+
 	if (best)
 	{
 		best->hasaward = qtrue;
-		Q_strcat(buffer, 1024, va("%i %.1f %i ", bestClientNum, best->hspct < 100.f ? best->hspct : 100.f, best->sess.sessionTeam));
+		Q_strcat(buffer, 1024, va("%i %.2f %i ", bestClientNum, best->hspct < 100.f ? (double)best->hspct : 100., best->sess.sessionTeam));
 	}
 	else
 	{
@@ -994,24 +1025,28 @@ void G_BuildEndgameStats(void)
 	for (i = 0; i < level.numConnectedClients; i++)
 	{
 		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
 		if (cl->sess.sessionTeam == TEAM_FREE)
 		{
 			continue;
 		}
+
 		if ((level.time - cl->pers.enterTime) / (float)(level.time - level.intermissiontime) < 0.5f)
 		{
 			continue;
 		}
+
 		if (!best || (cl->sess.time_played / (float)(level.time - cl->pers.enterTime)) > (best->sess.time_played / (float)(level.time - best->pers.enterTime)))
 		{
 			best          = cl;
 			bestClientNum = level.sortedClients[i];
 		}
 	}
+
 	if (best)
 	{
 		best->hasaward = qtrue;
-		Q_strcat(buffer, 1024, va("%i %f %i ", bestClientNum, 100 * best->sess.time_played / (float)(level.time - best->pers.enterTime), best->sess.sessionTeam));
+		Q_strcat(buffer, 1024, va("%i %.2f %i ", bestClientNum, MIN(100. * best->sess.time_played / (double)(level.time - best->pers.enterTime), 100.), best->sess.sessionTeam));
 	}
 	else
 	{
@@ -1024,14 +1059,17 @@ void G_BuildEndgameStats(void)
 	for (i = 0; i < level.numConnectedClients; i++)
 	{
 		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
 		if (cl->sess.sessionTeam == TEAM_FREE)
 		{
 			continue;
 		}
+
 		if (cl->sess.gibs <= 0)
 		{
 			continue;
 		}
+
 		if (!best || cl->sess.gibs > best->sess.gibs)
 		{
 			best          = cl;
@@ -1043,6 +1081,7 @@ void G_BuildEndgameStats(void)
 			bestClientNum = level.sortedClients[i];
 		}
 	}
+
 	if (best)
 	{
 		best->hasaward = qtrue;
@@ -1059,14 +1098,17 @@ void G_BuildEndgameStats(void)
 	for (i = 0; i < level.numConnectedClients; i++)
 	{
 		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
 		if (cl->sess.sessionTeam == TEAM_FREE)
 		{
 			continue;
 		}
+
 		if (cl->sess.self_kills <= 0)
 		{
 			continue;
 		}
+
 		if (!best || cl->sess.self_kills > best->sess.self_kills)
 		{
 			best          = cl;
@@ -1078,6 +1120,7 @@ void G_BuildEndgameStats(void)
 			bestClientNum = level.sortedClients[i];
 		}
 	}
+
 	if (best)
 	{
 		best->hasaward = qtrue;
@@ -1094,14 +1137,17 @@ void G_BuildEndgameStats(void)
 	for (i = 0; i < level.numConnectedClients; i++)
 	{
 		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
 		if (cl->sess.sessionTeam == TEAM_FREE)
 		{
 			continue;
 		}
+
 		if (cl->sess.deaths <= 0)
 		{
 			continue;
 		}
+
 		if (!best || cl->sess.deaths > best->sess.deaths)
 		{
 			best          = cl;
@@ -1113,6 +1159,7 @@ void G_BuildEndgameStats(void)
 			bestClientNum = level.sortedClients[i];
 		}
 	}
+
 	if (best)
 	{
 		best->hasaward = qtrue;
@@ -1129,10 +1176,12 @@ void G_BuildEndgameStats(void)
 	for (i = 0; i < level.numConnectedClients; i++)
 	{
 		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
 		if (cl->sess.sessionTeam == TEAM_FREE)
 		{
 			continue;
 		}
+
 		if (!best || cl->sess.team_kills > best->sess.team_kills)
 		{
 			best          = cl;
@@ -1144,6 +1193,7 @@ void G_BuildEndgameStats(void)
 			bestClientNum = level.sortedClients[i];
 		}
 	}
+
 	if (best)
 	{
 		best->hasaward = qtrue;
@@ -1156,16 +1206,19 @@ void G_BuildEndgameStats(void)
 	for (i = 0; i < level.numConnectedClients; i++)
 	{
 		gclient_t *cl = &level.clients[level.sortedClients[i]];
+
 		if (cl->sess.sessionTeam == TEAM_FREE)
 		{
 			continue;
 		}
+
 		if (!best || (cl->ps.persistant[PERS_SCORE] / (float)(level.time - cl->pers.enterTime)) > (best->ps.persistant[PERS_SCORE] / (float)(level.time - best->pers.enterTime)))
 		{
 			best          = cl;
 			bestClientNum = level.sortedClients[i];
 		}
 	}
+
 	if (best)
 	{
 		if ((best->sess.startxptotal - best->ps.persistant[PERS_SCORE]) >= 100 || best->medals || best->hasaward)

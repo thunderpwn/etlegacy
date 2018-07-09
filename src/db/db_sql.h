@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -40,10 +40,12 @@
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 
-#define ETL_DBMS_VERSION 1
+// when updating our DB schema in DB_CreateSchema increase this
+// for existing databases on servers we do the upgrade with Lua scripts or SQL commands stored in version table ...
+#define SQL_DBMS_SCHEMA_VERSION 1
 
 extern cvar_t *db_mode;     // 0 - disabled, 1 - sqlite3 memory db, 2 - sqlite3 file db
-extern cvar_t *db_url;
+extern cvar_t *db_uri;
 
 extern sqlite3  *db;        // our sqlite3 database
 extern qboolean isDBActive; // general flag for active dbms (db_mode is latched)
@@ -53,8 +55,11 @@ int DB_Create(void);
 int DB_Close(void);
 int DB_LoadOrSaveDb(sqlite3 *, const char *, int);
 // int DB_BackupDB(const char *, void *));
+int DB_SaveMemDB(void); // use in code
 
-int callback(void *, int, char **, char **);
+void DB_SaveMemDB_f(void); // console command to store memory db at any time to disk
+
+int DB_Callback(void *, int, char **, char **);
 
 void DB_ExecSQLCommand_f(void);
 

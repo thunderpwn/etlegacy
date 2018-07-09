@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -37,25 +37,47 @@
 
 #include "dl_public.h"
 
+/**
+ * @brief DL_InitDownload
+ */
 void DL_InitDownload(void)
 {
 }
 
+/**
+ * @brief DL_Shutdown
+ */
 void DL_Shutdown(void)
 {
 }
 
+/**
+ * @brief DL_BeginDownload
+ * @param localName - unused
+ * @param remoteName - unused
+ * @return
+ */
 int DL_BeginDownload(char *localName, const char *remoteName)
 {
 	return 1;
 }
 
+/**
+ * @brief DL_GetString
+ * @param url - unused
+ * @return
+ */
 char *DL_GetString(const char *url)
 {
 	return 0;
 }
 
-// (maybe this should be CL_DL_DownloadLoop)
+/**
+ * @brief DL_DownloadLoop
+ * @return
+ *
+ * @note Maybe this should be CL_DL_DownloadLoop
+ */
 dlStatus_t DL_DownloadLoop(void)
 {
 	return DL_DONE;

@@ -7,12 +7,19 @@
 
 # Mandatory variables
 _SRC=`pwd`
-BUILDDIR="${_SRC}/build"
+#BUILDDIR="${_SRC}/build"
+BUILDDIR="${BUILD_DIR:-${_SRC}/build}"
 SOURCEDIR="${_SRC}/src"
 PROJECTDIR="${_SRC}/project"
 LEGACYETMAIN="${HOME}/.etlegacy/etmain"
-LEGACY_MIRROR="http://mirror.etlegacy.com/etmain/"
+LEGACY_MIRROR="https://mirror.etlegacy.com/etmain/"
 LEGACY_VERSION=`git describe 2>/dev/null`
+
+# Set this to false to disable colors
+color=true
+
+# Do 32bit build
+x86_build=true
 
 # Command that can be run
 # first array has the cmd names which can be given
@@ -33,12 +40,31 @@ check_exit() {
 	fi
 }
 
+if $color; then
+    # For color codes, see e.g. http://www.cplusplus.com/forum/unices/36461/
+    boldgreen='\033[1;32m'
+    boldlightblue='\033[1;36m'
+    boldwhite='\033[1;37m'
+    boldyellow='\033[1;33m'
+    boldred='\033[1;31m'
+    darkgreen='\033[0;32m'
+    reset='\033[0m'
+else
+    boldgreen=
+    boldlightblue=
+    boldwhite=
+    boldyellow=
+    boldred=
+    darkgreen=
+    reset=
+fi
+
 einfo() {
-	echo -e "\n\033[1;32m~~>\033[0m \033[1;37m${1}\033[0m"
+    echo -e "\n$boldgreen~~>$reset $boldwhite${1}$reset"
 }
 
 ehead() {
-	echo -e "\033[1;36m * \033[1;37m${1}\033[0m"
+    echo -e "$boldlightblue * $boldwhite${1}$reset"
 }
 
 app_exists() {
@@ -62,12 +88,12 @@ checkapp() {
 	app_exists APP_FOUND $1
 
 	if [ $APP_FOUND == 1 ]; then
-		printf "  %-8s \033[1;32m%s\033[0m: %s\n" "${1}" "found" "${BINPATH}"
+		printf "  %-8s $boldgreen%s$reset: %s\n" "${1}" "found" "${BINPATH}"
 	else
 		if [ ${ISPROBLEM} == 0 ]; then
-			printf "  %-8s \033[1;33m%s\033[0m\n" "${1}" "not found but no problem"
+			printf "  %-8s $boldyellow%s$reset\n" "${1}" "not found but no problem"
 		else
-			printf "  %-8s \033[1;31m%s\033[0m\n" "${1}" "not found"
+			printf "  %-8s $boldred%s$reset\n" "${1}" "not found"
 		fi
 	fi
 }
@@ -86,6 +112,9 @@ _detectlinuxdistro() {
 
 	# archlinux has empty file...
 	[ -e "/etc/arch-release" ] && echo "Arch Linux" && exit
+
+	# Alpine Linux only has a version number
+	[ -e "/etc/alpine-release" ] && echo "Alpine Linux $(</etc/alpine-release)" && exit
 
 	# oh, maybe we have /etc/lsb-release?
 	if [ -e "/etc/lsb-release" ]; then
@@ -108,7 +137,20 @@ detectos() {
 	else
 		DISTRO="Unknown"
 	fi
-	echo -e "  running on: \033[1;32m${PLATFORMSYS}\033[0m \033[0;32m${PLATFORMARCH}\033[0m - \033[1;36m${DISTRO}\033[0m"
+	echo -e "  running on: $boldgreen${PLATFORMSYS}$reset $darkgreen${PLATFORMARCH}$reset - $boldlightblue${DISTRO}$reset"
+}
+
+# This is in reference to https://cmake.org/pipermail/cmake/2016-April/063312.html
+# Long story short, setting the cross compile state in cmake does not work on all platforms
+# so lets set the -m32 flag before we run cmake
+set_compiler() {
+	if [ ${3} == true ]; then
+		export CC="${1} -m32"
+		export CXX="${2} -m32"
+	else
+		export CC=${1}
+		export CXX=${2}
+	fi
 }
 
 check_compiler() {
@@ -118,11 +160,9 @@ check_compiler() {
 		app_exists CLANGFOUND "clang"
 		app_exists CLANGPLUSFOUND "clang++"
 		if [ $GCCFOUND == 1 ] && [ $GPLUSFOUND == 1 ]; then
-			export CC=gcc
-			export CXX=g++
+			set_compiler gcc g++ $x86_build
 		elif [ $CLANGFOUND == 1 ] && [ $CLANGPLUSFOUND == 1 ]; then
-			export CC=clang
-			export CXX=clang++
+			set_compiler clang clang++ $x86_build
 		else
 			einfo "Missing compiler. Exiting."
 			exit 1
@@ -169,10 +209,13 @@ parse_commandline() {
 		if [ "$var" = "-64" ]; then
 			einfo "Will disable crosscompile"
 			CROSS_COMPILE32=0
+			x86_build=false
 		elif [ "$var" = "-clang" ]; then
 			einfo "Will use clang"
-			export CC=clang
-			export CXX=clang++
+			set_compiler clang clang++ $x86_build
+		elif [ "$var" = "-gcc" ]; then
+			einfo "Will use gcc"
+			set_compiler gcc g++ $x86_build
 		elif [ "$var" = "-debug" ]; then
 			einfo "Will enable debug build"
 			RELEASE_TYPE="Debug"
@@ -205,15 +248,15 @@ parse_commandline() {
 			BUNDLED_FREETYPE=0
 			BUNDLED_JANSSON=0
 			BUNDLED_SQLITE3=0
-		elif [ "$var" = "-noob" ]; then
-			einfo "Will disable omni-bot installation"
+		elif [ "$var" = "-noextra" ]; then
+			einfo "Will disable installation of Omni-bot, GeoIP and WolfAdmin"
+			INSTALL_EXTRA=0
 			INSTALL_OMNIBOT=0
+			INSTALL_GEOIP=0
+			INSTALL_WOLFADMIN=0
 		elif [ "$var" = "-noupdate" ]; then
 			einfo "Will disable autoupdate"
 			FEATURE_AUTOUPDATE=0
-		elif [ "$var" = "-rating" ]; then
-			einfo "Will enable skill rating"
-			FEATURE_RATING=1
 		elif [ "$var" = "-RPI" ]; then
 			einfo "Will enable Raspberry PI build ..."
 			ARM=1
@@ -235,9 +278,62 @@ parse_commandline() {
 			BUNDLED_FREETYPE=0
 			#FEATURE_DBMS=0
 			#BUNDLED_SQLITE3=0
+			FEATURE_LUASQL=1
 			FEATURE_OMNIBOT=1
 			INSTALL_OMNIBOT=0
-			INSTALL_LUASQL=1
+		elif [ "$var" = "-mod" ]; then
+			einfo "Will only build the mod"
+			BUILD_CLIENT=0
+			BUILD_SERVER=0
+			FEATURE_RENDERER2=0
+			FEATURE_RENDERER_GLES=0
+			RENDERER_DYNAMIC=0
+
+			FEATURE_CURL=0
+			FEATURE_OGG_VORBIS=0
+			FEATURE_THEORA=0
+			FEATURE_OPENAL=0
+			FEATURE_FREETYPE=0
+			FEATURE_JANSSON=0
+
+			BUNDLED_SDL=0
+			# FIXME: this needs to be fixed in cmake, we do not want zlib or minizip if we are not building the client or server
+			BUNDLED_ZLIB=1
+			BUNDLED_MINIZIP=1
+			BUNDLED_JPEG=0
+			BUNDLED_OGG_VORBIS=0
+			BUNDLED_THEORA=0
+			BUNDLED_GLEW=0
+			BUNDLED_FREETYPE=0
+			BUNDLED_JANSSON=0
+			BUNDLED_CURL=0
+			BUNDLED_OPENAL=0
+		elif [ "$var" = "-server" ]; then
+			einfo "Will only build server requirements"
+			BUILD_CLIENT=0
+			BUILD_SERVER=1
+			FEATURE_RENDERER2=0
+			FEATURE_RENDERER_GLES=0
+			RENDERER_DYNAMIC=0
+
+			FEATURE_CURL=0
+			FEATURE_OGG_VORBIS=0
+			FEATURE_THEORA=0
+			FEATURE_OPENAL=0
+			FEATURE_FREETYPE=0
+			FEATURE_JANSSON=0
+
+			BUNDLED_SDL=0
+			BUNDLED_ZLIB=1
+			BUNDLED_MINIZIP=1
+			BUNDLED_JPEG=0
+			BUNDLED_OGG_VORBIS=0
+			BUNDLED_THEORA=0
+			BUNDLED_GLEW=0
+			BUNDLED_FREETYPE=0
+			BUNDLED_JANSSON=0
+			BUNDLED_CURL=0
+			BUNDLED_OPENAL=0
 		else
 			# drop the script commands from the result
 			for index in ${!easy_keys[*]}
@@ -292,6 +388,7 @@ generate_configuration() {
 	RENDERER_DYNAMIC=${RENDERER_DYNAMIC:-1}
 
 	FEATURE_CURL=${FEATURE_CURL:-1}
+	FEATURE_OPENSSL=${FEATURE_OPENSSL:-0}
 	FEATURE_OGG_VORBIS=${FEATURE_OGG_VORBIS:-1}
 	FEATURE_THEORA=${FEATURE_THEORA:-1}
 	FEATURE_OPENAL=${FEATURE_OPENAL:-1}
@@ -304,12 +401,14 @@ generate_configuration() {
 	FEATURE_MULTIVIEW=${FEATURE_MULTIVIEW:-1}
 	FEATURE_EDV=${FEATURE_EDV:-1}
 	FEATURE_ANTICHEAT=${FEATURE_ANTICHEAT:-1}
-	FEATURE_LIVEAUTH=${FEATURE_LIVEAUTH:-1}
-	FEATURE_RATING=${FEATURE_RATING:-0}
+	FEATURE_RATING=${FEATURE_RATING:-1}
 	FEATURE_AUTOUPDATE=${FEATURE_AUTOUPDATE:-0}
+	FEATURE_LUASQL=${FEATURE_LUASQL:-1}
 	FEATURE_OMNIBOT=${FEATURE_OMNIBOT:-1}
+	INSTALL_EXTRA=${INSTALL_EXTRA:-1}
 	INSTALL_OMNIBOT=${INSTALL_OMNIBOT:-1}
-	INSTALL_LUASQL=${INSTALL_LUASQL:-1}
+	INSTALL_GEOIP=${INSTALL_GEOIP:-1}
+	INSTALL_WOLFADMIN=${INSTALL_WOLFADMIN:-1}
 
 	einfo "Configuring ET Legacy..."
 	_CFGSTRING="
@@ -335,6 +434,7 @@ generate_configuration() {
 		-DBUNDLED_JANSSON=${BUNDLED_JANSSON}
 		-DBUNDLED_SQLITE3=${BUNDLED_SQLITE3}
 		-DFEATURE_CURL=${FEATURE_CURL}
+		-DFEATURE_OPENSSL=${FEATURE_OPENSSL}
 		-DFEATURE_OGG_VORBIS=${FEATURE_OGG_VORBIS}
 		-DFEATURE_THEORA=${FEATURE_THEORA}
 		-DFEATURE_OPENAL=${FEATURE_OPENAL}
@@ -347,15 +447,17 @@ generate_configuration() {
 		-DFEATURE_GETTEXT=${FEATURE_GETTEXT}
 		-DFEATURE_JANSSON=${FEATURE_JANSSON}
 		-DFEATURE_DBMS=${FEATURE_DBMS}
-		-DFEATURE_LIVEAUTH=${FEATURE_LIVEAUTH}
 		-DFEATURE_RATING=${FEATURE_RATING}
 		-DFEATURE_AUTOUPDATE=${FEATURE_AUTOUPDATE}
 		-DFEATURE_RENDERER2=${FEATURE_RENDERER2}
 		-DFEATURE_RENDERER_GLES=${FEATURE_RENDERER_GLES}
 		-DRENDERER_DYNAMIC=${RENDERER_DYNAMIC}
+		-DFEATURE_LUASQL=${FEATURE_LUASQL}
 		-DFEATURE_OMNIBOT=${FEATURE_OMNIBOT}
+		-DINSTALL_EXTRA=${INSTALL_EXTRA}
 		-DINSTALL_OMNIBOT=${INSTALL_OMNIBOT}
-		-DINSTALL_LUASQL=${INSTALL_LUASQL}
+		-DINSTALL_GEOIP=${INSTALL_GEOIP}
+		-DINSTALL_WOLFADMIN=${INSTALL_WOLFADMIN}
 	"
 
 	if [ "${DEV}" != 1 ]; then
@@ -378,7 +480,7 @@ generate_configuration() {
 	fi
 	fi
 
-	echo -e "\033[1;33musing: \033[1;37m${_CFGSTRING}\033[0m"
+	echo -e "$boldyellowusing: $boldwhite${_CFGSTRING}$reset"
 }
 
 # Check if the bundled libs repo has been loaded
@@ -446,9 +548,21 @@ run_build() {
 
 create_osx_dmg() {
 	# Generate DMG
-	app_exists APP_FOUND "dmgcanvas"
+	app_exists APP_FOUND "gm"
 	if [ $APP_FOUND == 0 ]; then
-		echo "Missing dmgcanvas skipping OSX installer creation"
+		echo "Missing GraphicsMagick skipping OSX installer creation"
+		return
+	fi
+
+	app_exists APP_FOUND "node"
+	if [ $APP_FOUND == 0 ]; then
+		echo "Missing nodejs skipping OSX installer creation"
+		return
+	fi
+
+	app_exists APP_FOUND "appdmg"
+	if [ $APP_FOUND == 0 ]; then
+		echo "Missing appdmg skipping OSX installer creation"
 		return
 	fi
 
@@ -459,15 +573,17 @@ create_osx_dmg() {
 	fi
 
 	echo "Generating OSX installer"
-	CANVAS_FILE="ETLegacy.dmgCanvas"
+	SHORT_VERSION=`git describe --abbrev=0 --tags 2>/dev/null`
 
 	# Generate the icon for the folder
 	# using rsvg-convert
 	# brew install librsvg
 	rsvg-convert -h 256 ../misc/etl.svg > icon.png
 
-	# Copy the canvas
-	cp -rf ../misc/${CANVAS_FILE} ${CANVAS_FILE}
+	# Generate the DMG background
+	# using the Graphics Magick
+	# brew install graphicsmagick
+	gm convert ../misc/osx-dmg-background.jpg -resize 640x360 -font ../misc/din1451alt.ttf -pointsize 20 -fill 'rgb(85,85,85)'  -draw "text 75,352 '${SHORT_VERSION}'" osx-dmg-background.jpg
 
 	# Needs to be the osx:s default python install!
 	python << END
@@ -488,8 +604,30 @@ if len(files) == 1 :
 	Cocoa.NSWorkspace.sharedWorkspace().setIcon_forFile_options_(Cocoa.NSImage.alloc().initWithContentsOfFile_(iconfile), foldername, 0) or sys.exit("Unable to set file icon")
 	print 'The icon succesfully set'
 END
-	# We will be generating the dmg with the DMG Canvas app
-	dmgcanvas ${CANVAS_FILE} "ETLegacy-${LEGACY_VERSION}.dmg" -v "ET Legacy ${LEGACY_VERSION}" -volume "ET Legacy ${LEGACY_VERSION}"
+
+	# Create the DMG json
+	cat << END > legacy-dmg.json
+{
+	"title": "ET Legacy $SHORT_VERSION",
+	"icon": "../misc/etl.icns",
+  "background": "osx-dmg-background.jpg",
+  "window": {
+  	"size": {
+  		"width": 640,
+  		"height": 390
+  	}
+  },
+  "contents": [
+    { "x": 456, "y": 250, "type": "link", "path": "/Applications" },
+    { "x": 192, "y": 250, "type": "file", "path": "ET Legacy" }
+  ]
+}
+END
+
+	# using appdmg nodejs application to generate the actual DMG installer
+	# https://github.com/LinusU/node-appdmg
+	# npm install -g appdmg
+	appdmg legacy-dmg.json "ETLegacy-${LEGACY_VERSION}.dmg"
 }
 
 run_package() {
@@ -581,7 +719,7 @@ print_help() {
 	ehead "help - print this help"
 	echo
 	einfo "Properties"
-	ehead "-64, -debug, -clang, -nodb -nor2, -nodynamic, -systemlib, -noob, --noupdate, -rating"
+	ehead "-64, -debug, -clang, -nodb -nor2, -nodynamic, -systemlib, -noextra, -noupdate, -mod, -server"
 	echo
 }
 

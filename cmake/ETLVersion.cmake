@@ -1,39 +1,41 @@
-# Version generation
+#-----------------------------------------------------------------
+# Version
+#-----------------------------------------------------------------
 
 # default values if they cannot be generated from git
 set(ETLEGACY_VERSION_MAJOR "2")
-set(ETLEGACY_VERSION_MINOR "74")
+set(ETLEGACY_VERSION_MINOR "75")
 set(ETLEGACY_VERSION_PATCH "0")
 set(ETLEGACY_VERSION_COMMIT "0")
 set(ETLEGACY_VERSION "${ETLEGACY_VERSION_MAJOR}.${ETLEGACY_VERSION_MINOR}-dirty")
 set(ETLEGACY_VERSIONPLAIN "${ETLEGACY_VERSION_MAJOR},${ETLEGACY_VERSION_MINOR},${ETLEGACY_VERSION_PATCH},${ETLEGACY_VERSION_COMMIT}")
 
 macro(HEXCHAR2DEC VAR VAL)
-	if (${VAL} MATCHES "[0-9]")
-	  SET(${VAR} ${VAL})
+	if(${VAL} MATCHES "[0-9]")
+		SET(${VAR} ${VAL})
 	elseif(${VAL} MATCHES "[aA]")
-	  SET(${VAR} 10)
+		SET(${VAR} 10)
 	elseif(${VAL} MATCHES "[bB]")
-	  SET(${VAR} 11)
+		SET(${VAR} 11)
 	elseif(${VAL} MATCHES "[cC]")
-	  SET(${VAR} 12)
+		SET(${VAR} 12)
 	elseif(${VAL} MATCHES "[dD]")
-	  SET(${VAR} 13)
+		SET(${VAR} 13)
 	elseif(${VAL} MATCHES "[eE]")
-	  SET(${VAR} 14)
+		SET(${VAR} 14)
 	elseif(${VAL} MATCHES "[fF]")
-	  SET(${VAR} 15)
+		SET(${VAR} 15)
 	else()
-	  MESSAGE(FATAL_ERROR "Invalid format for hexidecimal character")
+		MESSAGE(FATAL_ERROR "Invalid format for hexidecimal character")
 	endif()
 endmacro(HEXCHAR2DEC)
 
 macro(GENERATENUMBER VAR VAL)
-	IF (${VAL} EQUAL 0)
+	IF(${VAL} EQUAL 0)
 		SET(${VAR} 0)
 	ELSEIF(${VAL} MATCHES "^[0-9]+$") # if its just numbers we escape out and just use that
 		SET(${VAR} ${VAL})
-  ELSE()
+	ELSE()
 		SET(CURINDEX 0)
 		STRING(LENGTH "${VAL}" CURLENGTH)
 		SET(${VAR} 0)
@@ -103,10 +105,16 @@ else()
 	set(ETL_CMAKE_VERSION_INT "${ETLEGACY_VERSION_MAJOR}${ETLEGACY_VERSION_MINOR}")
 endif()
 
+if(NOT CMAKE_VERSION VERSION_LESS 3.0.2)
+	string(TIMESTAMP ETL_CMAKE_BUILD_TIME "%Y-%m-%dT%H:%M:%S" UTC)
+else()
+	set(ETL_CMAKE_BUILD_TIME "1999-01-01T00:00:00") # Yes this is a joke, for the systems running ancient cmake versions
+endif()
+
 # Mod version
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/git_version.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/etmain/ui/git_version.h" @ONLY)
 # This is for NSIS
 string(REPLACE "," "." ETL_CMAKE_PROD_VERSIONDOT ${ETL_CMAKE_PROD_VERSION})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/git_version.h.in" "${CMAKE_CURRENT_BINARY_DIR}/include/git_version.h" @ONLY)
 list(APPEND COMMON_SRC "${CMAKE_CURRENT_BINARY_DIR}/include/git_version.h")
-include_directories(${PROJECT_BINARY_DIR}/include) # git_version.h
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include) # git_version.h

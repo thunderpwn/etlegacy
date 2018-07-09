@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -42,11 +42,10 @@ static char         consoleLog[MAX_LOG];
 static unsigned int writePos = 0;
 static unsigned int readPos  = 0;
 
-/*
-==================
-CON_LogSize
-==================
-*/
+/**
+ * @brief CON_LogSize
+ * @return
+ */
 unsigned int CON_LogSize(void)
 {
 	if (readPos <= writePos)
@@ -59,21 +58,20 @@ unsigned int CON_LogSize(void)
 	}
 }
 
-/*
-==================
-CON_LogFree
-==================
-*/
+/**
+ * @brief CON_LogFree
+ * @return
+ */
 static unsigned int CON_LogFree(void)
 {
 	return MAX_LOG - CON_LogSize() - 1;
 }
 
-/*
-==================
-CON_LogWrite
-==================
-*/
+/**
+ * @brief CON_LogWrite
+ * @param[in] in
+ * @return
+ */
 unsigned int CON_LogWrite(const char *in)
 {
 	unsigned int length = strlen(in);
@@ -114,11 +112,12 @@ unsigned int CON_LogWrite(const char *in)
 	return length;
 }
 
-/*
-==================
-CON_LogRead
-==================
-*/
+/**
+ * @brief CON_LogRead
+ * @param[out] out
+ * @param[in] outSize
+ * @return
+ */
 unsigned int CON_LogRead(char *out, unsigned int outSize)
 {
 	unsigned int firstChunk;
@@ -141,7 +140,7 @@ unsigned int CON_LogRead(char *out, unsigned int outSize)
 	}
 
 	Com_Memcpy(out, consoleLog + readPos, firstChunk);
-	Com_Memcpy(out + firstChunk, out, secondChunk);
+	Com_Memcpy(out + firstChunk, consoleLog, secondChunk);
 
 	readPos = (readPos + outSize) % MAX_LOG;
 

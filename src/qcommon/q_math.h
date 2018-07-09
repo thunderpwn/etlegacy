@@ -3,7 +3,7 @@
 * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 *
 * ET: Legacy
-* Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+* Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
 *
 * This file is part of ET: Legacy - http://www.etlegacy.com
 *
@@ -116,7 +116,7 @@ extern vec4_t clrBrownLineFull;
 #define FRAMETIME           100                 // msec
 
 #define Q_COLOR_ESCAPE  '^'
-#define Q_IsColorString(p) ((p) && *(p) == Q_COLOR_ESCAPE && *((p) + 1) && isgraph(*((p) + 1)) && *((p) + 1) != Q_COLOR_ESCAPE)
+#define Q_IsColorString(p) (*p == Q_COLOR_ESCAPE && *(p + 1) && isgraph(*(p + 1)) && *(p + 1) != Q_COLOR_ESCAPE)
 
 #define COLOR_BLACK     '0'
 #define COLOR_RED       '1'
@@ -175,8 +175,8 @@ extern vec4_t g_color_table[32];
 #define Q_IsHexColorString(p) (ishex(*(p)) && ishex(*((p) + 1)) && ishex(*((p) + 2)) && ishex(*((p) + 3)) && ishex(*((p) + 4)) && ishex(*((p) + 5)))
 #define Q_HexColorStringHasAlpha(p) (ishex(*((p) + 6)) && ishex(*((p) + 7)))
 
-#define DEG2RAD(a) (((a) * M_PI) / 180.0F)
-#define RAD2DEG(a) (((a) * 180.0f) / M_PI)
+#define DEG2RAD(a) (((a) * M_PI) / 180.0)
+#define RAD2DEG(a) (((a) * 180.0) / M_PI)
 
 struct cplane_s;
 
@@ -197,7 +197,7 @@ extern void qsnapvectorsse(vec3_t vec);
 //#define Q_ftol qftolsse
 #define Q_SnapVector qsnapvectorsse
 
-extern int(*Q_VMftol)(void); // Unused.
+extern int (*Q_VMftol)(void); // Unused.
 #elif id386
 extern long QDECL qftolx87(float f);
 extern long QDECL qftolsse(float f);
@@ -207,8 +207,8 @@ extern void QDECL qsnapvectorx87(vec3_t vec);
 extern void QDECL qsnapvectorsse(vec3_t vec);
 
 //extern long (QDECL *Q_ftol)(float f);
-extern int (QDECL *Q_VMftol)(void);  // Unused.
-extern void (QDECL *Q_SnapVector)(vec3_t vec);
+extern int(QDECL * Q_VMftol)(void);  // Unused.
+extern void(QDECL * Q_SnapVector)(vec3_t vec);
 #else
 // Q_ftol must expand to a function name so the pluggable renderer can take
 // its address
@@ -226,7 +226,7 @@ extern void (QDECL *Q_SnapVector)(vec3_t vec);
 
 static ID_INLINE long Q_ftol(float f)
 {
-#if id386_sse && defined(_MSC_VER)
+#if defined(id386_sse) && defined(_MSC_VER)
 	static int tmp;
 	__asm fld f
 	__asm fistp tmp
@@ -260,7 +260,7 @@ static ID_INLINE float Q_rsqrt(float number)
 	float x = 0.5f * number;
 	float y;
 #ifdef __GNUC__
-	asm("frsqrte %0,%1" : "=f" (y) : "f" (number));
+	asm ("frsqrte %0,%1" : "=f" (y) : "f" (number));
 #else
 	y = __frsqrte(number);
 #endif
@@ -272,7 +272,7 @@ static ID_INLINE float Q_fabs(float x)
 {
 	float abs_x;
 
-	asm("fabs %0,%1" : "=f" (abs_x) : "f" (x));
+	asm ("fabs %0,%1" : "=f" (abs_x) : "f" (x));
 	return abs_x;
 }
 #else
@@ -287,11 +287,11 @@ float Q_rsqrt(float f);         // reciprocal square root
 #define SQRTFAST(x) (1.0f / Q_rsqrt(x))
 
 signed char ClampChar(int i);
-signed short ClampShort(int i); // Unused.
+//signed short ClampShort(int i); // Unused.
 byte ClampByte(int i);
 void ClampColor(vec4_t color);
 
-								// this isn't a real cheap function to call!
+// this isn't a real cheap function to call!
 int DirToByte(vec3_t dir);
 void ByteToDir(int b, vec3_t dir);
 
@@ -344,6 +344,20 @@ void vec3_lerp(vec3_t start, vec3_t end, float frac, vec3_t out);
 // Perpendicular vector of source
 void vec3_per(const vec3_t src, vec3_t dst);
 
+static inline void VectorMin(const vec3_t a, const vec3_t b, vec3_t out)
+{
+	out[0] = a[0] < b[0] ? a[0] : b[0];
+	out[1] = a[1] < b[1] ? a[1] : b[1];
+	out[2] = a[2] < b[2] ? a[2] : b[2];
+}
+
+static inline void VectorMax(const vec3_t a, const vec3_t b, vec3_t out)
+{
+	out[0] = a[0] > b[0] ? a[0] : b[0];
+	out[1] = a[1] > b[1] ? a[1] : b[1];
+	out[2] = a[2] > b[2] ? a[2] : b[2];
+}
+
 /************************************************************************/
 /* Vector 4                                                             */
 /************************************************************************/
@@ -386,7 +400,7 @@ float angle_lerp(float from, float to, float frac);
 float angle_sub(float a1, float a2);
 void angles_sub(vec3_t v1, vec3_t v2, vec3_t v3);
 
-float angle_norm_pi(float angle); // Unused.
+//float angle_norm_pi(float angle); // Unused.
 float angle_norm_360(float angle);
 float angle_norm_180(float angle);
 float angle_delta(float angle1, float angle2);
@@ -450,18 +464,18 @@ typedef struct
 #endif
 #endif
 
-unsigned ColorBytes3(float r, float g, float b); // Unused.
+//unsigned ColorBytes3(float r, float g, float b); // Unused.
 unsigned ColorBytes4(float r, float g, float b, float a);
 
-float NormalizeColor(const vec3_t in, vec3_t out); // Unused.
+//float NormalizeColor(const vec3_t in, vec3_t out); // Unused.
 
 float RadiusFromBounds(const vec3_t mins, const vec3_t maxs);
 void ClearBounds(vec3_t mins, vec3_t maxs);
 void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs);
-qboolean PointInBounds(const vec3_t v, const vec3_t mins, const vec3_t maxs); // Unused.
+//qboolean PointInBounds(const vec3_t v, const vec3_t mins, const vec3_t maxs); // Unused.
 void BoundsAdd(vec3_t mins, vec3_t maxs, const vec3_t mins2, const vec3_t maxs2);
 
-int Q_log2(int val); // Unused.
+//int Q_log2(int val); // Unused.
 
 float Q_acos(float c);
 
@@ -470,16 +484,16 @@ float Q_random(int *seed);
 float Q_crandom(int *seed);
 
 #define random()    ((rand() & 0x7fff) / ((float)0x7fff))
-#define crandom()   (2.0 * (random() - 0.5))
+#define crandom()   (2.0f * (random() - 0.5f))
 
 void SetPlaneSignbits(struct cplane_s *out);
-int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s *plane);
+int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s *p);
 
 qboolean PlaneFromPoints(vec4_t plane, const vec3_t a, const vec3_t b, const vec3_t c);
 void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal);
 void RotatePoint(vec3_t point, vec3_t matrix[3]);
 void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees);
-void RotatePointAroundVertex(vec3_t pnt, float rot_x, float rot_y, float rot_z, const vec3_t origin); // Unused.
+//void RotatePointAroundVertex(vec3_t pnt, float rot_x, float rot_y, float rot_z, const vec3_t origin); // Unused.
 void RotateAroundDirection(vec3_t axis[3], float yaw);
 void CreateRotationMatrix(const vec3_t angles, vec3_t matrix[3]);
 void MakeNormalVectors(const vec3_t forward, vec3_t right, vec3_t up);
@@ -507,13 +521,13 @@ float DistanceFromVectorSquared(vec3_t p, vec3_t lp1, vec3_t lp2);
 
 #if 1
 
-#define DotProduct(x, y) vec3_dot(x,y)
-#define VectorSubtract(a, b, c) vec3_sub(a,b,c)
-#define VectorAdd(a, b, c) vec3_add(a,b,c)
-#define VectorCopy(a, b) vec3_copy(a,b)
-#define VectorScale(v, s, o) vec3_scale(v,s,o)
+#define DotProduct(x, y) vec3_dot(x, y)
+#define VectorSubtract(a, b, c) vec3_sub(a, b, c)
+#define VectorAdd(a, b, c) vec3_add(a, b, c)
+#define VectorCopy(a, b) vec3_copy(a, b)
+#define VectorScale(v, s, o) vec3_scale(v, s, o)
 // Vector multiply & add
-#define VectorMA(v, s, b, o) vec3_ma(v,s,b,o)
+#define VectorMA(v, s, b, o) vec3_ma(v, s, b, o)
 
 #define MatrixMultiply(in1, in2, o) mat3_mult(in1, in2, o)
 
@@ -539,7 +553,7 @@ void _VectorMA(const vec3_t veca, float scale, const vec3_t vecb, vec3_t vecc);
 void _MatrixMultiply(float in1[3][3], float in2[3][3], float out[3][3]);
 
 #define VectorClear(a) vec3_clear(a)
-#define VectorNegate(a, b) vec3_negate(a,b)
+#define VectorNegate(a, b) vec3_negate(a, b)
 #define VectorSet(v, x, y, z) vec3_set(v, x, y, z)
 
 #define Vector2Set(v, x, y) vec2_set(v, x, y)
@@ -565,6 +579,21 @@ void _MatrixMultiply(float in1[3][3], float in2[3][3], float out[3][3]);
 #define Vector4Scale vec4_scale
 #define VectorRotate vec3_rotate
 #define VectorCompare vec3_compare
+
+static ID_INLINE int VectorCompareEpsilon(const vec3_t v1, const vec3_t v2, float epsilon)
+{
+	vec3_t d;
+
+	VectorSubtract(v1, v2, d);
+	d[0] = fabs(d[0]);
+	d[1] = fabs(d[1]);
+	d[2] = fabs(d[2]);
+
+	if(d[0] > epsilon || d[1] > epsilon || d[2] > epsilon)
+		return 0;
+
+	return 1;
+}
 
 #define AngleMod angle_mod
 #define LerpAngle angle_lerp

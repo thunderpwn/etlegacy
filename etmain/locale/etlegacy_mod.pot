@@ -1260,12 +1260,16 @@ msgstr ""
 msgid "VOTE"
 msgstr ""
 
-#: etmain/ui/ingame_main.menu:39 etmain/ui/ingame_vote.menu:53
+#: etmain/ui/ingame_main.menu:38 etmain/ui/ingame_vote.menu:53
 msgid "REFEREE"
 msgstr ""
 
-#: etmain/ui/ingame_main.menu:40 etmain/ui/ingame_vote.menu:71
+#: etmain/ui/ingame_main.menu:39 etmain/ui/ingame_vote.menu:71
 msgid "RCON"
+msgstr ""
+
+#: etmain/ui/ingame_main.menu:40
+msgid "LIMBO MENU"
 msgstr ""
 
 #: etmain/ui/ingame_main.menu:41 etmain/ui/ingame_serverinfo.menu:52
@@ -2435,11 +2439,6 @@ msgstr ""
 
 #: etmain/ui/options_customise_game.menu:82
 msgid "Display Tool Tips in the UI"
-msgstr ""
-
-#: etmain/ui/options_customise_game.menu:1
-#: etmain/ui/wm_ftquickmessageAlt.menu:1
-msgid "ui/menudef.h"
 msgstr ""
 
 #: etmain/ui/options_customise_hud.menu:28 etmain/ui/options.menu:33
@@ -4585,6 +4584,10 @@ msgstr ""
 msgid "SECS TO NEXT MAP"
 msgstr ""
 
+#: src/cgame/cg_debriefing.c:2905
+msgid "SEC TO NEXT MAP"
+msgstr ""
+
 #: src/cgame/cg_debriefing.c:3371
 #, c-format
 msgid "Campaign: %s"
@@ -5222,6 +5225,11 @@ msgstr ""
 msgid "Kills:  %3d    Team Kills: %3d    Accuracy:  %5.1f%%"
 msgstr ""
 
+#: src/cgame/cg_servercmds.c:1941
+#, c-format
+msgid "Gibs:   %3d    Team Gibs:  %3d"
+msgstr ""
+
 #: src/cgame/cg_servercmds.c:1879
 #, c-format
 msgid "Deaths: %3d    Self Kills: %3d    Headshots: %5.1f%%"
@@ -5581,7 +5589,7 @@ msgstr ""
 msgid "You must be a player or following a player to use +stats\n"
 msgstr ""
 
-msgid "^9You must be alive to use ^3/kill."
+msgid "You must be alive to use ^3/kill^7."
 msgstr ""
 
 msgid "No vote in progress.\n"
@@ -5874,7 +5882,7 @@ msgstr ""
 msgid "Arming landmine..."
 msgstr ""
 
-msgid "Landmine armed..."
+msgid "Landmine armed"
 msgstr ""
 
 msgid "Dynamite is set, but NOT armed!"
@@ -5886,10 +5894,10 @@ msgstr ""
 msgid "Dynamite is now armed with a 30 second timer!"
 msgstr ""
 
-msgid "Defusing landmine"
+msgid "Defusing landmine..."
 msgstr ""
 
-msgid "Landmine defused..."
+msgid "Landmine defused"
 msgstr ""
 
 msgid "Defusing dynamite..."
@@ -6000,7 +6008,7 @@ msgstr ""
 msgid "Public Settings Loaded!\n"
 msgstr ""
 
-msgid "Landmine cannot be armed here..."
+msgid "Landmine cannot be armed here"
 msgstr ""
 
 msgid "Your team has too many landmines placed..."
@@ -6306,6 +6314,9 @@ msgstr ""
 msgid "'s KA-BAR"
 msgstr ""
 
+msgid "'s knife arts"
+msgstr ""
+
 msgid "'s .45ACP 1911"
 msgstr ""
 
@@ -6463,6 +6474,9 @@ msgid "was killed by"
 msgstr ""
 
 msgid "was stabbed by"
+msgstr ""
+
+msgid "was backstabbed by"
 msgstr ""
 
 msgid "was blasted by"
@@ -6829,13 +6843,28 @@ msgstr ""
 msgid "Welcome Newbie! Award"
 msgstr ""
 
+msgid "Highest Headshots Percentage"
+msgstr ""
+
+msgid "Best Survivor"
+msgstr ""
+
+msgid "Most Gibs"
+msgstr ""
+
+msgid "Most Selfkills"
+msgstr ""
+
+msgid "Most Deaths"
+msgstr ""
+
 msgid "\nET: Legacy with OpenGL 3.x renderer can not run on this machine since it is missing one or more required OpenGL extensions. Please update your video card drivers and try again.\n"
 msgstr ""
 
 msgid "Gib command not allowed during intermission.\n"
 msgstr ""
 
-msgid "^9%d players gibbed."
+msgid "^3%d^7 players gibbed."
 msgstr ""
 
 msgid "There is no player to gib."
@@ -6853,7 +6882,7 @@ msgstr ""
 msgid "Die command not allowed during intermission.\n"
 msgstr ""
 
-msgid "^9%d players died."
+msgid "^3%d^7 players died."
 msgstr ""
 
 msgid "There is no player to die.\n"
@@ -6871,7 +6900,7 @@ msgstr ""
 msgid "Freeze command not allowed during intermission.\n"
 msgstr ""
 
-msgid "^9%d players are frozen."
+msgid "^3%d^7 players are frozen."
 msgstr ""
 
 msgid "No players in team or they are already frozen.\n"
@@ -6886,7 +6915,7 @@ msgstr ""
 msgid "^7%s^7 is frozen."
 msgstr ""
 
-msgid "^9%d players are unfrozen."
+msgid "^3%d^7 players are unfrozen."
 msgstr ""
 
 msgid "No players in team or they are already unfrozen.\n"
@@ -6904,7 +6933,7 @@ msgstr ""
 msgid "Burn command not allowed during intermission.\n"
 msgstr ""
 
-msgid "^9%d players burned."
+msgid "^3%d^7 players burned."
 msgstr ""
 
 msgid "No players in team or they are already burned.\n"
@@ -6922,7 +6951,7 @@ msgstr ""
 msgid "Pip command not allowed during intermission.\n"
 msgstr ""
 
-msgid "^9%d players pipped."
+msgid "^3%d^7 players pipped."
 msgstr ""
 
 msgid "No players in team or they are already pipped.\n"
@@ -6940,7 +6969,7 @@ msgstr ""
 msgid "%s command not allowed during intermission.\n"
 msgstr ""
 
-msgid "^9%d players %s."
+msgid "^3%d^7 players %s."
 msgstr ""
 
 msgid "No players in team or they are already %s.\n"
@@ -7044,3 +7073,288 @@ msgstr ""
 
 msgid "^7BACKSPACE ^mgo  back"
 msgstr ""
+
+msgid "CURRENT PROFILE"
+msgstr ""
+
+#: src/cgame/cg_draw.c:1504
+msgid "%s^7's dynamite"
+msgstr ""
+
+#: src/cgame/cg_draw.c:1516
+msgid "%s^7's mine"
+msgstr ""
+
+msgid "You are frozen - ^3/kill^7 is disabled."
+msgstr ""
+
+msgid "Renderer:"
+msgstr ""
+
+msgid "Set your desired renderer (does a video restart)"
+msgstr ""
+
+msgid "Custom Width:"
+msgstr ""
+
+msgid "Specifies custom resolution width - requires custom resolution set. *Use on your own risk!"
+msgstr ""
+
+msgid "Custom Height:"
+msgstr ""
+
+msgid "Specifies custom resolution height - requires custom resolution set .*Use on your own risk!"
+msgstr ""
+
+msgid "Max. Frames Per Second:"
+msgstr ""
+
+msgid "Sets the limit of frames per second - keep the values between 20 and 333"
+msgstr ""
+
+msgid "JOYSTICK"
+msgstr ""
+
+msgid "Enable Joysticks:"
+msgstr ""
+
+msgid "General joystick initialization. Requires vid_restart."
+msgstr ""
+
+msgid "Use Joystick#:"
+msgstr ""
+
+msgid "Specifies active joystick"
+msgstr ""
+
+msgid "Analog Joystick:"
+msgstr ""
+
+msgid "Use analog joystick?"
+msgstr ""
+
+msgid "Joystick Threshold:"
+msgstr ""
+
+msgid "Sets joystick threshold sensitivity"
+msgstr ""
+
+msgid "Includes or excludes servers with anti-lag support from the server list"
+msgstr ""
+
+msgid "Allow players to vote for teams to be shuffled by XP"
+msgstr ""
+
+msgid "Allow players to vote for teams to be shuffled by XP without a restart"
+msgstr ""
+
+msgid "SR Shuffle:"
+msgstr ""
+
+msgid "Allow players to vote for teams to be shuffled by SR"
+msgstr ""
+
+msgid "SR Shuffle No Rstrt:"
+msgstr ""
+
+msgid "Allow players to vote for teams to be shuffled by SR without a restart"
+msgstr ""
+
+msgid "Allow players to vote for teams to be shuffled by XP"
+msgstr ""
+
+msgid "Allow players to vote for teams to be shuffled by XP"
+msgstr ""
+
+msgid "Voice text:"
+msgstr ""
+
+msgid "Show voice text in-game"
+msgstr ""
+
+msgid "Voice chat:"
+msgstr ""
+
+msgid "Play voice chat in-game"
+msgstr ""
+
+#: cgame/cg_limbopanel:1907
+msgid "1of%i"
+msgstr ""
+
+#: cgame/cg_limbopanel:1911 cgame/cg_limbopanel:2553
+#: cgame/cg_limbopanel:2570 cgame/cg_limbopanel:2590
+msgid "%iof%i"
+msgstr ""
+
+msgid "IRC CLIENT"
+msgstr ""
+
+msgid "Mode:"
+msgstr ""
+
+msgid "Specifies IRC client behavior"
+msgstr ""
+
+msgid "Name of IRC server"
+msgstr ""
+
+msgid "Channel #:"
+msgstr ""
+
+msgid "Name of IRC channel - no '#' required"
+msgstr ""
+
+msgid "Port of IRC server"
+msgstr ""
+
+msgid "Nickname:"
+msgstr ""
+
+msgid "IRC nickame in channel"
+msgstr ""
+
+msgid "Kick rejoin time ms:"
+msgstr ""
+
+msgid "Auto rejoin time after kick"
+msgstr ""
+
+msgid "Reconnect time ms:"
+msgstr ""
+
+msgid "Reconnect time in ms"
+msgstr ""
+
+msgid "SR SHUFFLE"
+msgstr ""
+
+msgid "NO SR SHUFFLE"
+msgstr ""
+
+msgid "JOIN A TEAM"
+msgstr ""
+
+msgid "SOLDIER"
+msgstr ""
+
+msgid "MEDIC"
+msgstr ""
+
+msgid "ENGINEER"
+msgstr ""
+
+msgid "FIELD OPS"
+msgstr ""
+
+msgid "COVERT OPS"
+msgstr ""
+
+msgid "Includes or excludes ET:Legacy servers with humans from the server list"
+msgstr ""
+
+msgid "Specify receiver of quick radio messages"
+msgstr ""
+
+msgid "Renderer:"
+msgstr ""
+
+msgid "High Quality Video:"
+msgstr ""
+
+msgid "Sets high quality video."
+msgstr ""
+
+msgid "Port:"
+msgstr ""
+
+msgid "^1JOIN US"
+msgstr ""
+
+msgid "ET: Legacy development is a collaborative effort done in an open, transparent and friendly manner. Anyone is welcome to join our efforts!"
+msgstr ""
+
+msgid "CHOOSE CLASS/WEAPON"
+msgstr ""
+
+msgid "S. Soldier"
+msgstr ""
+
+msgid "M. Medic"
+msgstr ""
+
+msgid "E. Engineer"
+msgstr ""
+
+msgid "F. Field Ops"
+msgstr ""
+
+msgid "C. Covert Ops"
+msgstr ""
+
+msgid "A. Automatic Rifle"
+msgstr ""
+
+msgid "G. Machinegun"
+msgstr ""
+
+msgid "F. Flamethrower"
+msgstr ""
+
+msgid "R. Rocket Launcher"
+msgstr ""
+
+msgid "M. Mortar"
+msgstr ""
+
+msgid "S. SMG"
+msgstr ""
+
+msgid "G. Rifle"
+msgstr ""
+
+msgid "P. Sniper Rifle"
+msgstr ""
+
+msgid "1. Soldier"
+msgstr ""
+
+msgid "2. Medic"
+msgstr ""
+
+msgid "3. Engineer"
+msgstr ""
+
+msgid "4. Field Ops"
+msgstr ""
+
+msgid "5. Covert Ops"
+msgstr ""
+
+msgid "1. Automatic Rifle"
+msgstr ""
+
+msgid "2. Machinegun"
+msgstr ""
+
+msgid "3. Flamethrower"
+msgstr ""
+
+msgid "4. Rocket Launcher"
+msgstr ""
+
+msgid "5. Mortar"
+msgstr ""
+
+msgid "1. SMG"
+msgstr ""
+
+msgid "2. Rifle"
+msgstr ""
+
+msgid "2. Automatic Rifle"
+msgstr ""
+
+msgid "3. Sniper Rifle"
+msgstr ""
+

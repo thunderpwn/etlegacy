@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -36,11 +36,14 @@
 
 #include "tr_local.h"
 
+/**
+ * @brief R_CullMDV
+ * @param[in] model
+ * @param[in,out] ent
+ */
 static void R_CullMDV(mdvModel_t *model, trRefEntity_t *ent)
 {
 	int    i;
-	vec3_t v;
-	vec3_t transformed;
 	// compute frame pointers
 	mdvFrame_t *newFrame = model->frames + ent->e.frame;
 	mdvFrame_t *oldFrame = model->frames + ent->e.oldframe;
@@ -55,19 +58,7 @@ static void R_CullMDV(mdvModel_t *model, trRefEntity_t *ent)
 	}
 
 	// setup world bounds for intersection tests
-	ClearBounds(ent->worldBounds[0], ent->worldBounds[1]);
-
-	for (i = 0; i < 8; i++)
-	{
-		v[0] = ent->localBounds[i & 1][0];
-		v[1] = ent->localBounds[(i >> 1) & 1][1];
-		v[2] = ent->localBounds[(i >> 2) & 1][2];
-
-		// transform local bounds vertices into world space
-		R_LocalPointToWorld(v, transformed);
-
-		AddPointToBounds(transformed, ent->worldBounds[0], ent->worldBounds[1]);
-	}
+	R_SetupEntityWorldBounds(ent);
 
 	// cull bounding sphere ONLY if this is not an upscaled entity
 	if (!ent->e.nonNormalizedAxes)
@@ -125,7 +116,7 @@ static void R_CullMDV(mdvModel_t *model, trRefEntity_t *ent)
 		}
 	}
 
-	switch (R_CullLocalBox(ent->localBounds))
+	switch (R_CullBox(ent->worldBounds))
 	{
 	case CULL_IN:
 		tr.pc.c_box_cull_mdx_in++;
@@ -143,6 +134,11 @@ static void R_CullMDV(mdvModel_t *model, trRefEntity_t *ent)
 	}
 }
 
+/**
+ * @brief R_ComputeLOD
+ * @param[in] ent
+ * @return
+ */
 int R_ComputeLOD(trRefEntity_t *ent)
 {
 	float      radius;
@@ -166,7 +162,7 @@ int R_ComputeLOD(trRefEntity_t *ent)
 
 		radius = RadiusFromBounds(frame->bounds[0], frame->bounds[1]);
 
-		if ((projectedRadius = R_ProjectRadius(radius, ent->e.origin)) != 0)
+		if ((projectedRadius = R_ProjectRadius(radius, ent->e.origin)) != 0.f)
 		{
 			lodscale = r_lodScale->value;
 			if (lodscale > 20)
@@ -208,6 +204,12 @@ int R_ComputeLOD(trRefEntity_t *ent)
 	return lod;
 }
 
+/**
+ * @brief GetMDVSurfaceShader
+ * @param[in] ent
+ * @param[in] mdvSurface
+ * @return
+ */
 static shader_t *GetMDVSurfaceShader(const trRefEntity_t *ent, mdvSurface_t *mdvSurface)
 {
 	shader_t *shader = 0;
@@ -228,9 +230,9 @@ static shader_t *GetMDVSurfaceShader(const trRefEntity_t *ent, mdvSurface_t *mdv
 		for (j = 0; j < skin->numSurfaces; j++)
 		{
 			// the names have both been lowercased
-			if (!strcmp(skin->surfaces[j]->name, mdvSurface->name))
+			if (!strcmp(skin->surfaces[j].name, mdvSurface->name))
 			{
-				shader = skin->surfaces[j]->shader;
+				shader = skin->surfaces[j].shader;
 				break;
 			}
 		}
@@ -251,6 +253,10 @@ static shader_t *GetMDVSurfaceShader(const trRefEntity_t *ent, mdvSurface_t *mdv
 	return shader;
 }
 
+/**
+ * @brief R_AddMDVSurfaces
+ * @param[in,out] ent
+ */
 void R_AddMDVSurfaces(trRefEntity_t *ent)
 {
 	int          i;
@@ -354,6 +360,11 @@ void R_AddMDVSurfaces(trRefEntity_t *ent)
 	}
 }
 
+/**
+ * @brief R_AddMDVInteractions
+ * @param[in] ent
+ * @param[in] light
+ */
 void R_AddMDVInteractions(trRefEntity_t *ent, trRefLight_t *light)
 {
 	int               i;

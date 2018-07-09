@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -34,7 +34,11 @@
 
 #include "ui_local.h"
 
-static void UI_LoadArenasFromFile(char *filename)
+/**
+ * @brief UI_LoadArenasFromFile
+ * @param[in] filename
+ */
+static void UI_LoadArenasFromFile(const char *filename)
 {
 	int        handle;
 	pc_token_t token;
@@ -224,11 +228,14 @@ static void UI_LoadArenasFromFile(char *filename)
 
 /**
  * @brief Sorting the map list
+ * @param[in] a
+ * @param[in] b
+ * @return
  */
 int QDECL UI_SortArenas(const void *a, const void *b)
 {
-	mapInfo ca = *(mapInfo *)a;
-	mapInfo cb = *(mapInfo *)b;
+	const mapInfo ca = *(const mapInfo *)a;
+	const mapInfo cb = *(const mapInfo *)b;
 	char    cleanNameA[MAX_STRING_CHARS];
 	char    cleanNameB[MAX_STRING_CHARS];
 
@@ -240,14 +247,17 @@ int QDECL UI_SortArenas(const void *a, const void *b)
 	return strcmp(cleanNameA, cleanNameB);
 }
 
+/**
+ * @brief UI_LoadArenas
+ */
 void UI_LoadArenas(void)
 {
-	int  numdirs;
-	char filename[128];
-	char dirlist[8192];
-	char *dirptr;
-	int  i;
-	int  dirlen;
+	int    numdirs;
+	char   filename[128];
+	char   dirlist[8192];
+	char   *dirptr;
+	int    i;
+	size_t dirlen;
 
 	uiInfo.mapCount = 0;
 
@@ -262,10 +272,26 @@ void UI_LoadArenas(void)
 		UI_LoadArenasFromFile(filename);
 	}
 
+	// Print a warning!
+	// Too many pk3s in path cause trouble ...
+	// All pk3 file names are stored in configstring 1 (execute /csinfo 1)
+	// The size of configstring 1 is limited and because configstring 1 is also a part of total
+	// configstrings MAX_GAMESTATE error is more achievable
+	// Unfortunately the game  isn't designed to keep tons of pk3s in paths (game & mod)
+	if (uiInfo.mapCount >= 30) // 30 should be fail safe
+	{
+		trap_Print(va(S_COLOR_YELLOW "Warning: Too many pk3 files in path - %i files found.\nWe strongly do recommend to reduce the number of map/pk3 files to max. 30 in path\nif you want to start a listen server with connected players.\n", uiInfo.mapCount));
+	}
+
 	// sorting the maplist
 	qsort(uiInfo.mapList, uiInfo.mapCount, sizeof(uiInfo.mapList[0]), UI_SortArenas);
 }
 
+/**
+ * @brief UI_FindMapInfoByMapname
+ * @param[in] name
+ * @return
+ */
 mapInfo *UI_FindMapInfoByMapname(const char *name)
 {
 	int i;
@@ -286,6 +312,10 @@ mapInfo *UI_FindMapInfoByMapname(const char *name)
 	return NULL;
 }
 
+/**
+ * @brief UI_LoadCampaignsFromFile
+ * @param[in] filename
+ */
 static void UI_LoadCampaignsFromFile(const char *filename)
 {
 	int        handle, i;
@@ -490,7 +520,10 @@ static void UI_LoadCampaignsFromFile(const char *filename)
 
 	trap_PC_FreeSource(handle);
 }
-
+/**
+ * @brief UI_DescriptionForCampaign
+ * @return
+ */
 const char *UI_DescriptionForCampaign(void)
 {
 	int  i = 0, j = 0;
@@ -515,6 +548,10 @@ const char *UI_DescriptionForCampaign(void)
 	return NULL;
 }
 
+/**
+ * @brief UI_NameForCampaign
+ * @return
+ */
 const char *UI_NameForCampaign(void)
 {
 	int  i = 0, j = 0;
@@ -539,6 +576,11 @@ const char *UI_NameForCampaign(void)
 	return NULL;
 }
 
+/**
+ * @brief UI_FindCampaignInCampaignList
+ * @param[in] shortName
+ * @return
+ */
 int UI_FindCampaignInCampaignList(const char *shortName)
 {
 	int i;
@@ -561,14 +603,18 @@ int UI_FindCampaignInCampaignList(const char *shortName)
 
 /**
  * @brief Sorting the campaign list
+ *
+ * @param a
+ * @param b
+ * @return
  */
 int QDECL UI_SortCampaigns(const void *a, const void *b)
 {
 	char cleanNameA[MAX_STRING_CHARS];
 	char cleanNameB[MAX_STRING_CHARS];
 
-	campaignInfo_t ca = *(campaignInfo_t *)a;
-	campaignInfo_t cb = *(campaignInfo_t *)b;
+	const campaignInfo_t ca = *(const campaignInfo_t *)a;
+	const campaignInfo_t cb = *(const campaignInfo_t *)b;
 	Q_strncpyz(cleanNameA, ca.campaignName, sizeof(cleanNameA));
 	Q_strncpyz(cleanNameB, cb.campaignName, sizeof(cleanNameB));
 	Q_CleanStr(cleanNameA);
@@ -577,19 +623,22 @@ int QDECL UI_SortCampaigns(const void *a, const void *b)
 	return strcmp(cleanNameA, cleanNameB);
 }
 
+/**
+ * @brief UI_LoadCampaigns
+ */
 void UI_LoadCampaigns(void)
 {
-	int  numdirs;
-	char filename[128];
-	char dirlist[2048];
-	char *dirptr;
-	int  i, j;
-	int  dirlen;
-	long hash;
-	char *ch;
+	int        numdirs;
+	char       filename[128];
+	char       dirlist[2048];
+	char       *dirptr;
+	int        i, j;
+	size_t     dirlen;
+	long       hash;
+	const char *ch;
 
 	uiInfo.campaignCount = 0;
-	memset(&uiInfo.campaignList, 0, sizeof(uiInfo.campaignList));
+	Com_Memset(&uiInfo.campaignList, 0, sizeof(uiInfo.campaignList));
 
 	// get all campaigns from .campaign files
 	numdirs = trap_FS_GetFileList("scripts", ".campaign", dirlist, 2048);
@@ -642,7 +691,7 @@ void UI_LoadCampaigns(void)
 	for (i = 0; i < uiInfo.campaignCount; i++)
 	{
 		// generate hash for campaign shortname
-		for (hash = 0, ch = (char *)uiInfo.campaignList[i].campaignShortName; *ch != '\0'; ch++)
+		for (hash = 0, ch = uiInfo.campaignList[i].campaignShortName; *ch != '\0'; ch++)
 		{
 			hash += (long)(tolower(*ch)) * ((ch - uiInfo.campaignList[i].campaignShortName) + 119);
 		}

@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2011 Robert Beckebans <trebor_7@users.sourceforge.net>
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -60,6 +60,11 @@ static vec3_t sky_clip[6] =
 static float sky_mins[2][6], sky_maxs[2][6];
 static float sky_min, sky_max;
 
+/**
+ * @brief AddSkyPolygon
+ * @param[in] nump
+ * @param[in] vecs
+ */
 static void AddSkyPolygon(int nump, vec3_t vecs)
 {
 	int    i, j;
@@ -90,9 +95,9 @@ static void AddSkyPolygon(int nump, vec3_t vecs)
 	{
 		VectorAdd(vp, v, v);
 	}
-	av[0] = fabs(v[0]);
-	av[1] = fabs(v[1]);
-	av[2] = fabs(v[2]);
+	av[0] = Q_fabs(v[0]);
+	av[1] = Q_fabs(v[1]);
+	av[2] = Q_fabs(v[2]);
 	if (av[0] > av[1] && av[0] > av[2])
 	{
 		if (v[0] < 0)
@@ -139,9 +144,9 @@ static void AddSkyPolygon(int nump, vec3_t vecs)
 		{
 			dv = -vecs[-j - 1];
 		}
-		if (dv < 0.001)
+		if (dv < 0.001f)
 		{
-			continue;           // don't divide by zero
+			continue;   // don't divide by zero
 		}
 		j = vec_to_st[axis][0];
 		if (j < 0)
@@ -181,9 +186,15 @@ static void AddSkyPolygon(int nump, vec3_t vecs)
 	}
 }
 
-#define ON_EPSILON      0.1f    // point on plane side epsilon
+#define ON_EPSILON      0.1f    ///< point on plane side epsilon
 #define MAX_CLIP_VERTS  64
 
+/**
+ * @brief ClipSkyPolygon
+ * @param[in] nump
+ * @param[in,out] vecs
+ * @param[in] stage
+ */
 static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
 {
 	float    *norm;
@@ -200,8 +211,8 @@ static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
 	{
 		Ren_Drop("ClipSkyPolygon: MAX_CLIP_VERTS");
 	}
-	if (stage == 6)
-	{                           // fully clipped, so draw it
+	if (stage == 6)     // fully clipped, so draw it
+	{
 		AddSkyPolygon(nump, vecs);
 		return;
 	}
@@ -228,8 +239,8 @@ static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
 		dists[i] = d;
 	}
 
-	if (!front || !back)
-	{                           // not clipped
+	if (!front || !back)     // not clipped
+	{
 		ClipSkyPolygon(nump, vecs, stage + 1);
 		return;
 	}
@@ -281,6 +292,9 @@ static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
 	ClipSkyPolygon(newc[1], newv[1][0], stage + 1);
 }
 
+/**
+ * @brief ClearSkyBox
+ */
 static void ClearSkyBox(void)
 {
 	int i;
@@ -292,10 +306,13 @@ static void ClearSkyBox(void)
 	}
 }
 
+/**
+ * @brief Tess_ClipSkyPolygons
+ */
 void Tess_ClipSkyPolygons()
 {
-	vec3_t p[5];                // need one extra point for clipping
-	int    i, j;
+	vec3_t       p[5];          // need one extra point for clipping
+	unsigned int i, j;
 
 	ClearSkyBox();
 
@@ -317,7 +334,12 @@ CLOUD VERTEX GENERATION
 */
 
 /**
- * @brief Parms: s, t range from -1 to 1
+ * @brief MakeSkyVec
+ * @param[in] s range from -1 to 1
+ * @param[in] t range from -1 to 1
+ * @param[in] axis
+ * @param[out] outSt
+ * @param[out] outXYZ
  */
 static void MakeSkyVec(float s, float t, int axis, vec4_t outSt, vec4_t outXYZ)
 {
@@ -331,14 +353,29 @@ static void MakeSkyVec(float s, float t, int axis, vec4_t outSt, vec4_t outXYZ)
 		{ -1, -3, 2 },
 
 		{ -2, -1, 3 }, // 0 degrees yaw, look straight up
-		{ 2,  -1, -3}           // look straight down
+		{ 2,  -1, -3}   // look straight down
 	};
-
 	vec3_t b;
 	int    j, k;
 	float  boxSize;
 
-	boxSize = backEnd.viewParms.zFar / 1.75;    // div sqrt(3)
+	// merged from r1
+	if (tr.glfogsettings[FOG_SKY].registered)         // trying this...
+	{
+		boxSize = tr.glfogsettings[FOG_SKY].end;       // trying this...
+	}
+	else
+	{
+		boxSize = backEnd.viewParms.zFar / 1.75f;    // div sqrt(3)
+	}
+
+	// make sure the sky is not near clipped
+	if (boxSize < r_zNear->value * 2.0f)
+	{
+		boxSize = r_zNear->value * 2.0f;
+	}
+	// vanilla end
+
 	b[0]    = s * boxSize;
 	b[1]    = t * boxSize;
 	b[2]    = boxSize;
@@ -358,8 +395,8 @@ static void MakeSkyVec(float s, float t, int axis, vec4_t outSt, vec4_t outXYZ)
 	outXYZ[3] = 1;
 
 	// avoid bilerp seam
-	s = (s + 1) * 0.5;
-	t = (t + 1) * 0.5;
+	s = (s + 1) * 0.5f;
+	t = (t + 1) * 0.5f;
 	if (s < sky_min)
 	{
 		s = sky_min;
@@ -378,7 +415,7 @@ static void MakeSkyVec(float s, float t, int axis, vec4_t outSt, vec4_t outXYZ)
 		t = sky_max;
 	}
 
-	t = 1.0 - t;
+	t = 1.0f - t;
 
 
 	if (outSt)
@@ -390,36 +427,137 @@ static void MakeSkyVec(float s, float t, int axis, vec4_t outSt, vec4_t outXYZ)
 	}
 }
 
-//static int      sky_texorder[6] = { 0, 2, 1, 3, 4, 5 };
+//static int    sky_texorder[6] = { 0, 2, 1, 3, 4, 5 };
 static vec4_t s_skyPoints[SKY_SUBDIVISIONS + 1][SKY_SUBDIVISIONS + 1];
 static float  s_skyTexCoords[SKY_SUBDIVISIONS + 1][SKY_SUBDIVISIONS + 1][4];
 
-/*
-static void DrawSkySide(struct image_s *image, const int mins[2], const int maxs[2])
+/**
+ * @brief DrawSkySide
+ * @param[in] image
+ * @param[in] mins
+ * @param[in] maxs
+ */
+static void DrawSkySide(struct image_s *image, const int mins[2], const int maxs[2]) // uses WT_EDGE_CLAMP
 {
     int             s, t;
+	int vertexStart = tess.numVertexes;
+	int tHeight     = maxs[1] - mins[1] + 1;
+	int sWidth      = maxs[0] - mins[0] + 1;
 
-    GL_SelectTexture(0);
-    GL_Bind(image);
+	GL_SelectTexture(0);
+	GL_Bind(image);
+	GL_Cull(CT_TWO_SIDED);
 
-    for(t = mins[1] + HALF_SKY_SUBDIVISIONS; t < maxs[1] + HALF_SKY_SUBDIVISIONS; t++)
-    {
-        glBegin(GL_TRIANGLE_STRIP);
+	for (t = mins[1] + HALF_SKY_SUBDIVISIONS; t <= maxs[1] + HALF_SKY_SUBDIVISIONS; t++)
+	{
+		for (s = mins[0] + HALF_SKY_SUBDIVISIONS; s <= maxs[0] + HALF_SKY_SUBDIVISIONS; s++)
+		{
+			VectorAdd(s_skyPoints[t][s], backEnd.viewParms.orientation.origin, tess.xyz[tess.numVertexes]);
+			tess.xyz[tess.numVertexes][3] = 1;
 
-        for(s = mins[0] + HALF_SKY_SUBDIVISIONS; s <= maxs[0] + HALF_SKY_SUBDIVISIONS; s++)
-        {
-            glVertexAttrib4fv(ATTR_INDEX_TEXCOORD0, s_skyTexCoords[t][s]);
-            glVertexAttrib4fv(ATTR_INDEX_POSITION, s_skyPoints[t][s]);
+			tess.texCoords[tess.numVertexes][0] = s_skyTexCoords[t][s][0];
+			tess.texCoords[tess.numVertexes][1] = s_skyTexCoords[t][s][1];
+			tess.texCoords[tess.numVertexes][2] = 0;
+			tess.texCoords[tess.numVertexes][3] = 1;
 
-            glVertexAttrib4fv(ATTR_INDEX_TEXCOORD0, s_skyTexCoords[t + 1][s]);
-            glVertexAttrib4fv(ATTR_INDEX_POSITION, s_skyPoints[t + 1][s]);
-        }
+			tess.numVertexes++;
 
-        glEnd();
-    }
+			if (tess.numVertexes >= SHADER_MAX_VERTEXES)
+			{
+				Ren_Drop("SHADER_MAX_VERTEXES hit in FillCloudySkySide()\n");
+			}
+		}
+	}
+
+	for (t = 0; t < tHeight - 1; t++)
+	{
+		for (s = 0; s < sWidth - 1; s++)
+		{
+			tess.indexes[tess.numIndexes] = vertexStart + s + t * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + (t + 1) * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + 1 + t * (sWidth);
+			tess.numIndexes++;
+
+			tess.indexes[tess.numIndexes] = vertexStart + s + (t + 1) * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + 1 + (t + 1) * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + 1 + t * (sWidth);
+			tess.numIndexes++;
+		}
+	}
+
+	tess.attribsSet |= ATTR_POSITION | ATTR_TEXCOORD;
 }
-*/
 
+/**
+ * @brief DrawSkySideInner
+ * @param[in] image
+ * @param[in] mins
+ * @param[in] maxs
+ */
+static void DrawSkySideInner(struct image_s *image, const int mins[2], const int maxs[2])  // uses WT_REPEAT
+{
+    int s, t;
+	int vertexStart = tess.numVertexes;
+	int tHeight     = maxs[1] - mins[1] + 1;
+	int sWidth      = maxs[0] - mins[0] + 1;
+
+	GL_SelectTexture(0);
+	GL_Bind(image);
+
+	for (t = mins[1] + HALF_SKY_SUBDIVISIONS; t <= maxs[1] + HALF_SKY_SUBDIVISIONS; t++)
+	{
+		for (s = mins[0] + HALF_SKY_SUBDIVISIONS; s <= maxs[0] + HALF_SKY_SUBDIVISIONS; s++)
+		{
+			VectorAdd(s_skyPoints[t][s], backEnd.viewParms.orientation.origin, tess.xyz[tess.numVertexes]);
+			tess.xyz[tess.numVertexes][3] = 1;
+
+			tess.texCoords[tess.numVertexes][0] = s_skyTexCoords[t][s][0];
+			tess.texCoords[tess.numVertexes][1] = s_skyTexCoords[t][s][1];
+			tess.texCoords[tess.numVertexes][2] = s_skyTexCoords[t][s][2];
+			tess.texCoords[tess.numVertexes][3] = s_skyTexCoords[t][s][3];
+
+			tess.numVertexes++;
+
+			if (tess.numVertexes >= SHADER_MAX_VERTEXES)
+			{
+				Ren_Drop("SHADER_MAX_VERTEXES hit in FillCloudySkySide()\n");
+			}
+		}
+	}
+
+	for (t = 0; t < tHeight - 1; t++)
+	{
+		for (s = 0; s < sWidth - 1; s++)
+		{
+			tess.indexes[tess.numIndexes] = vertexStart + s + t * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + (t + 1) * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + 1 + t * (sWidth);
+			tess.numIndexes++;
+
+			tess.indexes[tess.numIndexes] = vertexStart + s + (t + 1) * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + 1 + (t + 1) * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + 1 + t * (sWidth);
+			tess.numIndexes++;
+		}
+	}
+
+	tess.attribsSet |= ATTR_POSITION | ATTR_TEXCOORD;
+}
+
+/**
+ * @brief FillCloudySkySide
+ * @param[in] mins
+ * @param[in] maxs
+ * @param[in] addIndexes
+ */
 static void FillCloudySkySide(const int mins[2], const int maxs[2], qboolean addIndexes)
 {
 	int s, t;
@@ -448,34 +586,38 @@ static void FillCloudySkySide(const int mins[2], const int maxs[2], qboolean add
 		}
 	}
 
-	// only add indexes for one pass, otherwise it would draw multiple times for each pass
-	if (addIndexes)
+	for (t = 0; t < tHeight - 1; t++)
 	{
-		for (t = 0; t < tHeight - 1; t++)
+		for (s = 0; s < sWidth - 1; s++)
 		{
-			for (s = 0; s < sWidth - 1; s++)
-			{
-				tess.indexes[tess.numIndexes] = vertexStart + s + t * (sWidth);
-				tess.numIndexes++;
-				tess.indexes[tess.numIndexes] = vertexStart + s + (t + 1) * (sWidth);
-				tess.numIndexes++;
-				tess.indexes[tess.numIndexes] = vertexStart + s + 1 + t * (sWidth);
-				tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + t * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + (t + 1) * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + 1 + t * (sWidth);
+			tess.numIndexes++;
 
-				tess.indexes[tess.numIndexes] = vertexStart + s + (t + 1) * (sWidth);
-				tess.numIndexes++;
-				tess.indexes[tess.numIndexes] = vertexStart + s + 1 + (t + 1) * (sWidth);
-				tess.numIndexes++;
-				tess.indexes[tess.numIndexes] = vertexStart + s + 1 + t * (sWidth);
-				tess.numIndexes++;
-			}
+			tess.indexes[tess.numIndexes] = vertexStart + s + (t + 1) * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + 1 + (t + 1) * (sWidth);
+			tess.numIndexes++;
+			tess.indexes[tess.numIndexes] = vertexStart + s + 1 + t * (sWidth);
+			tess.numIndexes++;
 		}
 	}
+
+	tess.attribsSet |= ATTR_POSITION | ATTR_TEXCOORD;
 }
 
-static void DrawSkyBox(shader_t *shader)
+/**
+ * @brief DrawSkyBox
+ * @param shader
+ */
+static void DrawSkyBox(shader_t *shader, qboolean outerbox)
 {
 	int i;
+	int sky_mins_subd[2], sky_maxs_subd[2];
+	int s, t;
 
 	sky_min = 0;
 	sky_max = 1;
@@ -491,9 +633,6 @@ static void DrawSkyBox(shader_t *shader)
 
 	for (i = 0; i < 6; i++)
 	{
-		int sky_mins_subd[2], sky_maxs_subd[2];
-		int s, t;
-
 		sky_mins[0][i] = floor(sky_mins[0][i] * HALF_SKY_SUBDIVISIONS) / HALF_SKY_SUBDIVISIONS;
 		sky_mins[1][i] = floor(sky_mins[1][i] * HALF_SKY_SUBDIVISIONS) / HALF_SKY_SUBDIVISIONS;
 		sky_maxs[0][i] = ceil(sky_maxs[0][i] * HALF_SKY_SUBDIVISIONS) / HALF_SKY_SUBDIVISIONS;
@@ -550,19 +689,31 @@ static void DrawSkyBox(shader_t *shader)
 			{
 				MakeSkyVec((s - HALF_SKY_SUBDIVISIONS) / (float)HALF_SKY_SUBDIVISIONS,
 				           (t - HALF_SKY_SUBDIVISIONS) / (float)HALF_SKY_SUBDIVISIONS,
-				           i, s_skyTexCoords[t][s], s_skyPoints[t][s]);
+				           i, 
+						   s_skyTexCoords[t][s], 
+						   s_skyPoints[t][s]);
 			}
 		}
 
-		//DrawSkySide(shader->sky.outerbox[sky_texorder[i]], sky_mins_subd, sky_maxs_subd);
-
-		// only add indexes for first stage
-		FillCloudySkySide(sky_mins_subd, sky_maxs_subd, qtrue);
+		if (outerbox)
+		{
+			DrawSkySide(shader->sky.outerbox, sky_mins_subd, sky_maxs_subd);
+		}
+		else
+		{
+			DrawSkySideInner(shader->sky.innerbox, sky_mins_subd, sky_maxs_subd);
+		}
 	}
 
+	Tess_UpdateVBOs(tess.attribsSet);
 	Tess_DrawElements();
 }
 
+/**
+ * @brief FillCloudBox
+ * @param shader - unused
+ * @param[in] stage
+ */
 static void FillCloudBox(const shader_t *shader, int stage)
 {
 	int i;
@@ -573,7 +724,7 @@ static void FillCloudBox(const shader_t *shader, int stage)
 		int   s, t;
 		float MIN_T;
 
-		if (1)                   // FIXME? shader->sky.fullClouds )
+		if (1)     // FIXME? shader->sky.fullClouds )
 		{
 			MIN_T = -HALF_SKY_SUBDIVISIONS;
 
@@ -596,7 +747,7 @@ static void FillCloudBox(const shader_t *shader, int stage)
 			case 5:
 				// don't draw clouds beneath you
 				continue;
-			case 4:         // top
+			case 4:     // top
 			default:
 				MIN_T = -HALF_SKY_SUBDIVISIONS;
 				break;
@@ -658,34 +809,43 @@ static void FillCloudBox(const shader_t *shader, int stage)
 			for (s = sky_mins_subd[0] + HALF_SKY_SUBDIVISIONS; s <= sky_maxs_subd[0] + HALF_SKY_SUBDIVISIONS; s++)
 			{
 				MakeSkyVec((s - HALF_SKY_SUBDIVISIONS) / (float)HALF_SKY_SUBDIVISIONS,
-				           (t - HALF_SKY_SUBDIVISIONS) / (float)HALF_SKY_SUBDIVISIONS, i, NULL, s_skyPoints[t][s]);
+				           (t - HALF_SKY_SUBDIVISIONS) / (float)HALF_SKY_SUBDIVISIONS,
+				           i,
+				           NULL,
+				           s_skyPoints[t][s]);
 
 				s_skyTexCoords[t][s][0] = s_cloudTexCoords[i][t][s][0];
 				s_skyTexCoords[t][s][1] = s_cloudTexCoords[i][t][s][1];
 			}
 		}
 
-		// only add indexes for first stage
-		FillCloudySkySide(sky_mins_subd, sky_maxs_subd, (qboolean) (stage == 0));
+		FillCloudySkySide(sky_mins_subd, sky_maxs_subd, stage == 0 ? qtrue : qfalse); // clouds
 	}
 }
 
+/**
+ * @brief BuildCloudData
+ */
 static void BuildCloudData()
 {
 	shader_t *shader = tess.surfaceShader;
 
-	assert(shader->isSky);
+	etl_assert(shader->isSky);
 
-	sky_min = 1.0 / 256.0f;     // FIXME: not correct?
-	sky_max = 255.0 / 256.0f;
+	sky_min = 1.0 / 256.0;     // FIXME: not correct?
+	sky_max = 255.0 / 256.0;
 
 	// set up for drawing
 	tess.multiDrawPrimitives = 0;
 	tess.numIndexes          = 0;
 	tess.numVertexes         = 0;
 
-	if (tess.surfaceShader->sky.cloudHeight)
+	if (tess.surfaceShader->sky.cloudHeight != 0.f)
 	{
+		// FIXME: ok, this is really wierd. it's iterating through shader stages here,
+		// which is unecessary for a multi-stage sky shader, as far as i can tell
+		// nuking this
+#if 0
 		int i;
 
 		for (i = 0; i < MAX_SHADER_STAGES; i++)
@@ -697,14 +857,17 @@ static void BuildCloudData()
 
 			FillCloudBox(tess.surfaceShader, i);
 		}
+#else
+		FillCloudBox(tess.surfaceShader, 0);
+#endif
 	}
 
-	// FIXME analyze required vertex attribs by the current material
-	Tess_UpdateVBOs(0);
+	Tess_UpdateVBOs(tess.attribsSet);
 }
 
 /**
- *  @brief Called when a sky shader is parsed
+ * @brief Called when a sky shader is parsed
+ * @param[in] heightCloud
  */
 void R_InitSkyTexCoords(float heightCloud)
 {
@@ -727,7 +890,10 @@ void R_InitSkyTexCoords(float heightCloud)
 			{
 				// compute vector from view origin to sky side integral point
 				MakeSkyVec((s - HALF_SKY_SUBDIVISIONS) / (float)HALF_SKY_SUBDIVISIONS,
-				           (t - HALF_SKY_SUBDIVISIONS) / (float)HALF_SKY_SUBDIVISIONS, i, NULL, skyVec);
+				           (t - HALF_SKY_SUBDIVISIONS) / (float)HALF_SKY_SUBDIVISIONS,
+				           i,
+				           NULL,
+				           skyVec);
 
 				// compute parametric value 'p' that intersects with cloud layer
 				p = (1.0f / (2 * DotProduct(skyVec, skyVec))) *
@@ -737,7 +903,8 @@ void R_InitSkyTexCoords(float heightCloud)
 				              Square(skyVec[0]) * Square(heightCloud) +
 				              2 * Square(skyVec[1]) * radiusWorld * heightCloud +
 				              Square(skyVec[1]) * Square(heightCloud) +
-				              2 * Square(skyVec[2]) * radiusWorld * heightCloud + Square(skyVec[2]) * Square(heightCloud)));
+				              2 * Square(skyVec[2]) * radiusWorld * heightCloud +
+				              Square(skyVec[2]) * Square(heightCloud)));
 
 				s_cloudTexP[i][t][s] = p;
 
@@ -760,11 +927,14 @@ void R_InitSkyTexCoords(float heightCloud)
 
 //======================================================================================
 
+/**
+ * @brief RB_DrawSun
+ */
 void RB_DrawSun(void)
 {
-	float    size;
-	float    dist;
-	vec3_t   origin, vec1, vec2;
+	float  size;
+	float  dist;
+	vec3_t origin, vec1, vec2;
 	mat4_t transformMatrix;
 	mat4_t modelViewMatrix;
 
@@ -785,8 +955,9 @@ void RB_DrawSun(void)
 	GL_LoadProjectionMatrix(backEnd.viewParms.projectionMatrix);
 	GL_LoadModelViewMatrix(modelViewMatrix);
 
-	dist = backEnd.viewParms.zFar / 1.75; // div sqrt(3)
-	size = dist * 0.4;
+	dist = backEnd.viewParms.zFar / 1.75f; // div sqrt(3)
+	// shrunk the size of the sun
+	size = dist * 0.2f;
 
 	VectorScale(tr.sunDirection, dist, origin);
 	PerpendicularVector(vec1, tr.sunDirection);
@@ -816,108 +987,111 @@ void Tess_StageIteratorSky(void)
 	Ren_LogComment("--- Tess_StageIteratorSky( %s, %i vertices, %i triangles ) ---\n", tess.surfaceShader->name,
 	               tess.numVertexes, tess.numIndexes / 3);
 
-	if (r_fastsky->integer)
+	if (r_fastSky->integer)
 	{
 		return;
 	}
 
-	// trebor: HACK why does this happen with cg_draw2D 0 ?
-	//tess.stageIteratorFunc2 = Tess_StageIteratorGeneric;
-	Ren_Assert(tess.stageIteratorFunc2 == NULL);
-
-	GL_Cull(CT_TWO_SIDED);
-
-	if (tess.stageIteratorFunc2 == &Tess_StageIteratorDepthFill)
+	// when portal sky exists, only render skybox for the portal sky scene
+	if (tr.world && tr.world->hasSkyboxPortal && !(backEnd.refdef.rdflags & RDF_SKYBOXPORTAL))
 	{
-		// go through all the polygons and project them onto
-		// the sky box to see which blocks on each side need
-		// to be drawn
-		Tess_ClipSkyPolygons();
+		return;
+	}
 
-		// generate the vertexes for all the clouds, which will be drawn
-		// by the generic shader routine
-		BuildCloudData();
-
-		if (tess.numVertexes || tess.multiDrawPrimitives)
+	// does the current fog require fastsky?
+	if (backEnd.viewParms.glFog.registered)
+	{
+		if (!backEnd.viewParms.glFog.drawsky)
 		{
-			tess.stageIteratorFunc2();
+			return;
 		}
+	}
+	else if (tr.glfogNum > FOG_NONE)
+	{
+		if (!tr.glfogsettings[FOG_CURRENT].drawsky)
+		{
+			return;
+		}
+	}
+
+	backEnd.refdef.rdflags |= RDF_DRAWINGSKY;
+
+	// go through all the polygons and project them onto
+	// the sky box to see which blocks on each side need
+	// to be drawn
+	Tess_ClipSkyPolygons();
+
+	// r_showSky will let all the sky blocks be drawn in
+	// front of everything to allow developers to see how
+	// much sky is getting sucked in
+	if (r_showSky->integer)
+	{
+		glDepthRange(0.0, 0.0);
 	}
 	else
 	{
-		// go through all the polygons and project them onto
-		// the sky box to see which blocks on each side need
-		// to be drawn
-		Tess_ClipSkyPolygons();
-
-		// r_showSky will let all the sky blocks be drawn in
-		// front of everything to allow developers to see how
-		// much sky is getting sucked in
-
-		if (r_showSky->integer)
-		{
-			glDepthRange(0.0, 0.0);
-		}
-		else
-		{
-			glDepthRange(1.0, 1.0);
-		}
-
-		// draw the outer skybox
-		if (tess.surfaceShader->sky.outerbox && tess.surfaceShader->sky.outerbox != tr.blackCubeImage)
-		{
-#if 1
-			R_BindVBO(tess.vbo);
-			R_BindIBO(tess.ibo);
-
-			SetMacrosAndSelectProgram(trProg.gl_skyboxShader, USE_PORTAL_CLIPPING, backEnd.viewParms.isPortal);
-
-			SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin);   // in world space
-			SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
-			SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
-
-			// u_PortalPlane
-			if (backEnd.viewParms.isPortal)
-			{
-				vec4_t plane;
-
-				// clipping plane in world space
-				plane[0] = backEnd.viewParms.portalPlane.normal[0];
-				plane[1] = backEnd.viewParms.portalPlane.normal[1];
-				plane[2] = backEnd.viewParms.portalPlane.normal[2];
-				plane[3] = backEnd.viewParms.portalPlane.dist;
-
-				SetUniformVec4(UNIFORM_PORTALPLANE, plane);
-			}
-
-			GLSL_SetRequiredVertexPointers(trProg.gl_skyboxShader);
-
-			// bind u_ColorMap
-			SelectTexture(TEX_COLOR);
-			GL_Bind(tess.surfaceShader->sky.outerbox);
-
-			DrawSkyBox(tess.surfaceShader);
-#endif
-		}
-
-		// generate the vertexes for all the clouds, which will be drawn
-		// by the generic shader routine
-		BuildCloudData();
-
-		if (tess.numVertexes || tess.multiDrawPrimitives)
-		{
-			tess.stageIteratorFunc2();
-		}
-
-		// TODO draw the inner skybox?
-
-		if (tess.stageIteratorFunc2 != Tess_StageIteratorDepthFill)
-		{
-			// back to normal depth range
-			glDepthRange(0.0, 1.0);
-
-			// note that sky was drawn so we will draw a sun later
-			backEnd.skyRenderedThisView = qtrue;
-		}
+		glDepthRange(1.0, 1.0);
 	}
+
+	// draw the outer skybox
+	if (tess.surfaceShader->sky.outerbox && tess.surfaceShader->sky.outerbox != tr.blackCubeImage)
+	{
+		GL_Cull(CT_FRONT_SIDED);
+		R_BindVBO(tess.vbo);
+		R_BindIBO(tess.ibo);
+
+		SetMacrosAndSelectProgram(trProg.gl_skyboxShader, USE_PORTAL_CLIPPING, backEnd.viewParms.isPortal);
+
+		SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin);   // in world space
+		SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
+		SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
+
+		// u_PortalPlane
+		if (backEnd.viewParms.isPortal)
+		{
+			// clipping plane in world space
+			clipPortalPlane();
+		}
+
+		GLSL_SetRequiredVertexPointers(trProg.gl_skyboxShader);
+
+		DrawSkyBox(tess.surfaceShader, qtrue);
+	}
+
+	// generate the vertexes for all the clouds, which will be drawn
+	// by the generic shader routine
+	BuildCloudData();
+
+	Tess_StageIteratorGeneric();
+
+	// draw the inner skybox
+	if (tess.surfaceShader->sky.innerbox && tess.surfaceShader->sky.innerbox != tr.blackCubeImage)
+	{
+		R_BindVBO(tess.vbo);
+		R_BindIBO(tess.ibo);
+
+		SetMacrosAndSelectProgram(trProg.gl_skyboxShader, USE_PORTAL_CLIPPING, backEnd.viewParms.isPortal);
+
+		SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin);   // in world space
+		SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
+		SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
+
+		// u_PortalPlane
+		if (backEnd.viewParms.isPortal)
+		{
+			// clipping plane in world space
+			clipPortalPlane();
+		}
+
+		GLSL_SetRequiredVertexPointers(trProg.gl_skyboxShader);
+
+		DrawSkyBox(tess.surfaceShader, qfalse);
+	}
+	
+	// back to normal depth range
+	glDepthRange(0.0, 1.0);
+
+	// note that sky was drawn so we will draw a sun later
+	backEnd.skyRenderedThisView = qtrue;
+	backEnd.refdef.rdflags &= ~RDF_DRAWINGSKY;
 }

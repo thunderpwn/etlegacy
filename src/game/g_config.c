@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -35,12 +35,13 @@
 
 #include "g_local.h"
 
-/*
-=============
-G_ConfigParse
-=============
-*/
-static qboolean G_ConfigError(int handle, char *format, ...)
+/**
+ * @brief G_ConfigError
+ * @param[in] handle
+ * @param[in] format
+ * @return
+ */
+static qboolean G_ConfigError(int handle, const char *format, ...)
 {
 	int         line = 0;
 	char        filename[MAX_QPATH];
@@ -62,6 +63,10 @@ static qboolean G_ConfigError(int handle, char *format, ...)
 	return qfalse;
 }
 
+/**
+ * @brief G_PrintConfigs
+ * @param[in] ent
+ */
 void G_PrintConfigs(gentity_t *ent)
 {
 	char configNames[8192];
@@ -90,6 +95,9 @@ void G_PrintConfigs(gentity_t *ent)
 
 /**
  * @brief Checks if config file is in paths (used before initiating a vote for configs)
+ *
+ * @param[in] ent
+ * @param[in] configname
  */
 qboolean G_isValidConfig(gentity_t *ent, const char *configname)
 {
@@ -106,7 +114,7 @@ qboolean G_isValidConfig(gentity_t *ent, const char *configname)
 		return qfalse;
 	}
 
-	if (!trap_FS_FOpenFile(va("configs/%s.config", filename), &f, FS_READ))
+	if (trap_FS_FOpenFile(va("configs/%s.config", filename), &f, FS_READ) <= 0)
 	{
 		G_refPrintf(ent, "^3Warning: No config with filename '%s' found\n", filename);
 		return qfalse;
@@ -117,6 +125,13 @@ qboolean G_isValidConfig(gentity_t *ent, const char *configname)
 	return qtrue;
 }
 
+/**
+ * @brief G_ParseSettings
+ * @param[in] handle
+ * @param[in] setvars
+ * @param[in] config
+ * @return
+ */
 qboolean G_ParseSettings(int handle, qboolean setvars, config_t *config)
 {
 	pc_token_t token;
@@ -152,26 +167,24 @@ qboolean G_ParseSettings(int handle, qboolean setvars, config_t *config)
 			{
 				return G_ConfigError(handle, "expected cvar to set");
 			}
-			else
+
+			if (!PC_String_ParseNoAlloc(handle, value, sizeof(value)))
 			{
-				if (!PC_String_ParseNoAlloc(handle, value, sizeof(value)))
-				{
-					return G_ConfigError(handle, "expected cvar value");
-				}
-
-				if (value[0] == '-')
-				{
-					if (!PC_String_ParseNoAlloc(handle, text, sizeof(text)))
-					{
-						return G_ConfigError(handle, "expected value after '-'");
-					}
-
-					Q_strncpyz(value, va("-%s", text), sizeof(value));
-				}
-
-				trap_Cvar_Set(text, value);
-				G_Printf("set %s %s\n", text, value);
+				return G_ConfigError(handle, "expected cvar value");
 			}
+
+			if (value[0] == '-')
+			{
+				if (!PC_String_ParseNoAlloc(handle, text, sizeof(text)))
+				{
+					return G_ConfigError(handle, "expected value after '-'");
+				}
+
+				Q_strncpyz(value, va("-%s", text), sizeof(value));
+			}
+
+			trap_Cvar_Set(text, value);
+			G_Printf("set %s %s\n", text, value);
 		}
 		else if (!Q_stricmp(token.string, "setl"))
 		{
@@ -182,22 +195,20 @@ qboolean G_ParseSettings(int handle, qboolean setvars, config_t *config)
 			{
 				return G_ConfigError(handle, "expected cvar to set");
 			}
-			else
+
+			if (!PC_String_ParseNoAlloc(handle, value, sizeof(value)))
 			{
-				if (!PC_String_ParseNoAlloc(handle, value, sizeof(value)))
+				return G_ConfigError(handle, "expected cvar value");
+			}
+
+			if (value[0] == '-')
+			{
+				if (!PC_String_ParseNoAlloc(handle, text, sizeof(text)))
 				{
-					return G_ConfigError(handle, "expected cvar value");
+					return G_ConfigError(handle, "expected value after '-'");
 				}
 
-				if (value[0] == '-')
-				{
-					if (!PC_String_ParseNoAlloc(handle, text, sizeof(text)))
-					{
-						return G_ConfigError(handle, "expected value after '-'");
-					}
-
-					Q_strncpyz(value, va("-%s", text), sizeof(value));
-				}
+				Q_strncpyz(value, va("-%s", text), sizeof(value));
 			}
 
 			for (; i < config->numSetl; i++)
@@ -249,6 +260,12 @@ qboolean G_ParseSettings(int handle, qboolean setvars, config_t *config)
 	return qtrue;
 }
 
+/**
+ * @brief G_ParseMapSettings
+ * @param[in] handle
+ * @param[in] config
+ * @return
+ */
 qboolean G_ParseMapSettings(int handle, config_t *config)
 {
 	pc_token_t token;
@@ -271,7 +288,8 @@ qboolean G_ParseMapSettings(int handle, config_t *config)
 		G_Printf("Setting rules for map: %s\n", token.string);
 		return G_ParseSettings(handle, qtrue, config);
 	}
-	else if (!Q_stricmp(token.string, mapname))
+
+	if (!Q_stricmp(token.string, mapname))
 	{
 		fileHandle_t f;
 		char         *code, *signature;
@@ -287,7 +305,7 @@ qboolean G_ParseMapSettings(int handle, config_t *config)
 			trap_Cvar_VariableStringBuffer("g_mapScriptDirectory", sdir, sizeof(sdir));
 
 			flen = trap_FS_FOpenFile(va("%s/%s.script", sdir, mapname), &f, FS_READ);
-			if (flen < 0)
+			if (flen <= 0)
 			{
 				// FIXME: handle this properly..
 				//return G_ConfigError(handle, "Cannot open mapscript file for hash verification: %s/%s.script", sdir, mapname);
@@ -295,13 +313,13 @@ qboolean G_ParseMapSettings(int handle, config_t *config)
 				return res;
 			}
 
-			code = malloc(flen + 1);
+			code = Com_Allocate(flen + 1);
 			trap_FS_Read(code, flen, f);
 			*(code + flen) = '\0';
 			trap_FS_FCloseFile(f);
 			signature = G_SHA1(code);
 
-			free(code);
+			Com_Dealloc(code);
 
 			if (Q_stricmp(config->mapscripthash, signature))
 			{
@@ -313,13 +331,15 @@ qboolean G_ParseMapSettings(int handle, config_t *config)
 
 		return res;
 	}
-	else
-	{
-		G_Printf("Ignoring rules for map: %s\n", token.string);
-		return G_ParseSettings(handle, qfalse, config);
-	}
+
+	G_Printf("Ignoring rules for map: %s\n", token.string);
+	return G_ParseSettings(handle, qfalse, config);
 }
 
+/**
+ * @brief G_configLoadAndSet
+ * @param[in] name
+ */
 void G_configLoadAndSet(const char *name)
 {
 	pc_token_t token;
@@ -335,7 +355,7 @@ void G_configLoadAndSet(const char *name)
 		return;
 	}
 
-	memset(&level.config, 0, sizeof(config_t));
+	Com_Memset(&level.config, 0, sizeof(config_t));
 
 	G_wipeCvars();
 
@@ -431,7 +451,11 @@ void G_configLoadAndSet(const char *name)
 	G_UpdateCvars();
 }
 
-// Force settings to predefined state.
+/**
+ * @brief Force settings to predefined state.
+ * @param[in] configname
+ * @return
+ */
 qboolean G_configSet(const char *configname)
 {
 	fileHandle_t f;
@@ -451,7 +475,7 @@ qboolean G_configSet(const char *configname)
 	}
 
 	G_Printf("Will try to load config: \"configs/%s.config\"\n", filename);
-	if (!trap_FS_FOpenFile(va("configs/%s.config", filename), &f, FS_READ))
+	if (trap_FS_FOpenFile(va("configs/%s.config", filename), &f, FS_READ) <= 0)
 	{
 		G_Printf("^3Warning: No config with filename '%s' found\n", filename);
 		return qfalse;
@@ -471,7 +495,7 @@ qboolean G_configSet(const char *configname)
 
 	if (!level.config.publicConfig && g_gamestate.integer == GS_WARMUP_COUNTDOWN)
 	{
-		level.lastRestartTime = level.time;
+		level.lastRestartTime = (qboolean)level.time;
 		trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WARMUP));
 	}
 	else
@@ -482,7 +506,10 @@ qboolean G_configSet(const char *configname)
 	return qtrue;
 }
 
-void G_ConfigCheckLocked()
+/**
+ * @brief G_ConfigCheckLocked
+ */
+void G_ConfigCheckLocked(void)
 {
 	int      i;
 	config_t *config = &level.config;
@@ -509,10 +536,8 @@ void G_ConfigCheckLocked()
 			G_Printf("Config cvar \"%s\" value: %s does not match the currently set value %s\n", config->setl[i].name, config->setl[i].value, temp);
 			trap_SetConfigstring(CS_CONFIGNAME, "");
 			trap_SendServerCommand(-1, va("cp \"^7Config '%s^7' ^1WAS UNLOADED DUE TO EXTERNAL MANIPULATION\"", config->name));
-			memset(&level.config, 0, sizeof(config_t));
+			Com_Memset(&level.config, 0, sizeof(config_t));
 			break;
 		}
 	}
-
-	return;
 }

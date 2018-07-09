@@ -3,7 +3,7 @@
  * Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
  *
  * ET: Legacy
- * Copyright (C) 2012-2016 ET:Legacy team <mail@etlegacy.com>
+ * Copyright (C) 2012-2018 ET:Legacy team <mail@etlegacy.com>
  *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
@@ -61,6 +61,9 @@ int r_firstSceneDecal;
 
 int skyboxportal;
 
+/**
+ * @brief R_InitNextFrame
+ */
 void R_InitNextFrame(void)
 {
 	backEndData->commands.used = 0;
@@ -91,11 +94,9 @@ void R_InitNextFrame(void)
 	r_firstSceneDecal          = 0;
 }
 
-/*
-====================
-RE_ClearScene
-====================
-*/
+/**
+ * @brief RE_ClearScene
+ */
 void RE_ClearScene(void)
 {
 	// clear everything else
@@ -111,13 +112,9 @@ DISCRETE POLYS
 ===========================================================================
 */
 
-/*
-=====================
-R_AddPolygonSurfaces
-
-Adds all the scene's polys into this view's drawsurf list
-=====================
-*/
+/**
+ * @brief Adds all the scene's polys into this view's drawsurf list
+ */
 void R_AddPolygonSurfaces(void)
 {
 	int       i;
@@ -135,11 +132,12 @@ void R_AddPolygonSurfaces(void)
 	}
 }
 
-/*
-=====================
-RE_AddPolyToScene
-=====================
-*/
+/**
+ * @brief RE_AddPolyToScene
+ * @param[in] hShader
+ * @param[in] numVerts
+ * @param[in] verts
+ */
 void RE_AddPolyToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts)
 {
 	srfPoly_t *poly;
@@ -154,13 +152,13 @@ void RE_AddPolyToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts)
 
 	if (!hShader)
 	{
-		ri.Printf(PRINT_WARNING, "WARNING RE_AddPolyToScene: NULL poly shader\n");
+		Ren_Warning("WARNING RE_AddPolyToScene: NULL poly shader\n");
 		return;
 	}
 
-	if (((r_numpolyverts + numVerts) >= r_maxpolyverts->integer) || (r_numpolys >= r_maxpolys->integer))
+	if (((r_numpolyverts + numVerts) >= r_maxPolyVerts->integer) || (r_numpolys >= r_maxPolys->integer))
 	{
-		ri.Printf(PRINT_DEVELOPER, "WARNING RE_AddPolyToScene: r_maxpolyverts or r_maxpolys reached\n");
+		Ren_Developer("WARNING RE_AddPolyToScene: r_maxpolyverts or r_maxpolys reached\n");
 		return;
 	}
 
@@ -170,7 +168,7 @@ void RE_AddPolyToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts)
 	poly->numVerts    = numVerts;
 	poly->verts       = &backEndData->polyVerts[r_numpolyverts];
 
-	memcpy(poly->verts, verts, numVerts * sizeof(*verts));
+	Com_Memcpy(poly->verts, verts, numVerts * sizeof(*verts));
 
 	r_numpolys++;
 	r_numpolyverts += numVerts;
@@ -212,11 +210,13 @@ void RE_AddPolyToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts)
 	poly->fogIndex = fogIndex;
 }
 
-/*
-=====================
-RE_AddPolysToScene
-=====================
-*/
+/**
+ * @brief RE_AddPolysToScene
+ * @param[in] hShader
+ * @param[in] numVerts
+ * @param[in] verts
+ * @param[in] numPolys
+ */
 void RE_AddPolysToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts, int numPolys)
 {
 	srfPoly_t *poly;
@@ -233,20 +233,20 @@ void RE_AddPolysToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts
 
 	if (!hShader)
 	{
-		ri.Printf(PRINT_WARNING, "WARNING RE_AddPolysToScene: NULL poly shader\n");
+		Ren_Warning("WARNING RE_AddPolysToScene: NULL poly shader\n");
 		return;
 	}
 
 	for (j = 0; j < numPolys; j++)
 	{
-		if (r_numpolyverts + numVerts >= r_maxpolyverts->integer)
+		if (r_numpolyverts + numVerts >= r_maxPolyVerts->integer)
 		{
-			ri.Printf(PRINT_DEVELOPER, "WARNING RE_AddPolysToScene: r_maxpolyverts[%i] reached. r_numpolyverts: %i - numVerts: %i - numPolys %i - shader %i\n", r_maxpolyverts->integer, r_numpolyverts, numVerts, numPolys, hShader);
+			Ren_Developer("WARNING RE_AddPolysToScene: r_maxpolyverts[%i] reached. r_numpolyverts: %i - numVerts: %i - numPolys %i - shader %i\n", r_maxPolyVerts->integer, r_numpolyverts, numVerts, numPolys, hShader);
 			return;
 		}
-		if (r_numpolys >= r_maxpolys->integer)
+		if (r_numpolys >= r_maxPolys->integer)
 		{
-			ri.Printf(PRINT_DEVELOPER, "WARNING RE_AddPolysToScene: r_maxpolys[%i] reached. r_numpolys: %i\n", r_maxpolys->integer, r_numpolys);
+			Ren_Developer("WARNING RE_AddPolysToScene: r_maxpolys[%i] reached. r_numpolys: %i\n", r_maxPolys->integer, r_numpolys);
 			return;
 		}
 
@@ -256,7 +256,7 @@ void RE_AddPolysToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts
 		poly->numVerts    = numVerts;
 		poly->verts       = &backEndData->polyVerts[r_numpolyverts];
 
-		memcpy(poly->verts, &verts[numVerts * j], numVerts * sizeof(*verts));
+		Com_Memcpy(poly->verts, &verts[numVerts * j], numVerts * sizeof(*verts));
 
 		r_numpolys++;
 		r_numpolyverts += numVerts;
@@ -302,13 +302,9 @@ void RE_AddPolysToScene(qhandle_t hShader, int numVerts, const polyVert_t *verts
 	}
 }
 
-/*
-=====================
-R_AddPolygonSurfaces
-
-Adds all the scene's polys into this view's drawsurf list
-=====================
-*/
+/**
+ * @brief Adds all the scene's polys into this view's drawsurf list
+ */
 void R_AddPolygonBufferSurfaces(void)
 {
 	int             i;
@@ -326,11 +322,10 @@ void R_AddPolygonBufferSurfaces(void)
 	}
 }
 
-/*
-=====================
-RE_AddPolyBufferToScene
-=====================
-*/
+/**
+ * @brief RE_AddPolyBufferToScene
+ * @param[in] pPolyBuffer
+ */
 void RE_AddPolyBufferToScene(polyBuffer_t *pPolyBuffer)
 {
 	srfPolyBuffer_t *pPolySurf;
@@ -380,11 +375,10 @@ void RE_AddPolyBufferToScene(polyBuffer_t *pPolyBuffer)
 
 //=================================================================================
 
-/*
-=====================
-RE_AddRefEntityToScene
-=====================
-*/
+/**
+ * @brief RE_AddRefEntityToScene
+ * @param[in] ent
+ */
 void RE_AddRefEntityToScene(const refEntity_t *ent)
 {
 	if (!tr.registered)
@@ -392,11 +386,11 @@ void RE_AddRefEntityToScene(const refEntity_t *ent)
 		return;
 	}
 
-	if (r_numentities >= ENTITYNUM_WORLD)
+	// NOTE: fixed was ENTITYNUM_WORLD
+	if (r_numentities >= MAX_REFENTITIES)
 	{
 		// we may change this to developer print
-		//Ren_Print("WARNING RE_AddRefEntityToScene: Dropping refEntity, reached MAX_REFENTITIES\n");
-		ri.Printf(PRINT_WARNING, "RE_AddRefEntityToScene: bad reType %i", ent->reType);
+		Ren_Print("WARNING RE_AddRefEntityToScene: Dropping refEntity, reached MAX_REFENTITIES\n");
 		return;
 	}
 
@@ -407,15 +401,14 @@ void RE_AddRefEntityToScene(const refEntity_t *ent)
 		if (firstTime)
 		{
 			firstTime = qfalse;
-			//Ren_Print("WARNING RE_AddRefEntityToScene passed a refEntity which has an origin with a NaN component\n");
-			ri.Printf(PRINT_WARNING, "RE_AddRefEntityToScene: bad reType %i", ent->reType);
+			Ren_Print("WARNING RE_AddRefEntityToScene passed a refEntity which has an origin with a NaN component\n");
 		}
 		return;
 	}
 
 	if ((int)ent->reType < 0 || ent->reType >= RT_MAX_REF_ENTITY_TYPE)
 	{
-		ri.Error(ERR_DROP, "RE_AddRefEntityToScene: bad reType %i", ent->reType);
+		Ren_Drop("RE_AddRefEntityToScene: bad reType %i", ent->reType);
 	}
 
 	backEndData->entities[r_numentities].e                  = *ent;
@@ -424,34 +417,40 @@ void RE_AddRefEntityToScene(const refEntity_t *ent)
 	r_numentities++;
 
 	// add projected shadows for this model
-	// - casting const away
-	R_AddModelShadow((refEntity_t *) ent);
+	R_AddModelShadow(ent);
 }
 
-/*
-RE_AddLightToScene()
-    modified dlight system to support seperate radius and intensity
-*/
+/**
+ * @brief Modified dlight system to support seperate radius and intensity
+ * @param[in] org
+ * @param[in] radius
+ * @param[in] intensity
+ * @param[in] r
+ * @param[in] g
+ * @param[in] b
+ * @param[in] hShader
+ * @param[in] flags
+ */
 void RE_AddLightToScene(const vec3_t org, float radius, float intensity, float r, float g, float b, qhandle_t hShader, int flags)
 {
 	dlight_t *dl;
 
 	// early out
-	if (!tr.registered || radius <= 0 || intensity <= 0)
+	if (!tr.registered  || radius <= 0 || intensity <= 0)
 	{
 		return;
 	}
 
 	if (r_numdlights >= MAX_DLIGHTS)
 	{
-		ri.Printf(PRINT_WARNING, "RE_AddLightToScene: Dropping dlight, reached MAX_DLIGHTS\n");
+		Ren_Print("WARNING RE_AddLightToScene: Dropping dlight, reached MAX_DLIGHTS\n");
 		return;
 	}
 
 	// allow us to force some dlights under all circumstances
 	if (!(flags & REF_FORCE_DLIGHT))
 	{
-		if (r_dynamiclight->integer == 0)
+		if (r_dynamicLight->integer == 0)
 		{
 			return;
 		}
@@ -462,7 +461,7 @@ void RE_AddLightToScene(const vec3_t org, float radius, float intensity, float r
 	VectorCopy(org, dl->origin);
 	VectorCopy(org, dl->transformed);
 	dl->radius             = radius;
-	dl->radiusInverseCubed = (1.0 / dl->radius);
+	dl->radiusInverseCubed = (1.0f / dl->radius);
 	dl->radiusInverseCubed = dl->radiusInverseCubed * dl->radiusInverseCubed * dl->radiusInverseCubed;
 	dl->intensity          = intensity;
 	dl->color[0]           = r;
@@ -476,11 +475,16 @@ void RE_AddLightToScene(const vec3_t org, float radius, float intensity, float r
 	dl->flags = flags;
 }
 
-/*
-==============
-RE_AddCoronaToScene
-==============
-*/
+/**
+ * @brief RE_AddCoronaToScene
+ * @param[in] org
+ * @param[in] r
+ * @param[in] g
+ * @param[in] b
+ * @param[in] scale
+ * @param[in] id
+ * @param[in] visible
+ */
 void RE_AddCoronaToScene(const vec3_t org, float r, float g, float b, float scale, int id, qboolean visible)
 {
 	corona_t *cor;
@@ -489,9 +493,15 @@ void RE_AddCoronaToScene(const vec3_t org, float r, float g, float b, float scal
 	{
 		return;
 	}
+
+	if (!visible)
+	{
+		return;
+	}
+
 	if (r_numcoronas >= MAX_CORONAS)
 	{
-		ri.Printf(PRINT_DEVELOPER, "RE_AddCoronaToScene: Dropping corona, reached MAX_CORONAS\n");
+		Ren_Developer("WARNING RE_AddCoronaToScene: Dropping corona, reached MAX_CORONAS\n");
 		return;
 	}
 
@@ -505,17 +515,15 @@ void RE_AddCoronaToScene(const vec3_t org, float r, float g, float b, float scal
 	cor->visible  = visible;
 }
 
-/*
-@@@@@@@@@@@@@@@@@@@@@
-RE_RenderScene
-
-Draw a 3D view into a part of the window, then return
-to 2D drawing.
-
-Rendering a scene may require multiple views to be rendered
-to handle mirrors,
-@@@@@@@@@@@@@@@@@@@@@
-*/
+/**
+ * @brief Draw a 3D view into a part of the window, then return
+ * to 2D drawing.
+ *
+ * Rendering a scene may require multiple views to be rendered
+ * to handle mirrors.
+ *
+ * @param[in] fd
+ */
 void RE_RenderScene(const refdef_t *fd)
 {
 	viewParms_t parms;
@@ -527,7 +535,7 @@ void RE_RenderScene(const refdef_t *fd)
 	}
 	Ren_LogComment("====== RE_RenderScene =====\n");
 
-	if (r_norefresh->integer)
+	if (r_noreFresh->integer)
 	{
 		return;
 	}
@@ -536,10 +544,10 @@ void RE_RenderScene(const refdef_t *fd)
 
 	if (!tr.world && !(fd->rdflags & RDF_NOWORLDMODEL))
 	{
-		ri.Error(ERR_DROP, "R_RenderScene: NULL worldmodel");
+		Ren_Drop("R_RenderScene: NULL worldmodel");
 	}
 
-	memcpy(tr.refdef.text, fd->text, sizeof(tr.refdef.text));
+	Com_Memcpy(tr.refdef.text, fd->text, sizeof(tr.refdef.text));
 
 	tr.refdef.x      = fd->x;
 	tr.refdef.y      = fd->y;
@@ -571,7 +579,7 @@ void RE_RenderScene(const refdef_t *fd)
 
 		// compare the area bits
 		areaDiff = 0;
-		for (i = 0 ; i < MAX_MAP_AREA_BYTES / 4 ; i++)
+		for (i = 0; i < MAX_MAP_AREA_BYTES / 4; i++)
 		{
 			areaDiff                      |= ((int *)tr.refdef.areamask)[i] ^ ((int *)fd->areamask)[i];
 			((int *)tr.refdef.areamask)[i] = ((int *)fd->areamask)[i];
@@ -586,7 +594,7 @@ void RE_RenderScene(const refdef_t *fd)
 
 	// derived info
 
-	tr.refdef.floatTime = (double)tr.refdef.time * 0.001;
+	tr.refdef.floatTime = tr.refdef.time * 0.001;
 
 	tr.refdef.numDrawSurfs = r_firstSceneDrawSurf;
 	tr.refdef.drawSurfs    = backEndData->drawSurfs;
@@ -625,7 +633,7 @@ void RE_RenderScene(const refdef_t *fd)
 	// set up viewport
 	// The refdef takes 0-at-the-top y coordinates, so
 	// convert to GL's 0-at-the-bottom space
-	memset(&parms, 0, sizeof(parms));
+	Com_Memset(&parms, 0, sizeof(parms));
 	parms.viewportX      = tr.refdef.x;
 	parms.viewportY      = glConfig.vidHeight - (tr.refdef.y + tr.refdef.height);
 	parms.viewportWidth  = tr.refdef.width;

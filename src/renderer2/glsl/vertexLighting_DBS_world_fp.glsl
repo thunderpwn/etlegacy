@@ -7,7 +7,6 @@ uniform sampler2D u_SpecularMap;
 uniform int       u_AlphaTest;
 uniform vec3      u_ViewOrigin;
 uniform float     u_DepthScale;
-uniform int       u_PortalClipping;
 uniform vec4      u_PortalPlane;
 uniform float     u_LightWrapAround;
 
@@ -18,18 +17,18 @@ varying vec4 var_LightColor;
 varying vec3 var_Tangent;
 varying vec3 var_Binormal;
 varying vec3 var_Normal;
+//varying vec3 var_LightDirection;
 
 void main()
 {
-	if (bool(u_PortalClipping))
-	{
+	#if defined(USE_PORTAL_CLIPPING)
 		float dist = dot(var_Position.xyz, u_PortalPlane.xyz) - u_PortalPlane.w;
 		if (dist < 0.0)
 		{
 			discard;
 			return;
 		}
-	}
+	#endif
 
 #if defined(USE_NORMAL_MAPPING)
 
@@ -108,19 +107,28 @@ void main()
 
 	// compute normal in tangent space from normalmap
 	vec3 N = 2.0 * (texture2D(u_NormalMap, texNormal).xyz - 0.5);
-	#if defined(r_NormalScale)
+
+#if defined(r_NormalScale)
 	N.z *= r_NormalScale;
-	normalize(N);
-	#endif
+#endif
 
-	// fake bump mapping
-	vec3 L = N;
+	N = normalize(N);
 
+	// compute light direction in tangent space
+	// FIXME/ADD?: See ATTR_INDEX_LIGHTDIRECTION
+	//vec3 L = normalize(objectToTangentMatrix * var_LightDirection);
+	vec3 L = N; // fake bump mapping
+		
 	// compute half angle in tangent space
 	vec3 H = normalize(L + V);
 
+	vec3 R = reflect(-L, N);
+
 	// compute the light term
-#if defined(r_WrapAroundLighting)
+#if defined(r_HalfLambertLighting)
+	// http://developer.valvesoftware.com/wiki/Half_Lambert
+	float NL = dot(N, L) * 0.5 + 0.5;
+#elif defined(r_WrapAroundLighting)
 	float NL = clamp(dot(N, L) + u_LightWrapAround, 0.0, 1.0) / clamp(1.0 + u_LightWrapAround, 0.0, 1.0);
 #else
 	float NL = clamp(dot(N, L), 0.0, 1.0);
@@ -128,8 +136,9 @@ void main()
 	vec3 light = var_LightColor.rgb * NL;
 
 	// compute the specular term
-	vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * var_LightColor.rgb * pow(clamp(dot(N, H), 0.0, 1.0), r_SpecularExponent) * r_SpecularScale;
-
+	//vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * var_LightColor.rgb * pow(clamp(dot(N, H), 0.0, 1.0), r_SpecularExponent) * r_SpecularScale;
+	vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * var_LightColor.rgb * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
+	
 	// compute final color
 	vec4 color = vec4(diffuse.rgb, var_LightColor.a);
 	color.rgb *= light;
@@ -137,7 +146,7 @@ void main()
 
 	gl_FragColor = color;
 
-#elif 1
+#else // no normal mapping
 
 	vec3 N;
 
@@ -173,81 +182,27 @@ void main()
 	}
 #endif
 
+	//FIXME/ADD?: See ATTR_INDEX_LIGHTDIRECTION
+	//vec3 L = normalize(var_LightDirection);
+
+	// compute the light term
+	//#if defined(r_WrapAroundLighting)
+	//	float NL = clamp(dot(N, L) + u_LightWrapAround, 0.0, 1.0) / clamp(1.0 + u_LightWrapAround, 0.0, 1.0);
+	//#else
+	//	float NL = clamp(dot(N, L), 0.0, 1.0);
+	//#endif
+
+	//vec3 light = var_LightColor.rgb * NL;
+	//vec4 color = vec4(diffuse.rgb * light, var_LightColor.a);
+
 	vec4 color = vec4(diffuse.rgb * var_LightColor.rgb, var_LightColor.a);
 
-	// gl_FragColor = vec4(diffuse.rgb * var_LightColor.rgb, diffuse.a);
-	// color = vec4(vec3(1.0, 0.0, 0.0), diffuse.a);
-	// gl_FragColor = vec4(vec3(diffuse.a, diffuse.a, diffuse.a), 1.0);
-	// gl_FragColor = vec4(vec3(var_LightColor.a, var_LightColor.a, var_LightColor.a), 1.0);
-	// gl_FragColor = var_LightColor;
-
-#if 0 //defined(r_ShowTerrainBlends)
+//defined(r_ShowTerrainBlends)
+#if 0
 	color = vec4(vec3(var_LightColor.a), 1.0);
 #endif
 
 	gl_FragColor = color;
 
-#else // USE_NORMAL_MAPPING
-
-	// compute the diffuse term
-	vec4 diffuse = texture2D(u_DiffuseMap, var_TexDiffuseNormal.st);
-
-#if defined(USE_ALPHA_TESTING)
-	if (u_AlphaTest == ATEST_GT_0 && diffuse.a <= 0.0)
-	{
-		discard;
-		return;
-	}
-	else if (u_AlphaTest == ATEST_LT_128 && diffuse.a >= 0.5)
-	{
-		discard;
-		return;
-	}
-	else if (u_AlphaTest == ATEST_GE_128 && diffuse.a < 0.5)
-	{
-		discard;
-		return;
-	}
-#endif
-
-	vec3 N;
-
-#if defined(TWOSIDED)
-	if (gl_FrontFacing)
-	{
-		N = -normalize(var_Normal);
-	}
-	else
-#endif
-	{
-		N = normalize(var_Normal);
-	}
-
-	vec3 L = normalize(var_LightDirection);
-
-	// compute the light term
-#if defined(r_WrapAroundLighting)
-	float NL = clamp(dot(N, L) + u_LightWrapAround, 0.0, 1.0) / clamp(1.0 + u_LightWrapAround, 0.0, 1.0);
-#else
-	float NL = clamp(dot(N, L), 0.0, 1.0);
-#endif
-
-	vec3 light = var_LightColor.rgb * NL;
-
-	vec4 color = vec4(diffuse.rgb * light, var_LightColor.a);
-	// vec4 color = vec4(vec3(NL, NL, NL), diffuse.a);
-
-	gl_FragColor = color;
-
 #endif // USE_NORMAL_MAPPING
-
-#if 0
-#if defined(USE_PARALLAX_MAPPING)
-	gl_FragColor = vec4(vec3(1.0, 0.0, 0.0), 1.0);
-#elif defined(USE_NORMAL_MAPPING)
-	gl_FragColor = vec4(vec3(0.0, 0.0, 1.0), 1.0);
-#else
-	gl_FragColor = vec4(vec3(0.0, 1.0, 0.0), 1.0);
-#endif
-#endif
 }
