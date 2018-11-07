@@ -259,7 +259,7 @@ parse_commandline() {
 			FEATURE_AUTOUPDATE=0
 		elif [ "$var" = "-RPI" ]; then
 			einfo "Will enable Raspberry PI build ..."
-			ARM=1
+			RPI=1
 			CROSS_COMPILE32=0
 			FEATURE_RENDERER_GLES=1
 			FEATURE_RENDERER2=0
