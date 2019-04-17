@@ -210,15 +210,9 @@ qhandle_t RE_GetShaderFromModel(qhandle_t modelid, int surfnum, int withlightmap
 		bmodel = model->bsp;
 		if (bmodel && bmodel->firstSurface)
 		{
-			if (bmodel->numSurfaces == 0) {
-				Ren_Print("RE_GetShaderFromModel warning: no surface was found.\n");
-				return 0;
-			}
-
-			// if it's out of range, use the first surface
 			if (surfnum >= bmodel->numSurfaces)
-			{                   
-				Ren_Print("RE_GetShaderFromModel warning: surface is out of range.\n");
+			{                   // if it's out of range, return the first surface
+				Ren_Print("RE_GetShaderFromModel warning: surface is our of range.\n");
 				surfnum = 0;
 			}
 
@@ -339,7 +333,6 @@ qhandle_t RE_RegisterSkin(const char *name)
 	ri.FS_ReadFile(name, (void **)&text);
 	if (!text)
 	{
-		Ren_Developer("WARNING: RE_RegisterSkin '%s' - empty skin or file not in path\n", name);
 		return 0;
 	}
 

@@ -77,7 +77,6 @@ model_t *R_AllocModel(void)
 
 	if (tr.numModels == MAX_MOD_KNOWN)
 	{
-		Ren_Print("WARNING R_AllocModel: MAX_MOD_KNOWN reached - returning NULL\n");
 		return NULL;
 	}
 
@@ -532,15 +531,8 @@ void R_ModelInit(void)
 	// leave a space for NULL model
 	tr.numModels = 0;
 
-	mod = R_AllocModel();
-	if (mod)
-	{
-		mod->type = MOD_BAD;
-	}
-	else
-	{
-		Ren_Drop("R_ModelInit: R_AllocModel failed");
-	}
+	mod       = R_AllocModel();
+	mod->type = MOD_BAD;
 }
 
 /**

@@ -283,7 +283,8 @@ static void RB_RenderDrawSurfaces(qboolean opaque, int drawSurfFilter)
 				backEnd.orientation      = backEnd.viewParms.world;
 				// we have to reset the shaderTime as well otherwise image animations on
 				// the world (like water) continue with the wrong frame
-				tess.shaderTime = backEnd.refdef.floatTime - tess.surfaceShader->timeOffset;
+				tess.shaderTime       = backEnd.refdef.floatTime - tess.surfaceShader->timeOffset;
+				backEnd.orientation   = backEnd.viewParms.world;
 			}
 
 			GL_LoadModelViewMatrix(backEnd.orientation.modelViewMatrix);
@@ -2347,7 +2348,7 @@ void RB_RenderGlobalFog()
 
 		SetUniformVec4(UNIFORM_FOGDISTANCEVECTOR, fogDistanceVector);
 		SetUniformVec4(UNIFORM_COLOR, fog->color);
-		SetUniformFloat(UNIFORM_FOGDENSITY, 0.6f); // FIXME: fog->fogParms.density?!
+		SetUniformFloat(UNIFORM_FOGDENSITY, 0.6f);
 	}
 
 	SetUniformMatrix16(UNIFORM_VIEWMATRIX, backEnd.viewParms.world.viewMatrix);
@@ -5154,65 +5155,37 @@ static void RB_RenderDebugUtils()
 		                          USE_VERTEX_ANIMATION, qfalse,
 		                          USE_DEFORM_VERTEXES, qfalse,
 		                          USE_NORMAL_MAPPING, qfalse);
+
 		SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin); // in world space
 
-		GLSL_SetUniform_ColorModulate(trProg.gl_reflectionShader, CGEN_IDENTITY, AGEN_IDENTITY); //CGEN_CUSTOM_RGB, AGEN_CUSTOM);
-		//GLSL_SetUniform_ColorModulate(trProg.gl_genericShader, CGEN_IDENTITY, AGEN_IDENTITY);
-		SetUniformVec4(UNIFORM_COLOR, colorBlack);
-
-		//GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
 		GL_State(0);
-		GL_Cull(CT_FRONT_SIDED); // the inside of the cube is textured, and the normals all point to the center of the cube: that's the front side (we don't want to see)
-		SetUniformInt(UNIFORM_ALPHATEST, ATEST_NONE);
+		GL_Cull(CT_FRONT_SIDED);
 
 		// set up the transformation matrix
 		backEnd.orientation = backEnd.viewParms.world;
-		//GL_LoadModelViewMatrix(backEnd.orientation.modelViewMatrix);
-		//SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
-		SetUniformMatrix16(UNIFORM_MODELMATRIX, MODEL_MATRIX);
+		GL_LoadModelViewMatrix(backEnd.orientation.modelViewMatrix);
+
+		SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
 		SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
-		SetUniformMatrix16(UNIFORM_COLORTEXTUREMATRIX, matrixIdentity);
-		
-		GLSL_SetRequiredVertexPointers(trProg.gl_reflectionShader);
-		//GLSL_SetRequiredVertexPointers(trProg.gl_genericShader);
+
+		Tess_Begin(Tess_StageIteratorDebug, NULL, NULL, NULL, qtrue, qfalse, -1, 0);
 
 		for (j = 0; j < tr.cubeProbes.currentElements; j++)
 		{
 			cubeProbe = (cubemapProbe_t *) Com_GrowListElement(&tr.cubeProbes, j);
 
-			Tess_Begin(Tess_StageIteratorDebug, NULL, NULL, NULL, qtrue, qtrue, LIGHTMAP_NONE, FOG_NONE);
-#if 1
-            // the glsl shader needs 2 cubemaps and an interpolation factor,
-            // but now we just want to render a single cubemap..
-            // so we pass on two of the same textures
-
-            // bind u_EnvironmentMap0
-            SelectTexture(TEX_ENVMAP0);
-            GL_Bind(cubeProbe->cubemap);
-
-            // bind u_EnvironmentMap1
-            SelectTexture(TEX_ENVMAP1);
-            GL_Bind(cubeProbe->cubemap);
-
-            // u_EnvironmentInterpolation
-            SetUniformFloat(UNIFORM_ENVIRONMENTINTERPOLATION, 1.0);
-#else
-            SelectTexture(TEX_COLOR);
-            GL_Bind(cubeProbe->cubemap);
-#endif
+			// bind u_ColorMap
+			SelectTexture(TEX_COLOR);
+			GL_Bind(cubeProbe->cubemap);
 
 			Tess_AddCubeWithNormals(cubeProbe->origin, mins, maxs, colorWhite);
-			Tess_End();
 		}
-		//Tess_UpdateVBOs(tess.attribsSet); // set by Tess_AddCube
 
+		Tess_End();
 
-#if 0	// color the 2 closest cubeProbes (green/red/yellow?/blue?)
-		// (disabled because, when you want to inspect a cubeProbe up close, no textures can be seen.. not handy)
 		{
-			cubemapProbe_t *cubeProbe1;
-			cubemapProbe_t *cubeProbe2;
-			float          distance1, distance2;
+			cubemapProbe_t *cubeProbeNearest;
+			cubemapProbe_t *cubeProbeSecondNearest;
 
 			SetMacrosAndSelectProgram(trProg.gl_genericShader);
 
@@ -5240,31 +5213,32 @@ static void RB_RenderDebugUtils()
 
 			GL_CheckErrors();
 
-			R_FindTwoNearestCubeMaps(backEnd.viewParms.orientation.origin, &cubeProbe1, &cubeProbe2, &distance1, &distance2);
+			R_FindTwoNearestCubeMaps(backEnd.viewParms.orientation.origin, &cubeProbeNearest, &cubeProbeSecondNearest);
+
 
 			Tess_Begin(Tess_StageIteratorDebug, NULL, NULL, NULL, qtrue, qfalse, -1, 0);
 
-			if (cubeProbe1 == NULL && cubeProbe2 == NULL)
+			if (cubeProbeNearest == NULL && cubeProbeSecondNearest == NULL)
 			{
 				// bad
 			}
-			else if (cubeProbe1 == NULL)
+			else if (cubeProbeNearest == NULL)
 			{
-				Tess_AddCubeWithNormals(cubeProbe2->origin, mins, maxs, colorBlue);
+				Tess_AddCubeWithNormals(cubeProbeSecondNearest->origin, mins, maxs, colorBlue);
 			}
-			else if (cubeProbe2 == NULL)
+			else if (cubeProbeSecondNearest == NULL)
 			{
-				Tess_AddCubeWithNormals(cubeProbe1->origin, mins, maxs, colorYellow);
+				Tess_AddCubeWithNormals(cubeProbeNearest->origin, mins, maxs, colorYellow);
 			}
 			else
 			{
-				Tess_AddCubeWithNormals(cubeProbe1->origin, mins, maxs, colorGreen);
-				Tess_AddCubeWithNormals(cubeProbe2->origin, mins, maxs, colorRed);
+				Tess_AddCubeWithNormals(cubeProbeNearest->origin, mins, maxs, colorGreen);
+				Tess_AddCubeWithNormals(cubeProbeSecondNearest->origin, mins, maxs, colorRed);
 			}
 
 			Tess_End();
 		}
-#endif
+
 		// go back to the world modelview matrix
 		backEnd.orientation = backEnd.viewParms.world;
 		GL_LoadModelViewMatrix(backEnd.viewParms.world.modelViewMatrix);
@@ -6560,6 +6534,7 @@ const void *RB_RotatedPic(const void *data)
 	int                       numVerts, numIndexes;
 	float                     angle;
 	float                     mx, my, mw, mh;
+	float                     pi2 = M_PI * 2;
 
 	if (!backEnd.projection2D)
 	{
@@ -6606,7 +6581,7 @@ const void *RB_RotatedPic(const void *data)
 #define COSAN mx + (float)(cos(angle) * mw)
 #define SINAN my + (float)(sin(angle) * mh)
 
-	angle                 = cmd->angle * M_TAU_F;
+	angle                 = cmd->angle * pi2;
 	tess.xyz[numVerts][0] = COSAN;
 	tess.xyz[numVerts][1] = SINAN;
 	tess.xyz[numVerts][2] = 0;
@@ -6615,7 +6590,7 @@ const void *RB_RotatedPic(const void *data)
 	tess.texCoords[numVerts][0] = cmd->s1;
 	tess.texCoords[numVerts][1] = cmd->t1;
 
-	angle                     = cmd->angle * M_TAU_F + 0.25f * M_TAU_F;
+	angle                     = cmd->angle * pi2 + 0.25f * pi2;
 	tess.xyz[numVerts + 1][0] = COSAN;
 	tess.xyz[numVerts + 1][1] = SINAN;
 	tess.xyz[numVerts + 1][2] = 0;
@@ -6624,7 +6599,7 @@ const void *RB_RotatedPic(const void *data)
 	tess.texCoords[numVerts + 1][0] = cmd->s2;
 	tess.texCoords[numVerts + 1][1] = cmd->t1;
 
-	angle                     = cmd->angle * M_TAU_F + 0.50f * M_TAU_F;
+	angle                     = cmd->angle * pi2 + 0.50f * pi2;
 	tess.xyz[numVerts + 2][0] = COSAN;
 	tess.xyz[numVerts + 2][1] = SINAN;
 	tess.xyz[numVerts + 2][2] = 0;
@@ -6633,7 +6608,7 @@ const void *RB_RotatedPic(const void *data)
 	tess.texCoords[numVerts + 2][0] = cmd->s2;
 	tess.texCoords[numVerts + 2][1] = cmd->t2;
 
-	angle                     = cmd->angle * M_TAU_F + 0.75f * M_TAU_F;
+	angle                     = cmd->angle * pi2 + 0.75f * pi2;
 	tess.xyz[numVerts + 3][0] = COSAN;
 	tess.xyz[numVerts + 3][1] = SINAN;
 	tess.xyz[numVerts + 3][2] = 0;

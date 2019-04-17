@@ -1293,14 +1293,14 @@ qboolean ParseTexMod(char **text, shaderStage_t *stage)
 		token = COM_ParseExt2(text, qfalse);
 		if (token[0] == 0)
 		{
-			Ren_Warning("WARNING: missing 1st scale scroll parms in shader '%s'\n", shader.name);
+			Ren_Warning("WARNING: missing scale scroll parms in shader '%s'\n", shader.name);
 			return qfalse;
 		}
 		tmi->scroll[0] = atof(token);
 		token          = COM_ParseExt2(text, qfalse);
 		if (token[0] == 0)
 		{
-			Ren_Warning("WARNING: missing 2nd scale scroll parms in shader '%s'\n", shader.name);
+			Ren_Warning("WARNING: missing scale scroll parms in shader '%s'\n", shader.name);
 			return qfalse;
 		}
 		tmi->scroll[1] = atof(token);
@@ -1588,15 +1588,11 @@ qboolean LoadMap(shaderStage_t *stage, char *buffer)
 
 	// try to load the image
 	stage->bundle[0].image[0] = R_FindImageFile(buffer, imageBits, filterType, wrapType, shader.name);
-	
+
 	if (!stage->bundle[0].image[0])
 	{
 		Ren_Warning("WARNING: LoadMap could not find image '%s' in shader '%s'\n", buffer, shader.name);
-		//FIXME:returning qfalse here if you dont have the new textures and r_materialscan is set to 3,
-		//makes terrain black and orange,also on some
-		//maps loads model textures it didnt before.
-		//better just to print a warning for now
-		//return qfalse;
+		return qfalse;
 	}
 
 /*
@@ -1633,8 +1629,8 @@ qboolean LoadMap(shaderStage_t *stage, char *buffer)
 		}
 
 		// Note/FIXME: image file name has to be including extension, we use tga - make this more generic one day
-		// ETL: suffix for specularmaps is '_r'
-		tmpImage = R_FindImageFile(va("%s_r.tga", strippedName), imageBits, filterType, wrapType, shader.name);
+		// ETL: suffix for specularmaps is '_s'
+		tmpImage = R_FindImageFile(va("%s_s.tga", strippedName), imageBits, filterType, wrapType, shader.name);
 		if (tmpImage)
 		{
 			stages[stageOffset].active             = qtrue;
@@ -1646,7 +1642,7 @@ qboolean LoadMap(shaderStage_t *stage, char *buffer)
 		}
 		else
 		{
-			Ren_Warning("LoadMap Warning: Specularmap image '%s' type %i not found.\n", va("%s_r.tga", strippedName), shader.type);
+			Ren_Warning("LoadMap Warning: Specularmap image '%s' type %i not found.\n", va("%s_s.tga", strippedName), shader.type);
 		}
 	}
 */
@@ -1663,7 +1659,8 @@ qboolean ParseStage(shaderStage_t *stage, char **text)
 {
 	char *token;
 	int  colorMaskBits             = 0;
-	int  depthMaskBits             = GLS_DEPTHMASK_TRUE, blendSrcBits = 0, blendDstBits = 0, atestBits = 0, depthFuncBits = 0, polyModeBits = 0;
+	int  depthMaskBits             = GLS_DEPTHMASK_TRUE, blendSrcBits = 0, blendDstBits = 0, atestBits = 0, depthFuncBits =
+	    0, polyModeBits            = 0;
 	qboolean     depthMaskExplicit = qfalse;
 	int          imageBits         = 0;
 	filterType_t filterType;
@@ -2497,6 +2494,9 @@ qboolean ParseStage(shaderStage_t *stage, char **text)
 			{
 				stage->tcGen_Environment = qtrue;
 				stage->tcGen_Lightmap    = qfalse;
+				
+				// testing cube map reflection on osis water pump
+				//stage->type = ST_REFLECTIONMAP;
 			}
 			else if (!Q_stricmp(token, "lightmap"))
 			{
@@ -4620,16 +4620,15 @@ static void CollapseStages()
 	qboolean hasNormalStage;
 	qboolean hasSpecularStage;
 	qboolean hasReflectionStage;
-	qboolean hasLiquidStage;
 
 	shaderStage_t tmpDiffuseStage;
 	shaderStage_t tmpNormalStage;
 	shaderStage_t tmpSpecularStage;
 	shaderStage_t tmpReflectionStage;
-	shaderStage_t tmpLiquidStage;
 
 	//int           idxColorStage;
-	//shaderStage_t tmpColorStage;
+	shaderStage_t tmpColorStage;
+
 	//int           idxLightmapStage;
 	//shaderStage_t tmpLightmapStage;
 
@@ -4650,44 +4649,37 @@ static void CollapseStages()
 	Com_Memset(&tmpStages[0], 0, sizeof(stages));
 	//Com_Memcpy(&tmpStages[0], &stages[0], sizeof(stages));
 
-	tmpShader.has_lightmapStage = qfalse;
-
 	for (j = 0; j < MAX_SHADER_STAGES; j++)
 	{
 		hasDiffuseStage    = qfalse;
 		hasNormalStage     = qfalse;
 		hasSpecularStage   = qfalse;
 		hasReflectionStage = qfalse;
-		hasLiquidStage     = qfalse;
 
 		Com_Memset(&tmpDiffuseStage, 0, sizeof(shaderStage_t));
 		Com_Memset(&tmpNormalStage, 0, sizeof(shaderStage_t));
 		Com_Memset(&tmpSpecularStage, 0, sizeof(shaderStage_t));
-		Com_Memset(&tmpLiquidStage, 0, sizeof(shaderStage_t));
-#if 0
-		idxColorStage = -1;
-		//Com_Memset(&tmpColorStage, 0, sizeof(shaderStage_t));
 
-		idxLightmapStage = -1;
+		//idxColorStage = -1;
+		Com_Memset(&tmpColorStage, 0, sizeof(shaderStage_t));
+
+		//idxLightmapStage = -1;
 		//Com_Memset(&tmpLightmapStage, 0, sizeof(shaderStage_t));
-#endif
+
 		if (!stages[j].active)
 		{
 			continue;
 		}
 
-		if (stages[j].type == ST_LIGHTMAP)
-		{
-			tmpShader.has_lightmapStage = qtrue;
-		}
-		else if (stages[j].type == ST_REFRACTIONMAP ||
-			stages[j].type == ST_DISPERSIONMAP ||
-			stages[j].type == ST_SKYBOXMAP ||
-			stages[j].type == ST_SCREENMAP ||
-			stages[j].type == ST_PORTALMAP ||
-			stages[j].type == ST_HEATHAZEMAP ||
-			stages[j].type == ST_ATTENUATIONMAP_XY ||
-			stages[j].type == ST_ATTENUATIONMAP_Z)
+		if (stages[j].type == ST_REFRACTIONMAP ||
+		    stages[j].type == ST_DISPERSIONMAP ||
+		    stages[j].type == ST_SKYBOXMAP ||
+		    stages[j].type == ST_SCREENMAP ||
+		    stages[j].type == ST_PORTALMAP ||
+		    stages[j].type == ST_HEATHAZEMAP ||
+		    stages[j].type == ST_LIQUIDMAP ||
+		    stages[j].type == ST_ATTENUATIONMAP_XY ||
+		    stages[j].type == ST_ATTENUATIONMAP_Z)
 		{
 			// only merge lighting relevant stages
 			tmpStages[numStages] = stages[j];
@@ -4696,91 +4688,70 @@ static void CollapseStages()
 		}
 
 #if 0 //defined(COMPAT_Q3A) || defined(COMPAT_ET) FIXME?
-		//for (i = 0; i < 2; i++)
-/*		for (i = 0; i < MAX_SHADER_STAGES; i++)
+		for (i = 0; i < 2; i++)
 		{
-			if (i >= MAX_SHADER_STAGES)
+			if ((j + i) >= MAX_SHADER_STAGES)
 			{
-				break; //continue 
+				continue; // break
 			}
 
-			if (!stages[i].active)
+			if (!stages[j + i].active)
 			{
 				continue;
 			}
 
-			if (stages[i].type == ST_COLORMAP && idxColorStage == -1)
+			if (stages[j + i].type == ST_COLORMAP && idxColorStage == -1)
 			{
-				idxColorStage = i;
-				//tmpColorStage = stages[i];
+				idxColorStage = j + i;
+				tmpColorStage = stages[j + i];
 			}
-			else
-			if (stages[i].type == ST_LIGHTMAP && idxLightmapStage == -1)
+			else if (stages[j + i].type == ST_LIGHTMAP && idxLightmapStage == -1)
 			{
-				idxLightmapStage = i;
-				//tmpLightmapStage = stages[i];
-				break;
+				idxLightmapStage = j + i;
+				tmpLightmapStage = stages[j + i];
 			}
 		}
-*/		
-		// if there's a lightmapNum given, but there's no ST_LIGHTMAP stage: create a lightmap stage
-		if (!tmpShader.has_lightmapStage && tess.lightmapNum >= 0) //tess.lightmapNum >= 0 && tr.lightmaps.currentElements && tess.lightmapNum < tr.lightmaps.currentElements)
+
+		// try to merge color/lightmap to diffuse
+		if (idxColorStage != -1 &&
+		    idxLightmapStage != -1 &&
+		    // TODO check color stage no alphaGen
+		    (tmpLightmapStage.stateBits & (GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO))
+		    )
 		{
 			Ren_Print("color/lightmap combo\n");
 
-//			if (numStages) tmpStages[numStages] = tmpStages[0];
+			tmpShader.collapseType = COLLAPSE_color_lightmap;
 
-			// create a new st_lightmap stage as the first stage
-			//tmpShader.collapseType = COLLAPSE_color_lightmap;
-//			tmpShader.defaultShader =
-			tmpShader.has_lightmapStage = qtrue;
-			tmpStages[j].type           = ST_LIGHTMAP;
-			tmpStages[j].alphaGen       = AGEN_IDENTITY;
-			tmpStages[j].rgbGen         = CGEN_IDENTITY;
-			tmpStages[j].stateBits      = (GLS_SRCBLEND_ZERO | GLS_SRCBLEND_DST_COLOR | GLS_DEPTHMASK_TRUE); // | GLS_SRCBLEND_BITS); //516;
-			//tmpStages[j].bundle[0].image[0] = tmpColorStage.bundle[0].image[0];
-			tmpStages[j].active = qtrue;
-/*
-			image_t *lightmap = tr.whiteImage;
-			if (tr.lightmaps.currentElements && tess.lightmapNum >= 0 && tess.lightmapNum < tr.lightmaps.currentElements) {
-				lightmap = (image_t *)Com_GrowListElement(&tr.lightmaps, tess.lightmapNum);
-				if (!lightmap) lightmap = tr.whiteImage;
-			}
-			tmpStages[numStages].bundle[0].image[0] = lightmap;
-*/
-/*
-//tmpStages[numStages] = tmpLightmapStage;
-			tmpStages[numStages].type = ST_LIGHTMAP;
-//tmpStages[numStages].type = ST_LIGHTMAP;
-//tmpStages[numStages].bundle[TB_DIFFUSEMAP] = tmpColorStage.bundle[0];
-			//			tmpStages[numStages].stateBits &= ~(GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS);
-//			tmpStages[numStages].stateBits |= GLS_DEPTHMASK_TRUE;
-//tmpStages[numStages].stateBits = (GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE);
-//			tmpStages[numStages].tcGen_Lightmap = qtrue;
+			tmpStages[numStages]            = tmpColorStage;
+			tmpStages[numStages].type       = ST_DIFFUSEMAP;
+			tmpStages[numStages].stateBits &= ~(GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS);
+			//tmpStages[numStages].stateBits |= GLS_DEPTHMASK_TRUE;
+
 			//tmpStages[numStages].bundle[TB_NORMALMAP] = tmpNormalStage.bundle[0];
-*/
+
 			numStages++;
-			//j += 1;
+			j += 1;
 			continue;
 		}
 		/*
 		else if(idxLightmapStage > idxColorStage)
 		{
-		tmpStages[numStages] = tmpColorStage;
-		numStages++;
+		    tmpStages[numStages] = tmpColorStage;
+		    numStages++;
 
-		tmpStages[numStages] = tmpLightmapStage;
-		numStages++;
-		continue;
+		    tmpStages[numStages] = tmpLightmapStage;
+		    numStages++;
+		    continue;
 		}
 		else
 		{
-		tmpStages[numStages] = tmpLightmapStage;
-		numStages++;
+		    tmpStages[numStages] = tmpLightmapStage;
+		    numStages++;
 
-		tmpStages[numStages] = tmpColorStage;
-		numStages++;
-		continue;
+		    tmpStages[numStages] = tmpColorStage;
+		    numStages++;
+		    continue;
 		}
 		*/
 #endif
@@ -4818,11 +4789,6 @@ static void CollapseStages()
 			{
 				hasReflectionStage = qtrue;
 				tmpReflectionStage = stages[ji];
-			}
-			else if (stages[ji].type == ST_LIQUIDMAP && !hasLiquidStage)
-			{
-				hasLiquidStage = qtrue;
-				tmpLiquidStage = stages[ji];
 			}
 		}
 
@@ -4870,20 +4836,6 @@ static void CollapseStages()
 
 			tmpStages[numStages]      = tmpReflectionStage;
 			tmpStages[numStages].type = ST_COLLAPSE_reflection_CB;
-
-			tmpStages[numStages].bundle[TB_NORMALMAP] = tmpNormalStage.bundle[0];
-
-			numStages++;
-			j += 1;
-			continue;
-		}
-		// try to merge env/normal
-		else if (hasLiquidStage && hasNormalStage)
-		{
-			//Ren_Print("liquid_DB\n");
-
-			tmpStages[numStages]      = tmpLiquidStage;
-			tmpStages[numStages].type = ST_LIQUIDMAP; // no extra type, stage collapse for renderer_liquid
 
 			tmpStages[numStages].bundle[TB_NORMALMAP] = tmpNormalStage.bundle[0];
 
@@ -5177,7 +5129,7 @@ static shader_t *FinishShader(void)
 		{
 			if (!pStage->bundle[0].image[0])
 			{
-				Ren_Warning("Shader %s has an xy attenuationmap stage with no image - stage isn't active\n", shader.name);
+				Ren_Warning("Shader %s has a xy attenuationmap stage with no image - stage isn't active\n", shader.name);
 				pStage->active = qfalse;
 				continue;
 			}
@@ -5880,8 +5832,8 @@ shader_t *R_FindShader(const char *name, shaderType_t type, qboolean mipRawImage
 			}
 
 			// Note/FIXME: image file name has to be including extension, we use tga - make this more generic one day
-			// ETL: suffix for specularmaps is '_r'
-			tmpImage = R_FindImageFile(va("%s_r.tga", strippedName), !shader.noPicMip ? IF_NONE : IF_NOPICMIP, !shader.noPicMip ? FT_DEFAULT : FT_LINEAR, !shader.noPicMip ? WT_REPEAT : WT_EDGE_CLAMP, shader.name);
+			// ETL: suffix for specularmaps is '_s'
+			tmpImage = R_FindImageFile(va("%s_s.tga", strippedName), !shader.noPicMip ? IF_NONE : IF_NOPICMIP, !shader.noPicMip ? FT_DEFAULT : FT_LINEAR, !shader.noPicMip ? WT_REPEAT : WT_EDGE_CLAMP, shader.name);
 			if (tmpImage)
 			{
 				stages[i].active             = qtrue;
@@ -5894,7 +5846,7 @@ shader_t *R_FindShader(const char *name, shaderType_t type, qboolean mipRawImage
 			else
 			{
 			
-				Ren_Developer("R_FindShader Warning: Specularmap image '%s' type %i not found.\n", va("%s_r.tga", strippedName), shader.type);
+				Ren_Developer("R_FindShader Warning: Specularmap image '%s' type %i not found.\n", va("%s_s.tga", strippedName), shader.type);
 			}
 
 			//tmpImage = R_FindImageFile(va("%s_disp", fileName), mipRawImage ? IF_NONE : IF_NOPICMIP, mipRawImage ? FT_DEFAULT : FT_LINEAR, mipRawImage ? WT_REPEAT : WT_CLAMP, shader.name);

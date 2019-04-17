@@ -44,6 +44,10 @@ glstate_t glState;
 
 static void GfxInfo_f(void);
 
+cvar_t *r_glMajorVersion;
+cvar_t *r_glMinorVersion;
+cvar_t *r_glDebugProfile;
+
 cvar_t *r_flares;
 cvar_t *r_flareSize;
 cvar_t *r_flareFade;
@@ -173,7 +177,7 @@ cvar_t *r_specularScale;
 cvar_t *r_normalScale;
 cvar_t *r_normalMapping;
 cvar_t *r_wrapAroundLighting;
-cvar_t *r_diffuseLighting;
+cvar_t *r_halfLambertLighting;
 cvar_t *r_rimLighting;
 cvar_t *r_rimExponent;
 cvar_t *r_gamma;
@@ -1135,16 +1139,16 @@ static void GLSL_restart_f(void)
 	GLSL_CompileGPUShaders();
 }
 
-void R_BuildCubeMaps_f(void)
-{
-	R_BuildCubeMaps(); // qtrue
-}
-
 /**
  * @brief R_Register
  */
 void R_Register(void)
 {
+	// OpenGL context selection
+	r_glMajorVersion = ri.Cvar_Get("r_glMajorVersion", "", CVAR_LATCH);
+	r_glMinorVersion = ri.Cvar_Get("r_glMinorVersion", "", CVAR_LATCH);
+	r_glDebugProfile = ri.Cvar_Get("r_glDebugProfile", "", CVAR_LATCH);
+
 	// latched and archived variables
 	r_extCompressedTextures       = ri.Cvar_Get("r_ext_compressed_textures", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_extOcclusionQuery           = ri.Cvar_Get("r_ext_occlusion_query", "1", CVAR_CHEAT | CVAR_LATCH);
@@ -1231,8 +1235,7 @@ void R_Register(void)
 	r_drawSun       = ri.Cvar_Get("r_drawSun", "1", CVAR_ARCHIVE);
 	r_finish        = ri.Cvar_Get("r_finish", "0", CVAR_CHEAT);
 	r_textureMode   = ri.Cvar_Get("r_textureMode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE);
-	// FIXME: r1 & r2 default values differ
-	r_gamma         = ri.Cvar_Get("r_gamma", "1.0", CVAR_ARCHIVE);
+	r_gamma         = ri.Cvar_Get("r_gamma", "1.3", CVAR_ARCHIVE);
 	r_facePlaneCull = ri.Cvar_Get("r_facePlaneCull", "1", CVAR_ARCHIVE);
 
 	r_railWidth         = ri.Cvar_Get("r_railWidth", "96", CVAR_ARCHIVE);
@@ -1240,7 +1243,7 @@ void R_Register(void)
 	r_railSegmentLength = ri.Cvar_Get("r_railSegmentLength", "32", CVAR_ARCHIVE);
 
 	r_ambientScale = ri.Cvar_Get("r_ambientScale", "0.5", CVAR_CHEAT);
-	r_lightScale   = ri.Cvar_Get("r_lightScale", "1", CVAR_CHEAT | CVAR_LATCH); // requires a FULL restart/bsp parse for static lights
+	r_lightScale   = ri.Cvar_Get("r_lightScale", "2", CVAR_CHEAT | CVAR_LATCH);
 
 	r_vboFaces            = ri.Cvar_Get("r_vboFaces", "1", CVAR_CHEAT);
 	r_vboCurves           = ri.Cvar_Get("r_vboCurves", "1", CVAR_CHEAT);
@@ -1340,16 +1343,16 @@ void R_Register(void)
 	r_offsetUnits     = ri.Cvar_Get("r_offsetUnits", "-2", CVAR_CHEAT);
 	r_forceSpecular   = ri.Cvar_Get("r_forceSpecular", "0", CVAR_CHEAT);
 	//These makes the spec spot bigger or smaller, the higher the number the smaller the dot
-	r_specularExponent  = ri.Cvar_Get("r_specularExponent", "512.0", CVAR_ARCHIVE | CVAR_LATCH); // cheat?
-	r_specularExponent2 = ri.Cvar_Get("r_specularExponent2", "2", CVAR_ARCHIVE | CVAR_LATCH);    // cheat? - a factor used only for entities.. for now
+	r_specularExponent  = ri.Cvar_Get("r_specularExponent", "16", CVAR_CHEAT | CVAR_LATCH);
+	r_specularExponent2 = ri.Cvar_Get("r_specularExponent2", "3", CVAR_CHEAT | CVAR_LATCH);
 	//this one sets the power of specular, the higher the brighter
-	r_specularScale      = ri.Cvar_Get("r_specularScale", "0.2", CVAR_ARCHIVE | CVAR_LATCH);     // cheat?
+	r_specularScale      = ri.Cvar_Get("r_specularScale", "0.2", CVAR_CHEAT | CVAR_LATCH);
 	r_normalScale        = ri.Cvar_Get("r_normalScale", "1.0", CVAR_CHEAT | CVAR_LATCH);
 	r_normalMapping      = ri.Cvar_Get("r_normalMapping", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_parallaxDepthScale = ri.Cvar_Get("r_parallaxDepthScale", "0.03", CVAR_CHEAT);
 	// toon lightning
 	r_wrapAroundLighting  = ri.Cvar_Get("r_wrapAroundLighting", "0", CVAR_CHEAT | CVAR_LATCH);
-	r_diffuseLighting = ri.Cvar_Get("r_diffuseLighting", "0.2", CVAR_ARCHIVE | CVAR_LATCH);      // cheat?
+	r_halfLambertLighting = ri.Cvar_Get("r_halfLambertLighting", "1", CVAR_CHEAT | CVAR_LATCH);
 	//rim light gives your shading a nice volumentric effect which can greatly enhance the contrast with the background
 	r_rimLighting = ri.Cvar_Get("r_rimLighting", "0", CVAR_CHEAT | CVAR_LATCH); // was CVAR_ARCHIVE | CVAR_LATCH
 	                                                                            // FIXME: make rim lighting work with diffuse maps/textures
@@ -1484,7 +1487,7 @@ void R_Register(void)
 	ri.Cmd_AddSystemCommand("screenshotPNG", R_ScreenShotPNG_f, "Takes a PNG screenshot of current frame.", NULL);
 	ri.Cmd_AddSystemCommand("gfxinfo", GfxInfo_f, "Prints GFX info of current system.", NULL);
 	//ri.Cmd_AddSystemCommand("generatemtr", R_GenerateMaterialFile_f, "Generate material file", NULL);
-	ri.Cmd_AddSystemCommand("buildcubemaps", R_BuildCubeMaps_f, "Builds cubemaps for the current loaded map.", NULL);
+	ri.Cmd_AddSystemCommand("buildcubemaps", R_BuildCubeMaps, "Builds cubemaps for the current loaded map.", NULL);
 
 	ri.Cmd_AddSystemCommand("glsl_restart", GLSL_restart_f, "Restarts the GLSL subsystem.", NULL);
 }

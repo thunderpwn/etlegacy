@@ -84,12 +84,13 @@ typedef enum
 	DS_STANDARD,                ///< deferred rendering like in Stalker
 } deferredShading_t;
 
+
+
 #define HDR_ENABLED() ((r_hdrRendering->integer && glConfig2.textureFloatAvailable && glConfig2.framebufferObjectAvailable && glConfig2.framebufferBlitAvailable))
 
-#define REF_CUBEMAP_SIZE        32
+#define REF_CUBEMAP_SIZE    32
 #define REF_CUBEMAP_STORE_SIZE  1024
 #define REF_CUBEMAP_STORE_SIDE  (REF_CUBEMAP_STORE_SIZE / REF_CUBEMAP_SIZE)
-#define REF_CUBEMAPS_PER_FILE   (REF_CUBEMAP_STORE_SIDE * REF_CUBEMAP_STORE_SIDE)
 
 /**
  * @enum cullResult_t
@@ -1098,16 +1099,16 @@ typedef struct
 	waveForm_t wave;
 
 	// used for TMOD_TRANSFORM
-	mat4_t matrix;  // s' = s * m[0][0] + t * m[1][0] + trans[0]
-                    // t' = s * m[0][1] + t * m[0][1] + trans[1]
+	mat4_t matrix;            // s' = s * m[0][0] + t * m[1][0] + trans[0]
+	// t' = s * m[0][1] + t * m[0][1] + trans[1]
 
 	// used for TMOD_SCALE
-	float scale[2]; // s *= scale[0]
-                    // t *= scale[1]
+	float scale[2];             // s *= scale[0]
+	// t *= scale[1]
 
 	// used for TMOD_SCROLL
-	float scroll[2]; // s' = s + scroll[0] * time
-                     // t' = t + scroll[1] * time
+	float scroll[2];            // s' = s + scroll[0] * time
+	// t' = t + scroll[1] * time
 
 	// + = clockwise
 	// - = counterclockwise
@@ -1473,8 +1474,6 @@ typedef struct shader_s
 	double clampTime;                                   ///< time this shader is clamped to // FIXME: double for time?
 	int timeOffset;                                     ///< current time offset for this shader
 
-	qboolean has_lightmapStage;
-
 	struct shader_s *remappedShader;    ///< current shader this one is remapped too
 
 	struct shader_s *next;
@@ -1659,7 +1658,6 @@ enum
 	GLSL_INT,
 	GLSL_FLOAT,
 	GLSL_FLOAT5,
-	GLSL_DOUBLE,
 	GLSL_VEC2,
 	GLSL_VEC3,
 	GLSL_VEC4,
@@ -2002,6 +2000,7 @@ typedef struct
 	glfog_t glFog; //for tr_fog
 	int numDrawSurfs;
 	struct drawSurf_s *drawSurfs;
+	qboolean isGLFogged; // for tr_fog - unused/not set
 	int numInteractions;
 	struct interaction_s *interactions;
 } viewParms_t;
@@ -2396,16 +2395,13 @@ typedef struct
  */
 typedef struct
 {
-	// srfGeneric_t BEGIN
-
 	surfaceType_t surfaceType;
 
+	// culling information
 	vec3_t bounds[2];
 	vec3_t origin;
 	float radius;
 	cplane_t plane;
-
-	// srfGeneric_t END
 
 	// dynamic lighting information
 	//int dlightBits;
@@ -3311,7 +3307,6 @@ typedef struct
 	int c_occlusionQueriesSaved;
 	int c_CHCTime;
 
-	// debugging FIXME: debug only
 	int c_decalProjectors, c_decalTestSurfaces, c_decalClipSurfaces, c_decalSurfaces, c_decalSurfacesCreated;
 } frontEndCounters_t;
 
@@ -3781,7 +3776,7 @@ extern cvar_t *r_specularScale;
 extern cvar_t *r_normalScale;
 extern cvar_t *r_normalMapping;
 extern cvar_t *r_wrapAroundLighting;
-extern cvar_t *r_diffuseLighting;
+extern cvar_t *r_halfLambertLighting;
 extern cvar_t *r_rimLighting;
 extern cvar_t *r_rimExponent;
 
@@ -4445,7 +4440,7 @@ void RE_ProjectDecal(qhandle_t hShader, int numPoints, vec3_t *points, vec4_t pr
                      int fadeTime);
 void RE_ClearDecals(void);
 
-//void R_AddModelShadow(refEntity_t *ent);
+void R_AddModelShadow(refEntity_t *ent);
 
 void R_TransformDecalProjector(decalProjector_t * in, vec3_t axis[3], vec3_t origin, decalProjector_t * out);
 qboolean R_TestDecalBoundingBox(decalProjector_t *dp, vec3_t mins, vec3_t maxs);
@@ -4791,9 +4786,8 @@ typedef enum
 #define MAX_POLYVERTS   32768 ///< was 8192
 
 // max decal projectors per frame, each can generate lots of polys
-#define MAX_DECAL_PROJECTORS      128 ///< includes decal projectors that will be culled out, hard limited to 32 active projectors because of bitmasks.
-#define MAX_USED_DECAL_PROJECTORS 32
-#define MAX_DECALS                1024
+#define MAX_DECAL_PROJECTORS    128 ///< includes decal projectors that will be culled out, hard limited to 32 active projectors because of bitmasks.
+#define MAX_DECALS              1024
 #define DECAL_MASK              (MAX_DECALS - 1)
 
 #define MAX_POLYBUFFERS 4096
@@ -4847,7 +4841,7 @@ void RE_TakeVideoFrame(int width, int height, byte *captureBuffer, byte *encodeB
 
 // cubemap reflections stuff
 void R_BuildCubeMaps(void);
-void R_FindTwoNearestCubeMaps(const vec3_t position, cubemapProbe_t **cubeProbe1, cubemapProbe_t **cubeProbe2, float *distance1, float *distance2);
+void R_FindTwoNearestCubeMaps(const vec3_t position, cubemapProbe_t **cubeProbeNearest, cubemapProbe_t **cubeProbeSecondNearest);
 
 void FreeVertexHashTable(vertexHash_t **hashTable);
 
@@ -4872,7 +4866,6 @@ void GLSL_SelectTexture(shaderProgram_t *program, texture_def_t tex);
 void GLSL_SetUniformBoolean(shaderProgram_t *program, int uniformNum, GLboolean value);
 void GLSL_SetUniformInt(shaderProgram_t *program, int uniformNum, GLint value);
 void GLSL_SetUniformFloat(shaderProgram_t *program, int uniformNum, GLfloat value);
-void GLSL_SetUniformDouble(shaderProgram_t *program, int uniformNum, GLdouble value);
 void GLSL_SetUniformFloat5(shaderProgram_t *program, int uniformNum, const vec5_t v);
 void GLSL_SetUniformVec2(shaderProgram_t *program, int uniformNum, const vec2_t v);
 void GLSL_SetUniformVec3(shaderProgram_t *program, int uniformNum, const vec3_t v);

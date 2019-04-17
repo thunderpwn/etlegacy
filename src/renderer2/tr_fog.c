@@ -138,6 +138,14 @@ void RB_FogOn(void)
 		return;
 	}
 
+	if(backEnd.viewParms.isGLFogged)
+	{
+		if(!(backEnd.viewParms.glFog.registered))
+		{
+			return;
+		}
+	}
+
 	if (backEnd.refdef.rdflags & RDF_SKYBOXPORTAL)     // don't force world fog on portal sky
 	{
 		if (!(tr.glfogsettings[FOG_PORTALVIEW].registered))
@@ -296,7 +304,7 @@ void R_SetFrameFog(void)
 		}
 	}
 
-	if (r_speeds->integer == RSPEEDS_FOG)
+	if (r_speeds->integer == 5)
 	{
 		if (!tr.glfogsettings[FOG_TARGET].registered)
 		{
@@ -389,7 +397,7 @@ void R_SetFrameFog(void)
 		}
 	}
 
-	if (r_speeds->integer == RSPEEDS_FOG)
+	if (r_speeds->integer == 5)
 	{
 		if (tr.glfogsettings[FOG_CURRENT].mode == GL_LINEAR)
 		{

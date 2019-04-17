@@ -343,8 +343,8 @@ void RE_AddRefEntityToScene(const refEntity_t *ent)
 	// fixed was ENTITYNUM_WORLD
 	if (r_numEntities >= MAX_REFENTITIES)
 	{
-		// some servers/mods might throw this - let's see what we are missing in the scene
-		Ren_Developer("WARNING RE_AddRefEntityToScene: Dropping refEntity [%i] model '%s', reached MAX_REFENTITIES\n", ent->entityNum, R_GetModelByHandle(ent->hModel)->name);
+		// we may change this to developer print
+		Ren_Print("WARNING RE_AddRefEntityToScene: Dropping refEntity, reached MAX_REFENTITIES\n");
 		return;
 	}
 
@@ -402,28 +402,20 @@ void RE_AddRefLightToScene(const refLight_t *light)
 		Ren_Drop("RE_AddRefLightToScene: bad rlType %i", light->rlType);
 	}
 
-	if (r_numLights >= MAX_REF_LIGHTS)
-	{
-		Ren_Developer("WARNING RE_AddRefLightToScene: Dropping light, reached MAX_REF_LIGHTS\n");
-		return;
-	}
-
 	trlight = &backEndData->lights[r_numLights++];
 	Com_Memcpy(&trlight->l, light, sizeof(trlight->l));
 
 	trlight->isStatic = qfalse;
 	trlight->additive = qtrue;
 
-	trlight->l.scale *= r_lightScale->value; // cvar for dynamic scaling only?
-
-	if (trlight->l.scale < 0)
+	if (trlight->l.scale <= 0)
 	{
 		trlight->l.scale = r_lightScale->value;
 	}
 
 	if (!HDR_ENABLED())
 	{
-		if (trlight->l.scale > r_lightScale->value)
+		if (trlight->l.scale >= r_lightScale->value)
 		{
 			trlight->l.scale = r_lightScale->value;
 		}
@@ -460,7 +452,6 @@ static void R_AddWorldLightsToScene()
 
 		if (r_numLights >= MAX_REF_LIGHTS)
 		{
-			Ren_Developer("WARNING R_AddWorldLightsToScene: Dropping light, reached MAX_REF_LIGHTS\n");
 			return;
 		}
 
@@ -490,10 +481,8 @@ static void R_AddWorldLightsToScene()
  * @param[in] r
  * @param[in] g
  * @param[in] b
- * @param hShader
+ * @param hShader - unused
  * @param flags   - unused
- *
- * @note vanilla mods deliver 0 hShader only
  */
 void RE_AddDynamicLightToScene(const vec3_t org, float radius, float intensity, float r, float g, float b, qhandle_t hShader, int flags)
 {
@@ -518,14 +507,20 @@ void RE_AddDynamicLightToScene(const vec3_t org, float radius, float intensity, 
 	light = &backEndData->lights[r_numLights++];
 
 	light->l.rlType = RL_OMNI;
-
+	//light->l.lightfx = 0;
 	VectorCopy(org, light->l.origin);
 
 	QuatClear(light->l.rotation);
 	VectorClear(light->l.center);
 
-	light->shader = R_GetShaderByHandle(hShader);
-
+	// HACK: this will tell the renderer backend to use tr.defaultLightShader
+#if 0
+	dl->shader = R_GetShaderByHandle(hShader);
+	if (dl->shader == tr.defaultShader)
+	{
+		dl->shader = NULL;
+	}
+#endif
 	light->l.attenuationShader = 0;
 
 	light->l.radius[0] = radius;
@@ -542,12 +537,13 @@ void RE_AddDynamicLightToScene(const vec3_t org, float radius, float intensity, 
 	light->isStatic = qfalse;
 	light->additive = qtrue;
 
-	light->l.scale = intensity * r_lightScale->value; // cvar for dynamic only?
-
-	if (light->l.scale < 0)
+	light->l.scale = intensity;
+#if 0
+	if (light->l.scale <= r_lightScale->value)
 	{
 		light->l.scale = r_lightScale->value;
 	}
+#endif
 }
 
 /**

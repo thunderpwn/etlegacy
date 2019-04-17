@@ -512,7 +512,6 @@ void R_AddBSPModelSurfaces(trRefEntity_t *ent)
 			{
 				continue;
 			}
-
 			if (ent->e.customShader)
 			{
 				R_AddBrushModelSurface(surf, R_GetShaderByHandle(ent->e.customShader), fogNum);

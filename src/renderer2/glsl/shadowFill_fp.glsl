@@ -1,56 +1,52 @@
 /* shadowFill_fp.glsl */
 
-#if defined(USE_ALPHA_TESTING)
-uniform int       u_AlphaTest;
 uniform sampler2D u_ColorMap;
-#endif // USE_ALPHA_TESTING
-#if defined(USE_PORTAL_CLIPPING)
+uniform int       u_AlphaTest;
 uniform vec4      u_PortalPlane;
-#endif // USE_PORTAL_CLIPPING
-
-#if defined(VSM) || defined(EVSM) || defined(ESM)
-#if !defined(LIGHT_DIRECTIONAL)
-uniform vec3  u_LightOrigin;
-uniform float u_LightRadius;
-
-varying float var_Distance;
-#if defined(VSM)
-varying float var_DistanceSquared;
-#endif
-#endif // LIGHT_DIRECTIONAL
-#endif // VSM, EVSM, ESM
+uniform vec3      u_LightOrigin;
+uniform float     u_LightRadius;
 
 varying vec3 var_Position;
-#if defined(USE_ALPHA_TESTING)
 varying vec2 var_Tex;
-#endif // USE_ALPHA_TESTING
-#if !defined(LIGHT_DIRECTIONAL)
+varying vec4 var_Color;
+
+
 #if defined(EVSM)
-#if !defined(r_EVSMPostProcess)
-varying vec4 var_FragColorEVSM;
-#endif // r_EVSMPostProcess
-#endif // EVSM
-#endif // LIGHT_DIRECTIONAL
 
-#if defined(USE_PORTAL_CLIPPING)
-varying float var_BackSide; // in front, or behind, the portalplane
-#endif // USE_PORTAL_CLIPPING
+vec2 WarpDepth(float depth)
+{
+	// rescale depth into [-1, 1]
+	depth = 2.0 * depth - 1.0;
+	float pos = exp(r_EVSMExponents.x * depth);
+	float neg = -exp(-r_EVSMExponents.y * depth);
 
+	return vec2(pos, neg);
+}
 
+vec4 ShadowDepthToEVSM(float depth)
+{
+	vec2 warpedDepth = WarpDepth(depth);
+	return vec4(warpedDepth.xy, warpedDepth.xy * warpedDepth.xy);
+}
+
+#endif // #if defined(EVSM)
 
 void main()
 {
 #if defined(USE_PORTAL_CLIPPING)
-	if (var_BackSide < 0.0)
 	{
-		discard;
-		return;
+		float dist = dot(var_Position.xyz, u_PortalPlane.xyz) - u_PortalPlane.w;
+		if (dist < 0.0)
+		{
+			discard;
+			return;
+		}
 	}
 #endif
 
-#if defined(USE_ALPHA_TESTING)
 	vec4 color = texture2D(u_ColorMap, var_Tex);
 
+#if defined(USE_ALPHA_TESTING)
 	if (u_AlphaTest == ATEST_GT_0 && color.a <= 0.0)
 	{
 		discard;
@@ -68,40 +64,52 @@ void main()
 	}
 #endif
 
+
 #if defined(VSM)
-	float distance_;
-	float distanceSquared;
+
+	float distance;
+
 #if defined(LIGHT_DIRECTIONAL)
-	distance_       = gl_FragCoord.z;
-	distanceSquared = distance_ * distance_;
+	distance = gl_FragCoord.z;
 #else
-	distance_       = var_Distance;
-	distanceSquared = var_DistanceSquared;
+	distance = length(var_Position - u_LightOrigin) / u_LightRadius;
 #endif
+
+	float distanceSquared = distance * distance;
+
 	// shadowmap can be float RGBA or luminance alpha so store distanceSquared into alpha
+
 #if defined(VSM_CLAMP)
 	// convert to [0,1] color space
-	gl_FragColor = vec4(distance_, 0.0, 0.0, distanceSquared) * 0.5 + 0.5;
+	gl_FragColor = vec4(distance, 0.0, 0.0, distanceSquared) * 0.5 + 0.5;
 #else
-	gl_FragColor = vec4(distance_, 0.0, 0.0, distanceSquared);
+	gl_FragColor = vec4(distance, 0.0, 0.0, distanceSquared);
 #endif
-
 
 #elif defined(EVSM) || defined(ESM)
-	float distance_;
+
+	float distance;
 #if defined(LIGHT_DIRECTIONAL)
-	distance_ = gl_FragCoord.z; // * r_ShadowMapDepthScale;
+	{
+		distance = gl_FragCoord.z; // * r_ShadowMapDepthScale;
+		//distance /= gl_FragCoord.w;
+		//distance = var_Position.z / var_Position.w;
+		//distance = var_Position.z;
+	}
 #else
-	distance_ = var_Distance;
+	{
+		distance = (length(var_Position - u_LightOrigin) / u_LightRadius); // * r_ShadowMapDepthScale;
+	}
 #endif
+
 #if defined(EVSM)
-	#if !defined(r_EVSMPostProcess)
-		gl_FragColor = var_FragColorEVSM; //ShadowDepthToEVSM(distance_);
-	#else
-		gl_FragColor = vec4(0.0, 0.0, 0.0, distance_);
-	#endif
+#if !defined(r_EVSMPostProcess)
+	gl_FragColor = ShadowDepthToEVSM(distance);
 #else
-	gl_FragColor = vec4(0.0, 0.0, 0.0, distance_);
+	gl_FragColor = vec4(0.0, 0.0, 0.0, distance);
+#endif
+#else
+	gl_FragColor = vec4(0.0, 0.0, 0.0, distance);
 #endif // defined(EVSM)
 
 #else

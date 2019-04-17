@@ -1,21 +1,11 @@
 /* forwardLighting_fp.glsl */
-
-#if defined(USE_NORMAL_MAPPING)
-#include "lib/normalMapping"
-#if defined(USE_PARALLAX_MAPPING)
 #include "lib/reliefMapping"
-#endif // USE_PARALLAX_MAPPING
-#endif // USE_NORMAL_MAPPING
 
 uniform sampler2D u_DiffuseMap;
-uniform int       u_AlphaTest;
-uniform mat4      u_ViewMatrix;
-uniform sampler2D u_AttenuationMapXY;
-uniform sampler2D u_AttenuationMapZ;
-#if defined(USE_NORMAL_MAPPING)
 uniform sampler2D u_NormalMap;
 uniform sampler2D u_SpecularMap;
-#endif // USE_NORMAL_MAPPING
+uniform sampler2D u_AttenuationMapXY;
+uniform sampler2D u_AttenuationMapZ;
 
 #if defined(LIGHT_DIRECTIONAL)
 uniform sampler2D u_ShadowMap0;
@@ -29,6 +19,10 @@ uniform sampler2D u_ShadowMap0;
 uniform samplerCube u_ShadowMap;
 #endif
 
+//uniform sampler2D u_RandomMap;      // random normals
+
+uniform vec3 u_ViewOrigin;
+
 #if defined(LIGHT_DIRECTIONAL)
 uniform vec3 u_LightDir;
 #else
@@ -38,40 +32,32 @@ uniform vec3  u_LightColor;
 uniform float u_LightRadius;
 uniform float u_LightScale;
 uniform float u_LightWrapAround;
+uniform int   u_AlphaTest;
 
 uniform mat4  u_ShadowMatrix[MAX_SHADOWMAPS];
 uniform vec4  u_ShadowParallelSplitDistances;
 uniform float u_ShadowTexelSize;
 uniform float u_ShadowBlur;
 
+uniform mat4 u_ViewMatrix;
+
+uniform vec4 u_PortalPlane;
+
+uniform float u_DepthScale;
+
 varying vec3 var_Position;
 varying vec4 var_TexDiffuse;
 varying vec4 var_TexNormal;
-varying vec4 var_TexAttenuation;
-varying vec4 var_Normal;
 #if defined(USE_NORMAL_MAPPING)
-varying mat3 var_tangentMatrix;
 varying vec2 var_TexSpecular;
-varying vec3 var_ViewOrigin; // vieworigin - position    !
-varying vec3 var_ViewOrigin2; // vieworigin in worldspace
-#if defined(USE_PARALLAX_MAPPING)
-varying vec2 var_S; // size and start position of search in texture space
-#endif // USE_PARALLAX_MAPPING
-#endif // USE_NORMAL_MAPPING
-#if defined(USE_PORTAL_CLIPPING)
-varying float var_BackSide; // in front, or behind, the portalplane
-#endif // USE_PORTAL_CLIPPING
-
-
-/*
-	VSM		Variance Shadow Mapping
-	ESM		Exponential Shadow Maps
-	EVSM	Exponential Variance Shadow Mapping
-	PCF		Percentage-Closer Filtering
-	PCSS	Percentage-Closer Soft Shadow
-*/
-
-
+#endif
+varying vec4 var_TexAttenuation;
+#if defined(USE_NORMAL_MAPPING)
+varying vec4 var_Tangent;
+varying vec4 var_Binormal;
+#endif
+varying vec4 var_Normal;
+//varying vec4		var_Color;
 
 /*
 ================
@@ -81,7 +67,6 @@ Given a normalized forward vector, create two
 other perpendicular vectors
 ================
 */
-
 void MakeNormalVectors(const vec3 forward, inout vec3 right, inout vec3 up)
 {
 	// this rotate and negate guarantees a vector
@@ -112,7 +97,7 @@ vec3 RandomVec3(vec2 uv)
 
 #if 1
 	float r     = Rand(uv);
-	float angle = M_TAU * r; // / 360.0;
+	float angle = 2.0 * M_PI * r; // / 360.0;
 
 	dir = normalize(vec3(cos(angle), sin(angle), r));
 #else
@@ -154,9 +139,9 @@ float ChebyshevUpperBound(vec2 shadowMoments, float vertexDistance, float minVar
 	float pMax = variance / (variance + (d * d));
 
 /*
-//	#if defined(r_LightBleedReduction)
-//	pMax = smoothstep(r_LightBleedReduction, 1.0, pMax);
-//	#endif
+	#if defined(r_LightBleedReduction)
+	pMax = smoothstep(r_LightBleedReduction, 1.0, pMax);
+	#endif
 */
 
 	// one-tailed Chebyshev with k > 0
@@ -595,20 +580,24 @@ float log_conv(float x0, float X, float y0, float Y)
 void    main()
 {
 #if defined(USE_PORTAL_CLIPPING)
-	if (var_BackSide < 0.0)
 	{
-		discard;
-		return;
+		float dist = dot(var_Position.xyz, u_PortalPlane.xyz) - u_PortalPlane.w;
+		if (dist < 0.0)
+		{
+			discard;
+			return;
+		}
 	}
 #endif
 
 
-//#if 0
-//	// create random noise vector
-//	vec3 rand = RandomVec3(gl_FragCoord.st * r_FBufScale);
-//	gl_FragColor = vec4(rand * 0.5 + 0.5, 1.0);
-//	return;
-//#endif
+#if 0
+	// create random noise vector
+	vec3 rand = RandomVec3(gl_FragCoord.st * r_FBufScale);
+
+	gl_FragColor = vec4(rand * 0.5 + 0.5, 1.0);
+	return;
+#endif
 
 
 	float shadow = 1.0;
@@ -621,15 +610,15 @@ void    main()
 	vec4 shadowMoments;
 	FetchShadowMoments(var_Position.xyz, shadowVert, shadowMoments);
 
-//	// FIXME
-//	#if 0 // defined(r_PCFSamples)
-//	shadowMoments = PCF(var_Position.xyz, u_ShadowTexelSize * u_ShadowBlur, r_PCFSamples);
-//	#endif
+	// FIXME
+	#if 0 // defined(r_PCFSamples)
+	shadowMoments = PCF(var_Position.xyz, u_ShadowTexelSize * u_ShadowBlur, r_PCFSamples);
+	#endif
 
-//#if 0
-//	gl_FragColor = vec4(u_ShadowTexelSize * u_ShadowBlur * u_LightRadius, 0.0, 0.0, 1.0);
-//	return;
-//#endif
+#if 0
+	gl_FragColor = vec4(u_ShadowTexelSize * u_ShadowBlur * u_LightRadius, 0.0, 0.0, 1.0);
+	return;
+#endif
 
 #if defined(r_ShowParallelShadowSplits)
 	// transform to camera space
@@ -786,10 +775,10 @@ void    main()
 	// const float	SHADOW_BIAS = 0.01;
 	// float vertexDistance = length(I) / u_LightRadius - 0.01;
 
-//#if 0
-//	gl_FragColor = vec4(u_ShadowTexelSize * u_ShadowBlur * length(I), 0.0, 0.0, 1.0);
-//	return;
-//#endif
+#if 0
+	gl_FragColor = vec4(u_ShadowTexelSize * u_ShadowBlur * length(I), 0.0, 0.0, 1.0);
+	return;
+#endif
 
 	#if defined(r_PCFSamples)
 	vec4 shadowMoments = PCF(I, u_ShadowTexelSize * u_ShadowBlur * length(I), r_PCFSamples);
@@ -946,38 +935,71 @@ void    main()
 
 	vec2 texDiffuse = var_TexDiffuse.st;
 
-	float dotNL;
-
 #if defined(USE_NORMAL_MAPPING)
+
+	// invert tangent space for twosided surfaces
+	mat3 tangentToWorldMatrix;
+#if defined(TWOSIDED)
+	if (!gl_FrontFacing)
+	{
+		
+		tangentToWorldMatrix = mat3(-var_Tangent.x,-var_Tangent.y, -var_Tangent.z,
+                                    -var_Binormal.x, -var_Binormal.y, -var_Binormal.z,
+                                    -var_Normal.x, -var_Normal.y, -var_Normal.z);
+	}
+	else
+#endif
+	{
+		tangentToWorldMatrix = mat3(var_Tangent.x, var_Tangent.y, var_Tangent.z,
+                                    var_Binormal.x, var_Binormal.y, var_Binormal.z,
+                                    var_Normal.x, var_Normal.y, var_Normal.z);
+	}
+
 
 	vec2 texNormal   = var_TexNormal.st;
 	vec2 texSpecular = var_TexSpecular.st;
 
 	// compute view direction in world space
-	vec3 V = var_ViewOrigin.xyz; // tangentspace //vec3 V = normalize(u_ViewOrigin - var_Position.xyz);
+	vec3 V = normalize(u_ViewOrigin - var_Position.xyz);
 
 #if defined(USE_PARALLAX_MAPPING)
 	// ray intersect in view direction
-	float depth = RayIntersectDisplaceMap(texNormal, var_S, u_NormalMap);
+
+	mat3 worldToTangentMatrix = transpose(tangentToWorldMatrix);
+
+	// compute view direction in tangent space
+	vec3 Vts = normalize(worldToTangentMatrix * V);
+
+	// size and start position of search in texture space
+	vec2 S = Vts.xy * -u_DepthScale / Vts.z;
+
+	float depth = RayIntersectDisplaceMap(texNormal, S, u_NormalMap);
+
 	// compute texcoords offset
-	vec2 texOffset = var_S * depth;
-	texDiffuse  += texOffset;
-	texNormal   += texOffset;
-	texSpecular += texOffset;
+	vec2 texOffset = S * depth;
+
+	texDiffuse.st  += texOffset;
+	texNormal.st   += texOffset;
+	texSpecular.st += texOffset;
 #endif // USE_PARALLAX_MAPPING
 
-	// normal
-	vec3 Ntex = texture2D(u_NormalMap, texNormal).xyz * 2.0 - 1.0;
-	// transform normal from tangentspace to worldspace
-	vec3 N = normalize(var_tangentMatrix * Ntex); // we must normalize to get a vector of unit-length..  reflect() needs it
+	// compute half angle in world space
+	vec3 H = normalize(L + V);
 
-	// the cosine of the angle between N & L    (if N & L are vectors of unit length (normalized))
-	dotNL = dot(N, L);
+	// compute normal in tangent space from normalmap and multiply with tangenttoworldmatrix so it gets to world
+	// each colour component is between 0 and 1, and each vector component is between -1 and 1,
+	//so this simple mapping goes from the texel to the normal
 
-	// specular highlights
-	vec4 map = texture2D(u_SpecularMap, texSpecular);
-	vec3 specular = computeSpecular2(dotNL, V, N, L, vec3(1.0), r_SpecularExponent)
-					* map.rgb * u_LightColor; // * r_SpecularScale;
+	vec3 N = normalize(tangentToWorldMatrix *(texture2D(u_NormalMap, texNormal).xyz *2.0 - 1.0));
+
+#if defined(r_NormalScale)
+	N.z *= r_NormalScale;
+	normalize(N);
+#endif
+
+	
+
+	vec3 R = reflect(-L, N);
 
 #else // else USE_NORMAL_MAPPING 
 
@@ -985,20 +1007,23 @@ void    main()
 #if defined(TWOSIDED)
 	if (!gl_FrontFacing)
 	{
-		N = normalize(-var_Normal.xyz);
+		N = -normalize(var_Normal.xyz);
 	}
 	else
 #endif
 	{
 		N = normalize(var_Normal.xyz);
 	}
-	dotNL = dot(N, L);
 
 #endif // end USE_NORMAL_MAPPING
 
+	// compute the light term
+	//with half lambert
+	float NL = dot(N, L) * 0.5 + 0.5;
+	NL = NL * NL;
+
 	// compute the diffuse term
 	vec4 diffuse = texture2D(u_DiffuseMap, texDiffuse.st);
-
 #if defined(USE_ALPHA_TESTING)
 	if (u_AlphaTest == ATEST_GT_0 && diffuse.a <= 0.0)
 	{
@@ -1016,23 +1041,24 @@ void    main()
 		return;
 	}
 #endif
+	diffuse.rgb *= u_LightColor * NL;
 
-	// compute the light term
-#if defined(r_WrapAroundLighting)
-	float NL = clamp(dotNL + u_LightWrapAround, 0.0, 1.0) / clamp(1.0 + u_LightWrapAround, 0.0, 1.0);
-#else
-	float NL = clamp(dotNL, 0.0, 1.0);
+#if defined(USE_NORMAL_MAPPING)
+	// compute the specular term
+	//vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * u_LightColor * pow(clamp(dot(N, H), 0.0, 1.0), r_SpecularExponent) * r_SpecularScale;
+	vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * u_LightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 #endif
-	diffuse.rgb *= (u_LightColor * NL);
 
 
 	// compute light attenuation
 #if defined(LIGHT_PROJ)
 	vec3 attenuationXY = texture2DProj(u_AttenuationMapXY, var_TexAttenuation.xyw).rgb;
 	vec3 attenuationZ  = texture2D(u_AttenuationMapZ, vec2(var_TexAttenuation.z + 0.5, 0.0)).rgb; // FIXME
+
 #elif defined(LIGHT_DIRECTIONAL)
 	vec3 attenuationXY = vec3(1.0);
 	vec3 attenuationZ  = vec3(1.0);
+
 #else
 	vec3 attenuationXY = texture2D(u_AttenuationMapXY, var_TexAttenuation.xy).rgb;
 	vec3 attenuationZ  = texture2D(u_AttenuationMapZ, vec2(var_TexAttenuation.z, 0)).rgb;
@@ -1057,4 +1083,24 @@ void    main()
 	color.gb *= var_TexNormal.pq;
 
 	gl_FragColor = color;
+
+#if 0
+#if defined(USE_PARALLAX_MAPPING)
+	gl_FragColor = vec4(vec3(1.0, 0.0, 0.0), diffuse.a);
+#elif defined(USE_NORMAL_MAPPING)
+	gl_FragColor = vec4(vec3(0.0, 0.0, 1.0), diffuse.a);
+#else
+	gl_FragColor = vec4(vec3(0.0, 1.0, 0.0), diffuse.a);
+#endif
+#endif
+
+#if 0
+#if defined(USE_VERTEX_SKINNING)
+	gl_FragColor = vec4(vec3(1.0, 0.0, 0.0), diffuse.a);
+#elif defined(USE_VERTEX_ANIMATION)
+	gl_FragColor = vec4(vec3(0.0, 0.0, 1.0), diffuse.a);
+#else
+	gl_FragColor = vec4(vec3(0.0, 1.0, 0.0), diffuse.a);
+#endif
+#endif
 }

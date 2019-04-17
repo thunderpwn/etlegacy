@@ -755,9 +755,12 @@ static qboolean GLSL_MissesRequiredMacros(int compilemacro, int usedmacros)
 	switch (compilemacro)
 	{
 	case USE_PARALLAX_MAPPING:
-	case USE_DELUXE_MAPPING:
-	case USE_REFLECTIONS:
-	case USE_SPECULAR:
+		if (!(usedmacros & BIT(USE_NORMAL_MAPPING)))
+		{
+			return qtrue;
+		}
+		break;
+	case USE_REFLECTIVE_SPECULAR:
 		if (!(usedmacros & BIT(USE_NORMAL_MAPPING)))
 		{
 			return qtrue;
@@ -858,7 +861,6 @@ static void GLSL_BuildShaderExtraDef()
 	BUFFEXT("#ifndef r_NormalScale\n#define r_NormalScale %f\n#endif\n", r_normalScale->value);
 
 	BUFFEXT("#ifndef M_PI\n#define M_PI 3.14159265358979323846f\n#endif\n");
-	BUFFEXT("#ifndef M_TAU\n#define M_TAU 6.28318530717958647693f\n#endif\n");
 	BUFFEXT("#ifndef MAX_SHADOWMAPS\n#define MAX_SHADOWMAPS %i\n#endif\n", MAX_SHADOWMAPS);
 	BUFFEXT("#ifndef MAX_SHADER_DEFORM_PARMS\n#define MAX_SHADER_DEFORM_PARMS %i\n#endif\n", MAX_SHADER_DEFORM_PARMS);
 	BUFFEXT("#ifndef deform_t\n"
@@ -896,7 +898,6 @@ static void GLSL_BuildShaderExtraDef()
 	        "#define DGEN_WAVE_TRIANGLE %i\n"
 	        "#define DGEN_WAVE_SAWTOOTH %i\n"
 	        "#define DGEN_WAVE_INVERSE_SAWTOOTH %i\n"
-			"#define DGEN_WAVE_NOISE %i\n"
 	        "#define DGEN_BULGE %i\n"
 	        "#define DGEN_MOVE %i\n"
 	        "#endif\n",
@@ -905,7 +906,6 @@ static void GLSL_BuildShaderExtraDef()
 	        DGEN_WAVE_TRIANGLE,
 	        DGEN_WAVE_SAWTOOTH,
 	        DGEN_WAVE_INVERSE_SAWTOOTH,
-			DGEN_WAVE_NOISE,
 	        DGEN_BULGE,
 	        DGEN_MOVE);
 
@@ -1078,9 +1078,9 @@ static void GLSL_BuildShaderExtraDef()
 		BUFFEXT("#ifndef r_WrapAroundLighting\n#define r_WrapAroundLighting %i\n#endif\n", r_wrapAroundLighting->integer);
 	}
 
-	if (r_diffuseLighting->value >= 0.0) // && r_diffuseLighting->value <= 1.0
+	if (r_halfLambertLighting->integer)
 	{
-		BUFFEXT("#ifndef r_diffuseLighting\n#define r_diffuseLighting %f\n#endif\n", r_diffuseLighting->value);
+		BUFFEXT("#ifndef r_HalfLambertLighting\n#define r_HalfLambertLighting 1\n#endif\n");
 	}
 
 	if (r_rimLighting->integer)
@@ -1576,9 +1576,6 @@ void GLSL_InitUniforms(shaderProgram_t *program)
 		case GLSL_FLOAT:
 			size += sizeof(GLfloat);
 			break;
-		case GLSL_DOUBLE:
-			size += sizeof(GLdouble);
-			break;
 		case GLSL_FLOAT5:
 			size += sizeof(vec_t) * 5;
 			break;
@@ -1724,38 +1721,6 @@ void GLSL_SetUniformFloat(shaderProgram_t *program, int uniformNum, GLfloat valu
 
 	glUniform1f(uniforms[uniformNum], value);
 }
-
-/**
- * @brief GLSL_SetUniformDouble
- * @param[in] program
- * @param[in] uniformNum
- * @param[in] value
- */
-void GLSL_SetUniformDouble(shaderProgram_t *program, int uniformNum, GLdouble value)
-{
-	GLint   *uniforms = program->uniforms;
-	GLdouble *compare  = (GLdouble *)(program->uniformBuffer + program->uniformBufferOffsets[uniformNum]);
-
-	if (uniforms[uniformNum] == -1)
-	{
-		return;
-	}
-
-	if (uniformsInfo[uniformNum].type != GLSL_DOUBLE)
-	{
-		Ren_Fatal("GLSL_SetUniformDouble: wrong type for uniform %i in program %s\n", uniformNum, program->name);
-	}
-
-	if (value == *compare)
-	{
-		return;
-	}
-
-	*compare = value;
-
-	glUniform1f(uniforms[uniformNum], value);
-}
-
 
 /**
  * @brief GLSL_SetUniformVec2
@@ -2184,9 +2149,6 @@ static void GLSL_SetInitialUniformValues(programInfo_t *info, int permutation)
 			break;
 		case GLSL_FLOAT5:
 			GLSL_SetUniformFloat5(&info->list->programs[permutation], location, *((vec5_t *)info->uniformValues[i].value));
-			break;
-		case GLSL_DOUBLE:
-			GLSL_SetUniformDouble(&info->list->programs[permutation], location, *((GLdouble *)info->uniformValues[i].value));
 			break;
 		case GLSL_VEC2:
 			GLSL_SetUniformVec2(&info->list->programs[permutation], location, *((vec2_t *)info->uniformValues[i].value));

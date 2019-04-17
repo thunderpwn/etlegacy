@@ -2683,7 +2683,7 @@ image_t *R_FindCubeImage(const char *imageName, int bits, filterType_t filterTyp
 		pic[i] = NULL;
 	}
 
-//tryQuakeSuffices:
+tryQuakeSuffices:
 	for (i = 0; i < 6; i++)
 	{
 		Com_sprintf(filename, sizeof(filename), "%s_%s", buffer, quakeSuffices[i]);
@@ -2776,9 +2776,8 @@ tryDoom3Suffices:
 		R_Rotate(pic[i], width, height, doom3Rot[i]);
 	}
 	//goto createCubeImage;
-
-createCubeImage:
 */
+createCubeImage:
 	image = R_CreateCubeImage((char *)buffer, (const byte **)pic, width, height, bits, filterType, wrapType);
 
 skipCubeImage:
@@ -2935,7 +2934,7 @@ static void R_CreateRandomNormalsImage(void)
 			float  r, angle;
 
 			r     = random();
-			angle = M_TAU_F * r; // / 360.0;
+			angle = 2.0 * M_PI * r; // / 360.0;
 
 			VectorSet(n, cos(angle), sin(angle), r);
 			VectorNormalize(n);
@@ -3639,10 +3638,12 @@ void R_SetColorMappings(void)
 		s_intensitytable[i] = j;
 	}
 
-	//if (glConfig.deviceSupportsGamma)
-	//{
-	//   ri.GLimp_SetGamma(s_gammatable, s_gammatable, s_gammatable);
-	//}
+	/*
+	if (glConfig.deviceSupportsGamma)
+	{
+	    GLimp_SetGamma(s_gammatable, s_gammatable, s_gammatable);
+	}
+	*/
 }
 
 /**
@@ -3709,10 +3710,8 @@ void R_ShutdownImages(void)
 	Com_DestroyGrowList(&tr.lightmaps);
 	Com_DestroyGrowList(&tr.deluxemaps);
 	Com_DestroyGrowList(&tr.cubeProbes);
-#if 0 // cubeProbe hash values
-	// the cubeProbe hash values can also be freed (the images have just been removed)
+
 	FreeVertexHashTable(tr.cubeHashTable);
-#endif
 }
 
 /**

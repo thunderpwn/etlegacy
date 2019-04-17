@@ -553,9 +553,8 @@ static void ChopWindingBehindPlane(int numInPoints, vec3_t inPoints[MAX_DECAL_VE
 		// clip xyz
 		clip = outPoints[*numOutPoints];
 		for (j = 0; j < 3; j++)
-		{
 			clip[j] = p1[j] + dot * (p2[j] - p1[j]);
-		}
+
 		(*numOutPoints)++;
 	}
 }
@@ -816,8 +815,10 @@ static void ProjectDecalOntoGrid(decalProjector_t *dp, bspSurface_t *surf, bspMo
  */
 void R_ProjectDecalOntoSurface(decalProjector_t *dp, bspSurface_t *surf, bspModel_t *bmodel)
 {
+	float        d;
 	srfGeneric_t *gen;
-	int          i;
+	int          i, count;
+	decal_t      *decal;
 
 	// early outs
 	if (dp->shader == NULL)
@@ -830,6 +831,20 @@ void R_ProjectDecalOntoSurface(decalProjector_t *dp, bspSurface_t *surf, bspMode
 	{
 		return;
 	}
+
+	// check if this projector already has a decal on this surface
+	count = (bmodel == tr.world->models ? MAX_WORLD_DECALS : MAX_ENTITY_DECALS);
+	decal = bmodel->decals;
+	for (i = 0; i < count; i++, decal++)
+	{
+		if (decal->parent == surf && decal->projectorNum == dp->projectorNum)
+		{
+			return;
+		}
+	}
+
+	// add to counts
+	tr.pc.c_decalTestSurfaces++;
 
 	// get generic surface
 	gen = (srfGeneric_t *) surf->data;
@@ -850,8 +865,6 @@ void R_ProjectDecalOntoSurface(decalProjector_t *dp, bspSurface_t *surf, bspMode
 	// planar surface
 	if (gen->plane.normal[0] != 0.f || gen->plane.normal[1] != 0.f || gen->plane.normal[2] != 0.f)
 	{
-		float d;
-
 		// backface check
 		d = DotProduct(dp->planes[0], gen->plane.normal);
 		if (d < -0.0001f)
@@ -869,22 +882,6 @@ void R_ProjectDecalOntoSurface(decalProjector_t *dp, bspSurface_t *surf, bspMode
 
 	// add to counts
 	tr.pc.c_decalClipSurfaces++;
-
-	// check if this projector already has a decal on this surface
-	{
-		int     count  = (bmodel == tr.world->models ? MAX_WORLD_DECALS : MAX_ENTITY_DECALS);
-		decal_t *decal = bmodel->decals;
-
-		for (i = 0; i < count; i++, decal++)
-		{
-			if (decal->parent == surf && decal->projectorNum == dp->projectorNum)
-			{
-				return;
-			}
-		}
-		// add to counts
-		tr.pc.c_decalTestSurfaces++;
-	}
 
 	// switch on type
 	switch (gen->surfaceType)
@@ -1003,7 +1000,7 @@ void R_CullDecalProjectors(void)
 		}
 
 		// put all active projectors at the beginning
-		if (tr.refdef.numDecalProjectors > MAX_USED_DECAL_PROJECTORS && dp != &tr.refdef.decalProjectors[numDecalProjectors])
+		if (tr.refdef.numDecalProjectors > 32 && dp != &tr.refdef.decalProjectors[numDecalProjectors])
 		{
 			// swap them
 			temp                                          = tr.refdef.decalProjectors[numDecalProjectors];
@@ -1015,7 +1012,7 @@ void R_CullDecalProjectors(void)
 		numDecalProjectors++;
 
 		// bitmask limit
-		if (numDecalProjectors == MAX_USED_DECAL_PROJECTORS)
+		if (numDecalProjectors == 32)
 		{
 			break;
 		}
