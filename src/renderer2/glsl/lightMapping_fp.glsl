@@ -70,7 +70,7 @@ void main()
 	}
 
 	mat3 worldToTangentMatrix = transpose(tangentToWorldMatrix);
-	V = normalize(tangentToWorldMatrix *(V));
+	
 
 #if defined(USE_PARALLAX_MAPPING)
 	// ray intersect in view direction
@@ -118,17 +118,14 @@ void main()
 	// each colour component is between 0 and 1, and each vector component is between -1 and 1,
 	//so this simple mapping goes from the texel to the normal
 
-	vec3 N = normalize(worldToTangentMatrix *(texture2D(u_NormalMap, texNormal).xyz *2.0 - 1.0));
+	vec3 N = normalize(tangentToWorldMatrix *(texture2D(u_NormalMap, texNormal).xyz *2.0 - 1.0));
 
-#if defined(r_NormalScale)
-	N.z *= r_NormalScale;
-	normalize(N);
-#endif
+
 
 	// compute light direction in world space
 	//NB! should be handled more or less like normalmap
 	//should this be - as in light from??
-	vec3 L = normalize(worldToTangentMatrix * texture2D(u_DeluxeMap, var_TexLight).xyz *2.0 - 1.0);
+	vec3 L = normalize(tangentToWorldMatrix * (texture2D(u_DeluxeMap, var_TexLight).xyz*2.0 - 1.0));
 
 	
 	// compute half angle in world space
