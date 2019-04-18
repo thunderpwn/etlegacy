@@ -173,7 +173,7 @@ float R_ProcessLightmap(byte *pic, int in_padding, int width, int height, byte *
 			{
 				maxIntensity = intensity;
 			}
-
+			//TODO, figure out what this does
 			HSVtoRGB(intensity, 1.00, 0.50, out);
 
 			if (r_lightMap->integer == 3)
