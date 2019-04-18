@@ -917,7 +917,7 @@ static void R_LoadLightmapsExternal(lump_t *l, const char *bspName)
 			}
 		}
 
-		if (tr.worldDeluxeMapping)
+		 if (tr.worldDeluxeMapping)
 		{
 			// load deluxemaps
 			lightmapFiles = ri.FS_ListFiles(mapName, ".png", &numLightmaps);
@@ -1529,69 +1529,7 @@ static void ParseTriSurf(dsurface_t *ds, drawVert_t *verts, bspSurface_t *surf, 
 	//R_CalcSurfaceTrianglePlanes(numTriangles, cv->triangles, cv->verts);
 
 	// calc tangent spaces
-#if 0
-	{
-		float       *v;
-		const float *v0, *v1, *v2;
-		const float *t0, *t1, *t2;
-		vec3_t      tangent;
-		vec3_t      binormal;
-		vec3_t      normal;
 
-		for (i = 0; i < numVerts; i++)
-		{
-			VectorClear(cv->verts[i].tangent);
-			VectorClear(cv->verts[i].binormal);
-			VectorClear(cv->verts[i].normal);
-		}
-
-		for (i = 0, tri = cv->triangles; i < numTriangles; i++, tri++)
-		{
-			v0 = cv->verts[tri->indexes[0]].xyz;
-			v1 = cv->verts[tri->indexes[1]].xyz;
-			v2 = cv->verts[tri->indexes[2]].xyz;
-
-			t0 = cv->verts[tri->indexes[0]].st;
-			t1 = cv->verts[tri->indexes[1]].st;
-			t2 = cv->verts[tri->indexes[2]].st;
-
-#if 1
-			R_CalcTangentSpace(tangent, binormal, normal, v0, v1, v2, t0, t1, t2);
-#else
-			R_CalcNormalForTriangle(normal, v0, v1, v2);
-			R_CalcTangentsForTriangle2(tangent, binormal, v0, v1, v2, t0, t1, t2);
-#endif
-
-			for (j = 0; j < 3; j++)
-			{
-				v = cv->verts[tri->indexes[j]].tangent;
-				VectorAdd(v, tangent, v);
-				v = cv->verts[tri->indexes[j]].binormal;
-				VectorAdd(v, binormal, v);
-				v = cv->verts[tri->indexes[j]].normal;
-				VectorAdd(v, normal, v);
-			}
-		}
-
-		for (i = 0; i < numVerts; i++)
-		{
-			float dot;
-
-			//VectorNormalize(cv->verts[i].tangent);
-			VectorNormalize(cv->verts[i].binormal);
-			VectorNormalize(cv->verts[i].normal);
-
-			// Gram-Schmidt orthogonalize
-			dot = DotProduct(cv->verts[i].normal, cv->verts[i].tangent);
-			VectorMA(cv->verts[i].tangent, -dot, cv->verts[i].normal, cv->verts[i].tangent);
-			VectorNormalize(cv->verts[i].tangent);
-
-			//dot = DotProduct(cv->verts[i].normal, cv->verts[i].tangent);
-			//VectorMA(cv->verts[i].tangent, -dot, cv->verts[i].normal, cv->verts[i].tangent);
-			//VectorNormalize(cv->verts[i].tangent);
-		}
-	}
-#else
 	{
 		srfVert_t *dv[3];
 
@@ -1603,8 +1541,9 @@ static void ParseTriSurf(dsurface_t *ds, drawVert_t *verts, bspSurface_t *surf, 
 
 			R_CalcTangentVectors(dv);
 		}
+
 	}
-#endif
+
 
 	// do another extra smoothing for normals to avoid flat shading
 	if (r_smoothNormals->integer & FLAGS_SMOOTH_TRISURF)
@@ -5130,7 +5069,7 @@ void R_LoadLights(char *lightDefs)
  */
 void R_LoadEntities(lump_t *l)
 {
-	char    *p, *token, *s;
+	char    *p, *token, *s, *li;
 	char    keyname[MAX_TOKEN_CHARS];
 	char    value[MAX_TOKEN_CHARS];
 	world_t *w = &s_worldData;
@@ -5253,8 +5192,8 @@ void R_LoadEntities(lump_t *l)
 			tr.fogDensity = atof(value);
 		}
 
-		// check for deluxe mapping support
-		if (!Q_stricmp(keyname, "deluxeMapping") && !Q_stricmp(value, "1"))
+		// check for if there are "real" lights in map
+		if (!Q_stricmp(keyname, "_KeepLights") && !Q_stricmp(value, "1"))
 		{
 			Ren_Developer("map features directional light mapping\n");
 			tr.worldDeluxeMapping = qtrue;
@@ -5269,9 +5208,18 @@ void R_LoadEntities(lump_t *l)
 		// check for deluxe mapping provided by NetRadiant's q3map2
 		if (!Q_stricmp(keyname, "_q3map2_cmdline"))
 		{
+
 			s = strstr(value, "-deluxe");
+			li = strstr(value, "-keeplights");
 			if (s)
 			{
+				//Deluxemaps
+				Ren_Developer("map features directional light mapping\n");
+				tr.worldDeluxeMapping = qtrue;
+			}
+			if (li)
+			{
+				//reallights
 				Ren_Developer("map features directional light mapping\n");
 				tr.worldDeluxeMapping = qtrue;
 			}
