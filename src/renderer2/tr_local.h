@@ -74,15 +74,7 @@ typedef unsigned short glIndex_t;
 
 //#define USE_BSP_CLUSTERSURFACE_MERGING 1
 
-/**
- * @enum deferredShading_t
- * @brief
- */
-typedef enum
-{
-	DS_DISABLED = 0,                ///< traditional Doom 3 style rendering
-	DS_STANDARD,                ///< deferred rendering like in Stalker
-} deferredShading_t;
+
 
 
 
