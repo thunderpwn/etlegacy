@@ -2683,7 +2683,7 @@ image_t *R_FindCubeImage(const char *imageName, int bits, filterType_t filterTyp
 		pic[i] = NULL;
 	}
 
-tryQuakeSuffices:
+//tryQuakeSuffices:
 	for (i = 0; i < 6; i++)
 	{
 		Com_sprintf(filename, sizeof(filename), "%s_%s", buffer, quakeSuffices[i]);
@@ -2777,7 +2777,7 @@ tryDoom3Suffices:
 	}
 	//goto createCubeImage;
 */
-createCubeImage:
+//createCubeImage:
 	image = R_CreateCubeImage((char *)buffer, (const byte **)pic, width, height, bits, filterType, wrapType);
 
 skipCubeImage:
