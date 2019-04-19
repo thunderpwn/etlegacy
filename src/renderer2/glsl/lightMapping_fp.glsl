@@ -14,8 +14,8 @@ uniform vec3      u_ViewOrigin;
 uniform float     u_DepthScale;
 uniform vec4      u_PortalPlane;
 
-varying vec3 var_Position;
-varying vec4 var_TexDiffuseNormal;
+varying vec3 var_FragPos;
+varying vec2 var_TexCoords;
 varying vec2 var_TexSpecular;
 varying vec2 var_TexLight;
 
@@ -24,77 +24,31 @@ varying vec3 var_Binormal;
 varying vec3 var_Normal;
 
 varying vec4 var_Color;
-
-
+varying mat3 var_TBN;
+varying vec3 var_TangentFragPos;
+varying vec3 var_TangentViewPos;
 void main()
 {
-#if defined(USE_PORTAL_CLIPPING)
-	float dist = dot(var_Position.xyz, u_PortalPlane.xyz) - u_PortalPlane.w;
-	if (dist < 0.0)
-	{
-		discard;
-		return;
-	}
-#endif
+//#if defined(USE_PORTAL_CLIPPING)
+//	float dist = dot(var_FragPos.xyz, u_PortalPlane.xyz) - u_PortalPlane.w;
+//	if (dist < 0.0)
+//	{
+//		discard;
+//		return;
+//	}
+//#endif
 
-	// compute view direction in world space
-	vec3 V = normalize(u_ViewOrigin - var_Position);
+	// compute view direction in tangent space
+	vec3 V =  normalize(var_TangentViewPos - var_TangentFragPos);
 
 	vec4 lightmapColor  = texture2D(u_LightMap, var_TexLight);
 	vec4 deluxemapColor = texture2D(u_DeluxeMap, var_TexLight);
 
 	
-
 #if defined(USE_NORMAL_MAPPING)
 
-	vec2 texDiffuse  = var_TexDiffuseNormal.st;
-	vec2 texNormal   = var_TexDiffuseNormal.pq;
-	vec2 texSpecular = var_TexSpecular.st;
-
-	// invert tangent space for two sided surfaces
-	mat3 tangentToWorldMatrix;
-#if defined(TWOSIDED)
-	if (!gl_FrontFacing)
-	{
-		
-		tangentToWorldMatrix = mat3(-var_Tangent.x,-var_Tangent.y, -var_Tangent.z,
-                                    -var_Binormal.x, -var_Binormal.y, -var_Binormal.z,
-                                    -var_Normal.x, -var_Normal.y, -var_Normal.z);
-	}
-	else
-#endif
-	{
-		tangentToWorldMatrix = mat3(var_Tangent.x, var_Tangent.y, var_Tangent.z,
-                                    var_Binormal.x, var_Binormal.y, var_Binormal.z,
-                                    var_Normal.x, var_Normal.y, var_Normal.z);
-	}
-
-	mat3 worldToTangentMatrix = transpose(tangentToWorldMatrix);
-	
-
-#if defined(USE_PARALLAX_MAPPING)
-	// ray intersect in view direction
-
-	mat3 worldToTangentMatrix = transpose(tangentToWorldMatrix);
-
-	// compute view direction in tangent space
-	vec3 Vts = normalize(worldToTangentMatrix * V);
-
-	// size and start position of search in texture space
-	vec2 S = Vts.xy * -u_DepthScale / Vts.z;
-
-	float depth = RayIntersectDisplaceMap(texNormal, S, u_NormalMap);
-
-	// compute texcoords offset
-	vec2 texOffset = S * depth;
-
-	texDiffuse.st  += texOffset;
-	texNormal.st   += texOffset;
-	texSpecular.st += texOffset;
-#endif // USE_PARALLAX_MAPPING
-
 	// compute the diffuse term
-	vec4 diffuse = texture2D(u_DiffuseMap, texDiffuse);
+	vec4 diffuse = texture2D(u_DiffuseMap, var_TexCoords);
 
 #if defined(USE_ALPHA_TESTING)
 	if (u_AlphaTest == ATEST_GT_0 && diffuse.a <= 0.0)
@@ -114,20 +68,26 @@ void main()
 	}
 #endif
    
-	// compute normal in tangent space from normalmap and multiply with tangenttoworldmatrix so it gets to world
-	// each colour component is between 0 and 1, and each vector component is between -1 and 1,
-	//so this simple mapping goes from the texel to the normal
-
-	vec3 N = normalize(tangentToWorldMatrix *(texture2D(u_NormalMap, texNormal).xyz *2.0 - 1.0));
-
-
-
-	// compute light direction in world space
-	//NB! should be handled more or less like normalmap
-	//should this be - as in light from??
-	vec3 L = normalize(tangentToWorldMatrix * (texture2D(u_DeluxeMap, var_TexLight).xyz*2.0 - 1.0));
-
 	
+	// obtain normal from normal map in range [0,1]
+	vec3 N =  texture2D(u_NormalMap, var_TexCoords).rgb;
+
+	N = normalize(N * 2.0 - 1.0); // this normal is in tangent space
+
+
+	// compute light direction in tangent space
+	
+#if defined (USE_DELUXEMAP)
+     //if there is a deluxemap present we use that ofcourse
+	vec3 L = texture2D(u_DeluxeMap, var_TexLight).xyz;
+
+	L = normalize(L * 2.0 - 1.0); // this lightdirection is in tangent space
+#else
+     //this is highly experimental, using values from the lightmap itself,
+	 //it works because it gives different values depending on the intensity in the lightmap range from 0 to 1
+    vec3 L = texture2D(u_LightMap, var_TexLight).xyz;
+	L = normalize(L * 2.0 - 1.0); // this lightdirection is in tangent space
+#endif
 	// compute half angle in world space
 	vec3 H = normalize(L + V);
 
@@ -143,7 +103,7 @@ void main()
 
 	// compute the specular term
 	//vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * lightColor * pow(clamp(dot(N, H), 0.0, 1.0), r_SpecularExponent) * r_SpecularScale;
-	vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * lightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
+	vec3 specular = texture2D(u_SpecularMap, var_TexCoords).rgb * lightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 
 	// compute final color
 	vec4 color = diffuse;
@@ -155,7 +115,7 @@ void main()
 #else // DO_NOT_NORMAL_MAPPING
 
 	// compute the diffuse term
-	vec4 diffuse = texture2D(u_DiffuseMap, var_TexDiffuseNormal.st);
+	vec4 diffuse = texture2D(u_DiffuseMap, var_TexCoords.st);
 
 #if defined(USE_ALPHA_TESTING)
 	if (u_AlphaTest == ATEST_GT_0 && diffuse.a <= 0.0)
