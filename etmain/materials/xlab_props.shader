@@ -4,8 +4,8 @@ textures/xlab_props/panel_m01
 {
     qer_editorimage textures/xlab_props/panel_m01.tga
 	diffusemap textures/xlab_props/panel_m01.tga
-	specularmap textures/xlab_props/panel_m01_r.tga
-	bumpmap textures/xlab_props/panel_m01_n.tga
+	specularmap textures/xlab_props/panel_m01_SPEC.tga
+	bumpmap textures/xlab_props/panel_m01_NORM.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -32,8 +32,8 @@ textures/xlab_props/xdrawers_c03
 {
     qer_editorimage textures/xlab_props/xdrawers_c03.tga
 	diffusemap textures/xlab_props/xdrawers_c03.tga
-	specularmap textures/xlab_props/xdrawers_c03_r.tga
-	bumpmap textures/xlab_props/xdrawers_c03_n.tga
+	specularmap textures/xlab_props/xdrawers_c03_SPEC.tga
+	bumpmap textures/xlab_props/xdrawers_c03_NORM.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -42,8 +42,8 @@ textures/xlab_props/xgrid_c01
 {
     qer_editorimage textures/xlab_props/xgrid_c01.tga
 	diffusemap textures/xlab_props/xgrid_c01.tga
-	specularmap textures/xlab_props/xgrid_c01_r.tga
-	bumpmap textures/xlab_props/xgrid_c01_n.tga
+	specularmap textures/xlab_props/xgrid_c01_SPEC.tga
+	bumpmap textures/xlab_props/xgrid_c01_NORM.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -52,8 +52,8 @@ textures/xlab_props/xpanel_c02dm
 {
     qer_editorimage textures/xlab_props/xpanel_c02dm.tga
 	diffusemap textures/xlab_props/xpanel_c02dm.tga
-	specularmap textures/xlab_props/xpanel_c02dm_r.tga
-	bumpmap textures/xlab_props/xpanel_c02dm_n.tga
+	specularmap textures/xlab_props/xpanel_c02dm_SPEC.tga
+	bumpmap textures/xlab_props/xpanel_c02dm_NORM.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -62,8 +62,8 @@ textures/xlab_props/xpanel_c05_light_half
 {
     qer_editorimage textures/xlab_props/xpanel_c05_light_half.tga
 	diffusemap textures/xlab_props/xpanel_c05_light_half.tga
-	specularmap textures/xlab_props/xpanel_c05_light_half_r.tga
-	bumpmap textures/xlab_props/xpanel_c05_light_half_n.tga
+	specularmap textures/xlab_props/xpanel_c05_light_half_SPEC.tga
+	bumpmap textures/xlab_props/xpanel_c05_light_half_NORM.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -72,8 +72,8 @@ textures/xlab_props/xpanel_c08
 {
     qer_editorimage textures/xlab_props/xpanel_c08.tga
 	diffusemap textures/xlab_props/xpanel_c08.tga
-	specularmap textures/xlab_props/xpanel_c08_r.tga
-	bumpmap textures/xlab_props/xpanel_c08_n.tga
+	specularmap textures/xlab_props/xpanel_c08_SPEC.tga
+	bumpmap textures/xlab_props/xpanel_c08_NORM.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -82,8 +82,8 @@ textures/xlab_props/xpanel_c10_light
 {
     qer_editorimage textures/xlab_props/xpanel_c10_light.tga
 	diffusemap textures/xlab_props/xpanel_c10_light.tga
-	specularmap textures/xlab_props/xpanel_c10_light_r.tga
-	bumpmap textures/xlab_props/xpanel_c10_light_n.tga
+	specularmap textures/xlab_props/xpanel_c10_light_SPEC.tga
+	bumpmap textures/xlab_props/xpanel_c10_light_NORM.tga
 	surfaceparm metalsteps
 	implicitMap -
 }

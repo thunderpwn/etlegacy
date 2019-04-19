@@ -4,8 +4,8 @@ textures/xlab_door/xdoor_m01
 {
     qer_editorimage textures/xlab_door/xdoor_m01.tga
 	diffusemap textures/xlab_door/xdoor_m01.tga
-	specularmap textures/xlab_door/xdoor_m01_r.tga
-	bumpmap textures/xlab_door/xdoor_m01_n.tga
+	specularmap textures/xlab_door/xdoor_m01_SPEC.tga
+	bumpmap textures/xlab_door/xdoor_m01_NORM.tga
 	surfaceparm metalsteps
 	{
 		map textures/effects/tinfx.tga
@@ -28,8 +28,8 @@ textures/xlab_door/xdoor_m01f
 {
     qer_editorimage textures/xlab_door/xdoor_m01f.tga
 	diffusemap textures/xlab_door/xdoor_m01f.tga
-	specularmap textures/xlab_door/xdoor_m01f_r.tga
-	bumpmap textures/xlab_door/xdoor_m01f_n.tga
+	specularmap textures/xlab_door/xdoor_m01f_SPEC.tga
+	bumpmap textures/xlab_door/xdoor_m01f_NORM.tga
 	surfaceparm metalsteps
 	{
 		map textures/effects/tinfx.tga

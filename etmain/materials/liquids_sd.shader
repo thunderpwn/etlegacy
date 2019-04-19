@@ -53,12 +53,12 @@ textures/liquids_sd/siwa_water
 
 	waterfogvars ( 0.11 0.13 0.15 ) 0.2
 
-	bumpmap textures/liquids_sd/siwa_water_n.tga
+	bumpmap textures/liquids_sd/siwa_water_NORM.tga
 
 	{ 
 		stage liquidmap
 		fog on
-		map textures/liquids_sd/siwa_water_n.tga
+		map textures/liquids_sd/siwa_water_NORM.tga
 		// these are new default values of Renderer_liquid
 		//refractionIndex 1.3 // water
         //fresnelPower 2.0
@@ -115,12 +115,12 @@ textures/liquids_sd/siwa_water_2
 	waterfogvars ( 0.11 0.13 0.15 ) 0.2
 	color 0.1, 0.1, 0.1, 0.5 // underwater fog color
 
-	bumpmap textures/liquids_sd/siwa_water_n.tga
+	bumpmap textures/liquids_sd/siwa_water_NORM.tga
 
 	nopicmip
 	{
 		stage liquidmap
-		map textures/liquids_sd/siwa_water_n.tga
+		map textures/liquids_sd/siwa_water_NORM.tga
 		blendFunc blend
 		alphaFunc GE128
 		rgbgen identity

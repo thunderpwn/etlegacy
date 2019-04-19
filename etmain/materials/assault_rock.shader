@@ -6,8 +6,8 @@ textures/assault_rock/ground_c07a
 {
     qer_editorimage textures/assault_rock/ground_c07a.tga
 	diffuseMap textures/assault_rock/ground_c07a.tga
-	bumpMap textures/assault_rock/ground_c07a_n.tga
-	specularMap textures/assault_rock/ground_c07a_r.tga
+	bumpMap textures/assault_rock/ground_c07a_NORM.tga
+	specularMap textures/assault_rock/ground_c07a_SPEC.tga
 	surfaceparm gravelsteps
 	implicitMap -
 }
@@ -16,8 +16,8 @@ textures/assault_rock/ground_c09a
 {
     qer_editorimage textures/assault_rock/ground_c09a.tga
 	diffuseMap textures/assault_rock/ground_c09a.tga
-	bumpMap textures/assault_rock/ground_c09a_n.tga
-	specularMap textures/assault_rock/ground_c09a_r.tga
+	bumpMap textures/assault_rock/ground_c09a_NORM.tga
+	specularMap textures/assault_rock/ground_c09a_SPEC.tga
 	surfaceparm grasssteps
 	implicitMap -
 }
@@ -64,7 +64,7 @@ textures/assault_rock/concrete_m02
 {
     qer_editorimage textures/assault_rock/concrete_m02.tga
 	diffuseMap textures/assault_rock/concrete_m02.tga
-	bumpMap textures/assault_rock/concrete_m02_n.tga
-	specularMap textures/assault_rock/concrete_m02_r.tga
+	bumpMap textures/assault_rock/concrete_m02_NORM.tga
+	specularMap textures/assault_rock/concrete_m02_SPEC.tga
 	implicitMap -
 }

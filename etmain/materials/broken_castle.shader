@@ -4,8 +4,8 @@ textures/broken_castle/wall_c03d
 {	 
     qer_editorimage textures/broken_castle/wall_c03d.tga
 	diffusemap textures/broken_castle/wall_c03d.tga
-	bumpmap textures/broken_castle/wall_c03d_n.tga
-	specularmap textures/broken_castle/wall_c03d_r.tga
+	bumpmap textures/broken_castle/wall_c03d_NORM.tga
+	specularmap textures/broken_castle/wall_c03d_SPEC.tga
     {
       map textures/broken_castle/wall_c03d.tga
      rgbGen vertex
@@ -18,8 +18,8 @@ textures/broken_castle/wall_c04
     
     qer_editorimage textures/broken_castle/wall_c04.tga
 	diffusemap textures/broken_castle/wall_c04.tga
-	bumpmap textures/broken_castle/wall_c04_n.tga
-	specularmap textures/broken_castle/wall_c04_r.tga
+	bumpmap textures/broken_castle/wall_c04_NORM.tga
+	specularmap textures/broken_castle/wall_c04_SPEC.tga
      {
       map textures/broken_castle/wall_c04.tga
       rgbGen vertex
@@ -31,8 +31,8 @@ textures/broken_castle/wall_c05
    
     qer_editorimage textures/broken_castle/wall_c05.tga
 	diffusemap textures/broken_castle/wall_c05.tga
-	bumpmap textures/broken_castle/wall_c05_n.tga
-	specularmap textures/broken_castle/wall_c05_r.tga
+	bumpmap textures/broken_castle/wall_c05_NORM.tga
+	specularmap textures/broken_castle/wall_c05_SPEC.tga
       {
       map textures/broken_castle/wall_c05.tga
       rgbGen vertex

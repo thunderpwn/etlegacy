@@ -19,7 +19,7 @@ textures/village/villwin_c12m_glass
 	}
 	{
 	   	stage bumpmap
-	    map textures/village/villwin_c12m_n.tga
+	    map textures/village/villwin_c12m_NORM.tga
 	    //blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		blendfunc blend
 		//alphaFunc GE128
@@ -28,7 +28,7 @@ textures/village/villwin_c12m_glass
 	}
 	{
 	   stage specularmap
-	   map textures/village/villwin_c12m_r.tga
+	   map textures/village/villwin_c12m_SPEC.tga
        //blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		blendfunc blend
 		//alphaFunc GE128
@@ -41,8 +41,8 @@ textures/village/villwin_c15
 {
 	qer_editorimage textures/village/villwin_c15.tga
 	diffusemap textures/village/villwin_c15.tga
-	specularmap textures/village/villwin_c15_r.tga
-	bumpmap textures/village/villwin_c15_n.tga
+	specularmap textures/village/villwin_c15_SPEC.tga
+	bumpmap textures/village/villwin_c15_NORM.tga
 	q3map_surfacelight 300
 	surfaceparm nomarks
 	{
@@ -65,8 +65,8 @@ textures/village/villwin_c18
 {
 	qer_editorimage textures/village/villwin_c18.tga
 	diffusemap textures/village/villwin_c18.tga
-	specularmap textures/village/villwin_c18_r.tga
-	bumpmap textures/village/villwin_c18_n.tga
+	specularmap textures/village/villwin_c18_SPEC.tga
+	bumpmap textures/village/villwin_c18_NORM.tga
 	q3map_lightsubdivide 128
 	q3map_surfacelight 200
 	surfaceparm nomarks
@@ -90,8 +90,8 @@ textures/village/vill2_win_m2
 {
         qer_editorimage textures/village/vill2_win_m2.tga
 		diffusemap textures/village/vill2_win_m2.tga
-		specularmap textures/village/vill2_win_m2_r.tga
-		bumpmap textures/village/vill2_win_m2_n.tga
+		specularmap textures/village/vill2_win_m2_SPEC.tga
+		bumpmap textures/village/vill2_win_m2_NORM.tga
 		surfaceparm glass
 	    surfaceparm pointlight
 }
@@ -100,8 +100,8 @@ textures/village/villwin_c08dm
 {
         qer_editorimage textures/village/villwin_c08dm.tga
 		diffusemap textures/village/villwin_c08dm.tga
-		specularmap textures/village/villwin_c08dm_r.tga
-		bumpmap textures/village/villwin_c08dm_n.tga
+		specularmap textures/village/villwin_c08dm_SPEC.tga
+		bumpmap textures/village/villwin_c08dm_NORM.tga
 		surfaceparm glass
 	    surfaceparm pointlight
 }
