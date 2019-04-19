@@ -827,7 +827,7 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 	shaderStage_t *pStage   = tess.surfaceStages[stage];
 	uint32_t      stateBits = pStage->stateBits;
 	rgbaGen_t     rgbaGen;
-
+	qboolean deluxemap = qfalse;
 	Ren_LogComment("--- Render_lightMapping ---\n");
 
 	rgbaGen = getRgbaGenForColorModulation(pStage, tess.lightmapNum);
@@ -836,7 +836,10 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 	{
 		stateBits &= ~(GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS | GLS_ATEST_BITS);
 	}
-
+	if (tr.worldDeluxeMapping == qtrue)
+	{
+		deluxemap = qtrue;
+	}
 	GL_State(stateBits);
 
 	// choose right shader program ----------------------------------
@@ -845,7 +848,7 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 	                          USE_ALPHA_TESTING, pStage->stateBits & GLS_ATEST_BITS,
 	                          USE_DEFORM_VERTEXES, tess.surfaceShader->numDeforms,
 	                          USE_NORMAL_MAPPING, normalMapping,
-	                          USE_PARALLAX_MAPPING, normalMapping && r_parallaxMapping->integer && tess.surfaceShader->parallax);
+	                          USE_PARALLAX_MAPPING, normalMapping && r_parallaxMapping->integer && tess.surfaceShader->parallax,USE_DELUXEMAP, deluxemap);
 
 	if (tess.surfaceShader->numDeforms)
 	{
