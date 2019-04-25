@@ -1536,6 +1536,10 @@ qboolean LoadMap(shaderStage_t *stage, char *buffer)
 		stage->type = ST_LIGHTMAP;
 		return qtrue;
 	}
+	
+
+	
+	
 
 	// determine image options
 	if (stage->overrideNoPicMip || shader.noPicMip || stage->highQuality || stage->forceHighQuality)
@@ -1591,6 +1595,28 @@ qboolean LoadMap(shaderStage_t *stage, char *buffer)
 
 	if (!stage->bundle[0].image[0])
 	{
+		if (stage->type == ST_NORMALMAP)
+		{
+			stage->bundle[0].image[0] = tr.flatImage;
+            return qtrue;
+		}
+		if (stage->type == ST_DIFFUSEMAP)
+		{
+			stage->bundle[0].image[0] = tr.whiteImage;
+			return qtrue;
+		}
+		if (stage->type == ST_COLORMAP)
+		{
+			stage->bundle[0].image[0] = tr.whiteImage;
+			return qtrue;
+		}
+		if (stage->type == ST_SPECULARMAP)
+		{
+			stage->bundle[0].image[0] = tr.blackImage;
+			return qtrue;
+		}
+		//return something to keep gl happy
+		stage->bundle[0].image[0] = tr.whiteImage;
 		Ren_Warning("WARNING: LoadMap could not find image '%s' in shader '%s'\n", buffer, shader.name);
 		//return qfalse;
 	}

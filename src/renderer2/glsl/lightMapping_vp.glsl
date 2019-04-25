@@ -9,9 +9,7 @@ attribute vec3 attr_Binormal;
 attribute vec3 attr_Normal;
 attribute vec4 attr_Color;
 
-uniform mat4 u_DiffuseTextureMatrix;
-uniform mat4 u_NormalTextureMatrix;
-uniform mat4 u_SpecularTextureMatrix;
+
 uniform mat4 u_ModelMatrix;
 uniform mat4 u_ModelViewProjectionMatrix;
 

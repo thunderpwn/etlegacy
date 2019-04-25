@@ -15,24 +15,23 @@ attribute vec3 attr_Binormal2;
 attribute vec3 attr_Normal2;
 
 uniform float u_VertexInterpolation;
+uniform vec3  u_LightDir;
 
-uniform mat4 u_DiffuseTextureMatrix;
-uniform mat4 u_NormalTextureMatrix;
-uniform mat4 u_SpecularTextureMatrix;
 uniform mat4 u_ModelMatrix;
 uniform mat4 u_ModelViewProjectionMatrix;
 
 uniform float u_Time;
 
-varying vec3 var_Position;
-varying vec2 var_TexDiffuse;
-#if defined(USE_NORMAL_MAPPING)
-varying vec2 var_TexNormal;
-varying vec2 var_TexSpecular;
+varying vec3 var_FragPos;
+varying vec2 var_TexCoords;
 varying vec3 var_Tangent;
 varying vec3 var_Binormal;
-#endif
 varying vec3 var_Normal;
+varying mat3 var_TBN;
+varying vec3 var_viewPos;
+varying vec3 var_TangentFragPos;
+varying vec3 var_TangentViewPos;
+varying vec3 var_tangentlight;
 
 void main()
 {
@@ -88,24 +87,26 @@ void main()
 	// transform vertex position into homogenous clip-space
 	gl_Position = u_ModelViewProjectionMatrix * position;
 
+
 	// transform position into world space
-	var_Position = (u_ModelMatrix * position).xyz;
+	var_FragPos = (u_ModelMatrix * position).xyz;
+   // texcoords
+	var_TexCoords.st = attr_TexCoord0.st;
+	
 
-	#if defined(USE_NORMAL_MAPPING)
-	var_Tangent.xyz  = (u_ModelMatrix * vec4(tangent, 0.0)).xyz;
-	var_Binormal.xyz = (u_ModelMatrix * vec4(binormal, 0.0)).xyz;
-	#endif
+	mat3 normalMatrix = transpose(inverse(mat3(u_ModelMatrix)));
+	
+	vec3 T = normalize(normalMatrix * attr_Tangent.xyz);
+    vec3 N = normalize(normalMatrix * attr_Normal.xyz);
+    T = normalize(T - dot(T, N) * N);
+    vec3 B = cross(N, T);
+    
+    var_TBN = transpose(mat3(T, B, N));
 
-	var_Normal.xyz = (u_ModelMatrix * vec4(normal, 0.0)).xyz;
-
-	// transform diffusemap texcoords
-	var_TexDiffuse = (u_DiffuseTextureMatrix * attr_TexCoord0).st;
-
-#if defined(USE_NORMAL_MAPPING)
-	// transform normalmap texcoords
-	var_TexNormal = (u_NormalTextureMatrix * attr_TexCoord0).st;
-
-	// transform specularmap texture coords
-	var_TexSpecular = (u_SpecularTextureMatrix * attr_TexCoord0).st;
-#endif
+    var_FragPos = vec3(u_ModelMatrix * position).xyz;  
+	var_Normal   = attr_Normal.xyz;
+	var_tangentlight = u_LightDir * normalMatrix;
+	
+    var_TangentViewPos = var_TBN * var_viewPos;
+    var_TangentFragPos = var_TBN * var_FragPos;
 }

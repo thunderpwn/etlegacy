@@ -5178,8 +5178,15 @@ void R_LoadEntities(lump_t *l)
 		// check for ambient scale constant
 		else if (!Q_stricmp(keyname, "ambientColor") || !Q_stricmp(keyname, "ambient") || !Q_stricmp(keyname, "_ambient"))
 		{
+			
+				tr.ambientStrenght = atof(value)/128;
+				
 			// FIXME: bypass r_ambientScale in R_SetupEntityLighting so map maker can set ambient scale for entities?
 			// ? = atof(value);
+		}
+		else if (!Q_stricmp(keyname, "_minlight"))
+		{
+			tr.minLight = atof(value)/128;
 		}
 		// check for fog color
 		else if (!Q_stricmp(keyname, "fogColor"))
@@ -8271,7 +8278,7 @@ void RE_LoadWorldMap(const char *name)
 	// build cubemaps after the necessary vbo stuff is done
 	// FIXME: causes missing vbo error on radar (maps with portal sky or foliage )
 	// devmap oasis; set developer 1; set r_showcubeprobs 1
-	R_BuildCubeMaps();
+	//R_BuildCubeMaps();
 
 	// never move this to RE_BeginFrame because we need it to set it here for the first frame
 	// but we need the information across 2 frames

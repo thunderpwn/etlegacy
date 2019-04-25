@@ -1322,7 +1322,8 @@ void R_Register(void)
 	r_flareCoeff = ri.Cvar_Get("r_flareCoeff", FLARE_STDCOEFF, CVAR_CHEAT);
 
 	r_skipBackEnd     = ri.Cvar_Get("r_skipBackEnd", "0", CVAR_CHEAT);
-	r_skipLightBuffer = ri.Cvar_Get("r_skipLightBuffer", "0", CVAR_CHEAT);
+	//not in use?, remove?
+	//r_skipLightBuffer = ri.Cvar_Get("r_skipLightBuffer", "0", CVAR_CHEAT);
 
 	r_measureOverdraw = ri.Cvar_Get("r_measureOverdraw", "0", CVAR_CHEAT);
 	r_lodScale        = ri.Cvar_Get("r_lodScale", "5", CVAR_CHEAT);
@@ -1346,7 +1347,7 @@ void R_Register(void)
 	r_specularExponent  = ri.Cvar_Get("r_specularExponent", "16", CVAR_CHEAT | CVAR_LATCH);
 	r_specularExponent2 = ri.Cvar_Get("r_specularExponent2", "3", CVAR_CHEAT | CVAR_LATCH);
 	//this one sets the power of specular, the higher the brighter
-	r_specularScale      = ri.Cvar_Get("r_specularScale", "0.2", CVAR_CHEAT | CVAR_LATCH);
+	r_specularScale      = ri.Cvar_Get("r_specularScale", "0.5", CVAR_CHEAT | CVAR_LATCH);
 	r_normalScale        = ri.Cvar_Get("r_normalScale", "1.0", CVAR_CHEAT | CVAR_LATCH);
 	r_normalMapping      = ri.Cvar_Get("r_normalMapping", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_parallaxDepthScale = ri.Cvar_Get("r_parallaxDepthScale", "0.03", CVAR_CHEAT);
@@ -1465,7 +1466,7 @@ void R_Register(void)
 	r_extTextureEnvAdd = ri.Cvar_Get("r_ext_texture_env_add", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_allowExtensions  = ri.Cvar_Get("r_allowExtensions", "1", CVAR_ARCHIVE | CVAR_LATCH | CVAR_UNSAFE);
 
-	r_materialScan = ri.Cvar_Get("r_materialScan", "1", CVAR_ARCHIVE | CVAR_LATCH);
+	r_materialScan = ri.Cvar_Get("r_materialScan", "3", CVAR_ARCHIVE | CVAR_LATCH);
 
 	r_smoothNormals = ri.Cvar_Get("r_smoothNormals", "0", CVAR_ARCHIVE | CVAR_LATCH);
 

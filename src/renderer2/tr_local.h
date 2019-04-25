@@ -3589,7 +3589,10 @@ typedef struct
 
 	float lightGridMulAmbient;              ///< lightgrid multipliers specified in sky shader
 	float lightGridMulDirected;             ///<
-
+	//New experimental
+	float ambientStrenght;                /// the ambientstrenght set in map
+	float minLight;                       ///minlight value almost same as ambientstrenght
+	//*****************
 	vec3_t fogColor;
 	float fogDensity;
 

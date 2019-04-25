@@ -166,10 +166,7 @@ static void BindDeluxeMap(shaderStage_t *pStage)
 	{
 		// hack: use TB_NORMALMAP image when r_normalMapping is enabled and there is no deluxe map available
 		if (r_normalMapping->integer && !tr.worldDeluxeMapping && pStage->bundle[TB_NORMALMAP].image[0] != NULL)
-		{
-			GL_Bind(pStage->bundle[TB_NORMALMAP].image[0]);
-		}
-		else
+		
 		{
 			GL_Bind(tr.flatImage);
 		}
@@ -558,13 +555,22 @@ static void Render_vertexLighting_DBS_entity(int stage)
 	// u_AlphaTest
 	GLSL_SetUniform_AlphaTest(pStage->stateBits);
 	SetUniformVec3(UNIFORM_AMBIENTCOLOR, backEnd.currentEntity->ambientLight);
-	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin); // in world space
+	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.viewOrigin); // in world space
 	SetUniformVec3(UNIFORM_LIGHTDIR, backEnd.currentEntity->lightDir); // = L vector which means surface to light
 	SetUniformVec3(UNIFORM_LIGHTCOLOR, backEnd.currentEntity->directedLight);
-
+	
 	SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
 	SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
 
+	if (tr.ambientStrenght <= 0)
+	{
+		SetUniformFloat(UNIFORM_AMBIENTSTRENGHT, tr.minLight);
+	}
+	else if (tr.ambientStrenght > 0)
+	{
+		SetUniformFloat(UNIFORM_AMBIENTSTRENGHT, tr.ambientStrenght);
+	}
+	
 	if (glState.vertexAttribsInterpolation > 0)
 	{
 		SetUniformFloat(UNIFORM_VERTEXINTERPOLATION, glState.vertexAttribsInterpolation);
@@ -757,6 +763,7 @@ static void Render_vertexLighting_DBS_world(int stage)
 	SetUniformVec4(UNIFORM_COLOR, tess.svars.color);
 
 	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.viewOrigin);
+	SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
 	SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
 	GLSL_SetUniform_AlphaTest(pStage->stateBits);
 
@@ -807,6 +814,10 @@ static void Render_vertexLighting_DBS_world(int stage)
 		}
 
 		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);
+
+		// bind u_DeluxeMap
+		SelectTexture(TEX_DELUXE);
+		GL_Bind(tr.flatImage);
 	}
 
 	GLSL_SetRequiredVertexPointers(trProg.gl_vertexLightingShader_DBS_world);
@@ -857,7 +868,7 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 	}
 
 	// set uniforms
-	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.origin); // in world space
+	SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.orientation.viewOrigin); // in world space
 	SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
 	SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
 	GLSL_SetUniform_AlphaTest(pStage->stateBits);
@@ -3160,7 +3171,21 @@ void Tess_StageIteratorGeneric()
 		}
 		case ST_LIGHTMAP:
 		{
-			Render_lightMapping(stage, qtrue, qfalse);
+			if (tess.lightmapNum >= 0)
+			{
+				Render_lightMapping(stage, qtrue, qfalse);
+				
+			}
+			else
+			{
+				pStage->bundle[0].image[0] = tr.whiteImage;
+				Render_lightMapping(stage, qtrue, qfalse);
+				
+			}
+			if (pStage->tcGen_Lightmap)
+			{
+				Render_generic(stage);
+			}
 			break;
 		}
 		case ST_DIFFUSEMAP:

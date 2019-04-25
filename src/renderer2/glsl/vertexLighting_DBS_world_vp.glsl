@@ -3,15 +3,15 @@
 
 attribute vec4 attr_Position;
 attribute vec4 attr_TexCoord0;
+attribute vec4 attr_TexCoord1;
 attribute vec3 attr_Tangent;
 attribute vec3 attr_Binormal;
 attribute vec3 attr_Normal;
 attribute vec4 attr_Color;
 
-uniform mat4 u_DiffuseTextureMatrix;
-uniform mat4 u_NormalTextureMatrix;
-uniform mat4 u_SpecularTextureMatrix;
+
 uniform mat4 u_ModelViewProjectionMatrix;
+uniform mat4 u_ModelMatrix;
 
 uniform float u_Time;
 
@@ -19,12 +19,18 @@ uniform vec4 u_ColorModulate;
 uniform vec4 u_Color;
 
 varying vec3 var_Position;
-varying vec4 var_TexDiffuseNormal;
-varying vec2 var_TexSpecular;
+varying vec3 var_FragPos;
+varying vec2 var_TexCoords;
+
+varying vec2 var_TexLight;
 varying vec4 var_LightColor;
 varying vec3 var_Tangent;
 varying vec3 var_Binormal;
 varying vec3 var_Normal;
+varying mat3 var_TBN;
+varying vec3 var_viewPos;
+varying vec3 var_TangentFragPos;
+varying vec3 var_TangentViewPos;
 
 void main()
 {
@@ -41,23 +47,25 @@ void main()
 
 
 
-	// transform diffusemap texcoords
-	var_TexDiffuseNormal.st = (u_DiffuseTextureMatrix * attr_TexCoord0).st;
+	// texcoords
+	var_TexCoords.st = attr_TexCoord0.st;
+	var_TexLight     = attr_TexCoord1.st;
 
-#if defined(USE_NORMAL_MAPPING)
-	// transform normalmap texcoords
-	var_TexDiffuseNormal.pq = (u_NormalTextureMatrix * attr_TexCoord0).st;
+	mat3 normalMatrix = transpose(inverse(mat3(u_ModelMatrix)));
+	
+	vec3 T = normalize(normalMatrix * attr_Tangent.xyz);
+    vec3 N = normalize(normalMatrix * attr_Normal.xyz);
+    T = normalize(T - dot(T, N) * N);
+    vec3 B = cross(N, T);
+    
+    var_TBN = transpose(mat3(T, B, N));
 
-	// transform specularmap texture coords
-	var_TexSpecular = (u_SpecularTextureMatrix * attr_TexCoord0).st;
-#endif
-    var_Position = position.xyz;
+    var_FragPos = vec3(u_ModelMatrix * position).xyz;  
 	var_Normal   = attr_Normal.xyz;
 
-#if defined(USE_NORMAL_MAPPING)
-	var_Tangent  = attr_Tangent.xyz;
-	var_Binormal = attr_Binormal.xyz;
-#endif
+	
+    var_TangentViewPos = var_TBN * var_viewPos;
+    var_TangentFragPos = var_TBN * var_FragPos;
 
 	
  // assign color

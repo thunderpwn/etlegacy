@@ -72,7 +72,7 @@ void main()
 	// obtain normal from normal map in range [0,1]
 	vec3 N =  texture2D(u_NormalMap, var_TexCoords).rgb;
 
-	N = normalize(N * 2.0 - 1.0); // this normal is in tangent space
+	N = normalize(N * 2.0 - vec3(1.0)); // this normal is in tangent space
 
 
 	// compute light direction in tangent space
@@ -81,11 +81,13 @@ void main()
      //if there is a deluxemap present we use that ofcourse
 	vec3 L = texture2D(u_DeluxeMap, var_TexLight).xyz;
 
-	L = normalize(L * 2.0 - 1.0); // this lightdirection is in tangent space
+	L = normalize(L * 2.0 - vec3(1.0)); // this lightdirection is in tangent space
 #else
-     //this is highly experimental, using values from the lightmap itself,
-	 //it works because it gives different values depending on the intensity in the lightmap range from 0 to 1
-    vec3 L = texture2D(u_LightMap, var_TexLight).xyz;
+//using flatimage, wich needs some tweak
+    vec3 L = texture2D(u_DeluxeMap, var_TexLight).xyz;
+	L.z *=1.0;
+	L.x *=1.0;
+	L.y *=0.5;
 	L = normalize(L * 2.0 - 1.0); // this lightdirection is in tangent space
 #endif
 	// compute half angle in world space
@@ -95,8 +97,7 @@ void main()
 	
 	// compute the light term
 	//with half lambert
-	float NL = dot(N, L) * 0.5 + 0.5;
-	NL = NL * NL;
+	float NL =dot(N, L);
 
 	// compute light color from world space lightmap
 	vec3 lightColor = lightmapColor.rgb * NL;
