@@ -1043,10 +1043,7 @@ static void GLSL_BuildShaderExtraDef()
 		BUFFEXT("#ifndef r_HDRGamma\n#define r_HDRGamma %f\n#endif\n", r_hdrGamma->value);
 	}
 
-	if (r_precomputedLighting->integer)
-	{
-		BUFFEXT("#ifndef r_precomputedLighting\n#define r_precomputedLighting 1\n#endif\n");
-	}
+	
 
 	if (r_heatHazeFix->integer && glConfig2.framebufferBlitAvailable)
 	{

@@ -1152,15 +1152,9 @@ static void ParseFace(dsurface_t *ds, drawVert_t *verts, bspSurface_t *surf, int
 	srfTriangle_t    *tri;
 	int              numVerts, numTriangles;
 
-	// get lightmap
-	if (r_vertexLighting->integer || !r_precomputedLighting->integer)
-	{
-		surf->lightmapNum = LIGHTMAP_NONE;
-	}
-	else
-	{
-		surf->lightmapNum = LittleLong(ds->lightmapNum);
-	}
+	
+	surf->lightmapNum = LittleLong(ds->lightmapNum);
+	
 
 	if (tr.worldDeluxeMapping && surf->lightmapNum >= 2)
 	{
@@ -1332,14 +1326,10 @@ static void ParseMesh(dsurface_t *ds, drawVert_t *verts, bspSurface_t *surf)
 	static surfaceType_t skipData = SF_SKIP;
 
 	// get lightmap
-	if (r_vertexLighting->integer || !r_precomputedLighting->integer)
-	{
-		surf->lightmapNum = LIGHTMAP_NONE;
-	}
-	else
-	{
-		surf->lightmapNum = LittleLong(ds->lightmapNum);
-	}
+	
+	
+	surf->lightmapNum = LittleLong(ds->lightmapNum);
+	
 
 	if (tr.worldDeluxeMapping && surf->lightmapNum >= 2)
 	{
@@ -1431,15 +1421,10 @@ static void ParseTriSurf(dsurface_t *ds, drawVert_t *verts, bspSurface_t *surf, 
 	int                  numVerts, numTriangles;
 	static surfaceType_t skipData = SF_SKIP;
 
-	// get lightmap
-	if (r_vertexLighting->integer || !r_precomputedLighting->integer)
-	{
-		surf->lightmapNum = LIGHTMAP_NONE;
-	}
-	else
-	{
-		surf->lightmapNum = LittleLong(ds->lightmapNum);
-	}
+	
+	
+	surf->lightmapNum = LittleLong(ds->lightmapNum);
+	
 
 	if (tr.worldDeluxeMapping && surf->lightmapNum >= 2)
 	{
@@ -3444,7 +3429,7 @@ static void R_CreateWorldVBO()
 	{
 		light = &s_worldData.lights[i];
 
-		if ((r_precomputedLighting->integer || r_vertexLighting->integer) && !light->noRadiosity)
+		if (!light->noRadiosity)
 		{
 			continue;
 		}
@@ -3570,7 +3555,7 @@ static void R_CreateSubModelVBOs()
 			shader      = surface->shader;
 			lightmapNum = surface->lightmapNum;
 
-			if (shader != oldShader || (r_precomputedLighting->integer ? lightmapNum != oldLightmapNum : qfalse))
+			if (shader != oldShader || (lightmapNum != oldLightmapNum))
 			{
 				oldShader      = shader;
 				oldLightmapNum = lightmapNum;
@@ -5169,11 +5154,10 @@ void R_LoadEntities(lump_t *l)
 		// check for ambient color
 		else if (!Q_stricmp(keyname, "_color") || !Q_stricmp(keyname, "color"))
 		{
-			if (r_forceAmbient->value <= 0)
-			{
+			
 				sscanf(value, "%f %f %f", &tr.worldEntity.ambientLight[0], &tr.worldEntity.ambientLight[1],
 				       &tr.worldEntity.ambientLight[2]);
-			}
+			
 		}
 		// check for ambient scale constant
 		else if (!Q_stricmp(keyname, "ambientColor") || !Q_stricmp(keyname, "ambient") || !Q_stricmp(keyname, "_ambient"))
@@ -7168,7 +7152,7 @@ void R_PrecacheInteractions()
 	{
 		light = &s_worldData.lights[i];
 
-		if ((r_precomputedLighting->integer || r_vertexLighting->integer) && !light->noRadiosity)
+		if (!light->noRadiosity)
 		{
 			continue;
 		}
@@ -7440,679 +7424,8 @@ vertexHash_t *AddVertexToHashTable(vertexHash_t **hashTable, vec3_t xyz, void *d
 	return vertexHash;
 }
 
-/**
- * @brief GL_BindNearestCubeMap
- * @param[in] xyz
- */
-void GL_BindNearestCubeMap(const vec3_t xyz)
-{
-#if 0
-	int            j;
-	float          distance, maxDistance;
-	cubemapProbe_t *cubeProbe;
 
-	Ren_LogComment("--- GL_BindNearestCubeMap ---\n");
 
-	maxDistance      = 9999999.0f;
-	tr.autoCubeImage = tr.blackCubeImage;
-	for (j = 0; j < tr.cubeProbes.currentElements; j++)
-	{
-		cubeProbe = Com_GrowListElement(&tr.cubeProbes, j);
-
-		distance = Distance(cubeProbe->origin, xyz);
-		if (distance < maxDistance)
-		{
-			tr.autoCubeImage = cubeProbe->cubemap;
-			maxDistance      = distance;
-		}
-	}
-#else
-	float          distance, maxDistance;
-	cubemapProbe_t *cubeProbe;
-	unsigned int   hash;
-	vertexHash_t   *vertexHash;
-
-	tr.autoCubeImage = tr.whiteCubeImage;
-	if (!r_reflectionMapping->integer)
-	{
-		return;
-	}
-
-	if (tr.cubeHashTable == NULL || xyz == NULL)
-	{
-		return;
-	}
-
-	maxDistance = 9999999.0f;
-
-	hash = VertexCoordGenerateHash(xyz);
-
-	for (vertexHash = tr.cubeHashTable[hash]; vertexHash; vertexHash = vertexHash->next)
-	{
-		cubeProbe = (cubemapProbe_t *)vertexHash->data;
-
-		distance = Distance(cubeProbe->origin, xyz);
-		if (distance < maxDistance)
-		{
-			tr.autoCubeImage = cubeProbe->cubemap;
-			maxDistance      = distance;
-		}
-	}
-#endif
-
-	GL_Bind(tr.autoCubeImage);
-}
-
-/**
- * @brief R_FindTwoNearestCubeMaps
- * @param[in] position
- * @param[out] cubeProbeNearest
- * @param[out] cubeProbeSecondNearest
- */
-void R_FindTwoNearestCubeMaps(const vec3_t position, cubemapProbe_t **cubeProbeNearest, cubemapProbe_t **cubeProbeSecondNearest)
-{
-	int            j;
-	float          distance, maxDistance, maxDistance2;
-	cubemapProbe_t *cubeProbe;
-	unsigned int   hash;
-	vertexHash_t   *vertexHash;
-
-	Ren_LogComment("--- R_FindTwoNearestCubeMaps ---\n");
-
-	*cubeProbeNearest       = NULL;
-	*cubeProbeSecondNearest = NULL;
-
-	if (tr.cubeHashTable == NULL || position == NULL)
-	{
-		return;
-	}
-
-	hash        = VertexCoordGenerateHash(position);
-	maxDistance = maxDistance2 = 9999999.0f;
-
-#if 0
-	for (j = 0; j < tr.cubeProbes.currentElements; j++)
-	{
-		cubeProbe = Com_GrowListElement(&tr.cubeProbes, j);
-#else
-	for (j = 0, vertexHash = tr.cubeHashTable[hash]; vertexHash; vertexHash = vertexHash->next, j++)
-	{
-		cubeProbe = (cubemapProbe_t *)vertexHash->data;
-#endif
-		distance = Distance(cubeProbe->origin, position);
-		if (distance < maxDistance)
-		{
-			*cubeProbeSecondNearest = *cubeProbeNearest;
-			maxDistance2            = maxDistance;
-
-			*cubeProbeNearest = cubeProbe;
-			maxDistance       = distance;
-		}
-		else if (distance < maxDistance2 && distance > maxDistance)
-		{
-			*cubeProbeSecondNearest = cubeProbe;
-			maxDistance2            = distance;
-		}
-	}
-
-	//Ren_Print("iterated through %i cubeprobes\n", j);
-}
-
-/**
- * @brief R_BuildCubeMaps
- */
-void R_BuildCubeMaps(void)
-{
-	int            i, j; // k;
-	int            ii, jj;
-	refdef_t       rf;
-	qboolean       flipx;
-	qboolean       flipy;
-	int            x, y, xy, xy2;
-	cubemapProbe_t *cubeProbe;
-	byte           temp[REF_CUBEMAP_SIZE * REF_CUBEMAP_SIZE * 4];
-	byte           *dest;
-
-#if 0
-	byte *fileBuf;
-	char *fileName = NULL;
-	int  fileCount = 0;
-	int  fileBufX  = 0;
-	int  fileBufY  = 0;
-#endif
-
-	//int             distance = 512;
-	//qboolean        bad;
-
-	//srfSurfaceStatic_t *sv;
-	size_t tics         = 0;
-	size_t nextTicCount = 0;
-#ifdef LEGACY_DEBUG
-	int startTime, endTime;
-
-	startTime = ri.Milliseconds();
-#endif
-
-	size_t ticsNeeded;
-	byte   r, g, b, best;
-
-	if (!r_reflectionMapping->integer)
-	{
-		return;
-	}
-
-	Com_Memset(&rf, 0, sizeof(refdef_t));
-
-	for (i = 0; i < 6; i++)
-	{
-		tr.cubeTemp[i] = (byte *)ri.Z_Malloc(REF_CUBEMAP_SIZE * REF_CUBEMAP_SIZE * 4);
-	}
-
-	//fileBuf = ri.Z_Malloc(REF_CUBEMAP_STORE_SIZE * REF_CUBEMAP_STORE_SIZE * 4);
-
-	// calculate origins for our probes
-	Com_InitGrowList(&tr.cubeProbes, 4000);
-	tr.cubeHashTable = NewVertexHashTable();
-
-#if 0
-	if (tr.world->vis)
-	{
-		bspCluster_t *cluster;
-
-		for (i = 0; i < tr.world->numClusters; i++)
-		{
-			cluster = &tr.world->clusters[i];
-
-			// check to see if this is a shit location
-			if (ri.CM_PointContents(cluster->origin, 0) == CONTENTS_SOLID)
-			{
-				continue;
-			}
-
-			if (FindVertexInHashTable(tr.cubeHashTable, cluster->origin, 256) == NULL)
-			{
-				cubeProbe = ri.Hunk_Alloc(sizeof(*cubeProbe), h_high);
-				Com_AddToGrowList(&tr.cubeProbes, cubeProbe);
-
-				VectorCopy(cluster->origin, cubeProbe->origin);
-
-				AddVertexToHashTable(tr.cubeHashTable, cubeProbe->origin, cubeProbe);
-
-				//gridPoint = tr.world->lightGridData + pos[0] * gridStep[0] + pos[1] * gridStep[1] + pos[2] * gridStep[2];
-
-				// TODO connect cubeProbe with gridPoint
-			}
-		}
-	}
-#elif 1
-	{
-		bspNode_t *node;
-
-		for (i = 0; i < tr.world->numnodes; i++)
-		{
-			node = &tr.world->nodes[i];
-
-			// check to see if this is a shit location
-			if (node->contents == CONTENTS_NODE)
-			{
-				continue;
-			}
-
-			if (node->area == -1)
-			{
-				// location is in the void
-				continue;
-			}
-
-			if (FindVertexInHashTable(tr.cubeHashTable, node->origin, 256) == NULL)
-			{
-				cubeProbe = (cubemapProbe_t *)ri.Hunk_Alloc(sizeof(*cubeProbe), h_high);
-				Com_AddToGrowList(&tr.cubeProbes, cubeProbe);
-
-				VectorCopy(node->origin, cubeProbe->origin);
-
-				AddVertexToHashTable(tr.cubeHashTable, cubeProbe->origin, cubeProbe);
-			}
-		}
-	}
-#else
-	{
-		int            numGridPoints;
-		bspGridPoint_t *gridPoint;
-		int            gridStep[3];
-		int            pos[3];
-		float          posFloat[3];
-
-		gridStep[0] = 1;
-		gridStep[1] = tr.world->lightGridBounds[0];
-		gridStep[2] = tr.world->lightGridBounds[0] * tr.world->lightGridBounds[1];
-
-		numGridPoints = tr.world->lightGridBounds[0] * tr.world->lightGridBounds[1] * tr.world->lightGridBounds[2];
-
-		Ren_Print("...trying to allocate %d cubemaps", numGridPoints);
-		Ren_Print(" with gridsize (%i %i %i)", (int)tr.world->lightGridSize[0], (int)tr.world->lightGridSize[1],
-		          (int)tr.world->lightGridSize[2]);
-		Ren_Print(" and gridbounds (%i %i %i)\n", (int)tr.world->lightGridBounds[0], (int)tr.world->lightGridBounds[1],
-		          (int)tr.world->lightGridBounds[2]);
-
-		for (i = 0; i < tr.world->lightGridBounds[0]; i += 1)
-		{
-			for (j = 0; j < tr.world->lightGridBounds[1]; j += 1)
-			{
-				for (k = 0; k < tr.world->lightGridBounds[2]; k += 1)
-				{
-					pos[0] = i;
-					pos[1] = j;
-					pos[2] = k;
-
-					posFloat[0] = i * tr.world->lightGridSize[0];
-					posFloat[1] = j * tr.world->lightGridSize[1];
-					posFloat[2] = k * tr.world->lightGridSize[2];
-
-					VectorAdd(posFloat, tr.world->lightGridOrigin, posFloat);
-
-					// check to see if this is a shit location
-					if (ri.CM_PointContents(posFloat, 0) == CONTENTS_SOLID)
-					{
-						continue;
-					}
-
-					if (FindVertexInHashTable(tr.cubeHashTable, posFloat, 256) == NULL)
-					{
-						cubeProbe = ri.Hunk_Alloc(sizeof(*cubeProbe), h_high);
-						Com_AddToGrowList(&tr.cubeProbes, cubeProbe);
-
-						VectorCopy(posFloat, cubeProbe->origin);
-
-						AddVertexToHashTable(tr.cubeHashTable, posFloat, cubeProbe);
-
-						gridPoint = tr.world->lightGridData + pos[0] * gridStep[0] + pos[1] * gridStep[1] + pos[2] * gridStep[2];
-
-						// TODO connect cubeProbe with gridPoint
-					}
-				}
-			}
-		}
-	}
-#endif
-
-	// if we can't find one, fake one
-	if (tr.cubeProbes.currentElements == 0)
-	{
-		cubeProbe = (cubemapProbe_t *)ri.Hunk_Alloc(sizeof(*cubeProbe), h_low);
-		Com_AddToGrowList(&tr.cubeProbes, cubeProbe);
-
-		VectorClear(cubeProbe->origin);
-	}
-
-	Ren_Print("...pre-rendering %d cubemaps\n", tr.cubeProbes.currentElements);
-	ri.Cvar_Set("viewlog", "1");
-	Ren_Print("0%%  10   20   30   40   50   60   70   80   90   100%%\n");
-	Ren_Print("|----|----|----|----|----|----|----|----|----|----|\n");
-	for (j = 0; j < tr.cubeProbes.currentElements; j++)
-	{
-		cubeProbe = (cubemapProbe_t *)Com_GrowListElement(&tr.cubeProbes, j);
-
-		//Ren_Print("rendering cubemap at (%i %i %i)\n", (int)cubeProbe->origin[0], (int)cubeProbe->origin[1],
-		//		  (int)cubeProbe->origin[2]);
-
-		if ((j + 1) >= nextTicCount)
-		{
-			ticsNeeded = (size_t)(((double)(j + 1) / tr.cubeProbes.currentElements) * 50.0);
-
-			do
-			{
-				Ren_Print("*");
-				// FIXME: updating screen doesn't work properly, R_BuildCubeMaps during map load causes eye cancer
-				Ren_UpdateScreen();
-			}
-			while (++tics < ticsNeeded);
-
-			nextTicCount = (size_t)((tics / 50.0) * tr.cubeProbes.currentElements);
-			if ((j + 1) == tr.cubeProbes.currentElements)
-			{
-				if (tics < 51)
-				{
-					Ren_Print("*");
-				}
-				Ren_Print("\n");
-			}
-		}
-
-		VectorCopy(cubeProbe->origin, rf.vieworg);
-
-		AxisClear(rf.viewaxis);
-
-		rf.fov_x  = 90;
-		rf.fov_y  = 90;
-		rf.x      = 0;
-		rf.y      = 0;
-		rf.width  = REF_CUBEMAP_SIZE;
-		rf.height = REF_CUBEMAP_SIZE;
-		rf.time   = 0;
-
-		rf.rdflags = RDF_NOCUBEMAP | RDF_NOBLOOM;
-
-		for (i = 0; i < 6; i++)
-		{
-			flipx = qfalse;
-			flipy = qfalse;
-			switch (i)
-			{
-			case 0:
-			{
-				//X+
-				rf.viewaxis[0][0] = 1;
-				rf.viewaxis[0][1] = 0;
-				rf.viewaxis[0][2] = 0;
-
-				rf.viewaxis[1][0] = 0;
-				rf.viewaxis[1][1] = 0;
-				rf.viewaxis[1][2] = 1;
-
-				CrossProduct(rf.viewaxis[0], rf.viewaxis[1], rf.viewaxis[2]);
-				//flipx=qtrue;
-				break;
-			}
-			case 1:
-			{
-				//X-
-				rf.viewaxis[0][0] = -1;
-				rf.viewaxis[0][1] = 0;
-				rf.viewaxis[0][2] = 0;
-
-				rf.viewaxis[1][0] = 0;
-				rf.viewaxis[1][1] = 0;
-				rf.viewaxis[1][2] = -1;
-
-				CrossProduct(rf.viewaxis[0], rf.viewaxis[1], rf.viewaxis[2]);
-				//flipx=qtrue;
-				break;
-			}
-			case 2:
-			{
-				//Y+
-				rf.viewaxis[0][0] = 0;
-				rf.viewaxis[0][1] = 1;
-				rf.viewaxis[0][2] = 0;
-
-				rf.viewaxis[1][0] = -1;
-				rf.viewaxis[1][1] = 0;
-				rf.viewaxis[1][2] = 0;
-
-				CrossProduct(rf.viewaxis[0], rf.viewaxis[1], rf.viewaxis[2]);
-				//flipx=qtrue;
-				break;
-			}
-			case 3:
-			{
-				//Y-
-				rf.viewaxis[0][0] = 0;
-				rf.viewaxis[0][1] = -1;
-				rf.viewaxis[0][2] = 0;
-
-				rf.viewaxis[1][0] = -1;     //-1
-				rf.viewaxis[1][1] = 0;
-				rf.viewaxis[1][2] = 0;
-
-				CrossProduct(rf.viewaxis[0], rf.viewaxis[1], rf.viewaxis[2]);
-				//flipx=qtrue;
-				break;
-			}
-			case 4:
-			{
-				//Z+
-				rf.viewaxis[0][0] = 0;
-				rf.viewaxis[0][1] = 0;
-				rf.viewaxis[0][2] = 1;
-
-				rf.viewaxis[1][0] = -1;
-				rf.viewaxis[1][1] = 0;
-				rf.viewaxis[1][2] = 0;
-
-				CrossProduct(rf.viewaxis[0], rf.viewaxis[1], rf.viewaxis[2]);
-				//  flipx=qtrue;
-				break;
-			}
-			case 5:
-			{
-				//Z-
-				rf.viewaxis[0][0] = 0;
-				rf.viewaxis[0][1] = 0;
-				rf.viewaxis[0][2] = -1;
-
-				rf.viewaxis[1][0] = 1;
-				rf.viewaxis[1][1] = 0;
-				rf.viewaxis[1][2] = 0;
-
-				CrossProduct(rf.viewaxis[0], rf.viewaxis[1], rf.viewaxis[2]);
-				//flipx=qtrue;
-				break;
-			}
-			}
-
-			tr.refdef.pixelTarget = tr.cubeTemp[i];
-			Com_Memset(tr.cubeTemp[i], 255, REF_CUBEMAP_SIZE * REF_CUBEMAP_SIZE * 4);
-			tr.refdef.pixelTargetWidth  = REF_CUBEMAP_SIZE;
-			tr.refdef.pixelTargetHeight = REF_CUBEMAP_SIZE;
-
-			RE_BeginFrame();
-			RE_RenderScene(&rf);
-			RE_EndFrame(&ii, &jj);
-
-			if (flipx)
-			{
-				dest = tr.cubeTemp[i];
-				Com_Memcpy(temp, dest, REF_CUBEMAP_SIZE * REF_CUBEMAP_SIZE * 4);
-
-				for (y = 0; y < REF_CUBEMAP_SIZE; y++)
-				{
-					for (x = 0; x < REF_CUBEMAP_SIZE; x++)
-					{
-						xy            = ((y * REF_CUBEMAP_SIZE) + x) * 4;
-						xy2           = ((y * REF_CUBEMAP_SIZE) + ((REF_CUBEMAP_SIZE - 1) - x)) * 4;
-						dest[xy2 + 0] = temp[xy + 0];
-						dest[xy2 + 1] = temp[xy + 1];
-						dest[xy2 + 2] = temp[xy + 2];
-						dest[xy2 + 3] = temp[xy + 3];
-
-					}
-				}
-			}
-
-			if (flipy)
-			{
-				dest = tr.cubeTemp[i];
-				Com_Memcpy(temp, dest, REF_CUBEMAP_SIZE * REF_CUBEMAP_SIZE * 4);
-
-				for (y = 0; y < REF_CUBEMAP_SIZE; y++)
-				{
-					for (x = 0; x < REF_CUBEMAP_SIZE; x++)
-					{
-						xy            = ((y * REF_CUBEMAP_SIZE) + x) * 4;
-						xy2           = ((((REF_CUBEMAP_SIZE - 1) - y) * REF_CUBEMAP_SIZE) + x) * 4;
-						dest[xy2 + 0] = temp[xy + 0];
-						dest[xy2 + 1] = temp[xy + 1];
-						dest[xy2 + 2] = temp[xy + 2];
-						dest[xy2 + 3] = temp[xy + 3];
-
-					}
-				}
-			}
-
-			// encode the pixel intensity into the alpha channel, saves work in the shader
-			//if (qtrue)
-			{
-				dest = tr.cubeTemp[i];
-				for (y = 0; y < REF_CUBEMAP_SIZE; y++)
-				{
-					for (x = 0; x < REF_CUBEMAP_SIZE; x++)
-					{
-						xy = ((y * REF_CUBEMAP_SIZE) + x) * 4;
-
-						r = dest[xy + 0];
-						g = dest[xy + 1];
-						b = dest[xy + 2];
-
-						if ((r > g) && (r > b))
-						{
-							best = r;
-						}
-						else if ((g > r) && (g > b))
-						{
-							best = g;
-						}
-						else
-						{
-							best = b;
-						}
-
-						dest[xy + 3] = best;
-					}
-				}
-			}
-
-			// collate cubemaps into one large image and write it out
-#if 0
-			if (qfalse)
-			{
-				// Initialize output buffer
-				if (fileBufX == 0 && fileBufY == 0)
-				{
-					Com_Memset(fileBuf, 255, REF_CUBEMAP_STORE_SIZE * REF_CUBEMAP_STORE_SIZE * 4);
-				}
-
-				// Copy this cube map into buffer
-				R_SubImageCpy(fileBuf,
-				              fileBufX * REF_CUBEMAP_SIZE, fileBufY * REF_CUBEMAP_SIZE,
-				              REF_CUBEMAP_STORE_SIZE, REF_CUBEMAP_STORE_SIZE,
-				              tr.cubeTemp[i],
-				              REF_CUBEMAP_SIZE, REF_CUBEMAP_SIZE,
-				              4, qtrue);
-
-				// Increment everything
-				fileBufX++;
-				if (fileBufX >= REF_CUBEMAP_STORE_SIDE)
-				{
-					fileBufY++;
-					fileBufX = 0;
-				}
-				if (fileBufY >= REF_CUBEMAP_STORE_SIDE)
-				{
-					// File is full, write it
-					fileName = va("maps/%s/cm_%04d.png", s_worldData.baseName, fileCount);
-					Ren_Print("\nwriting %s\n", fileName);
-					ri.FS_WriteFile(fileName, fileBuf, 1);  // create path
-					SavePNG(fileName, fileBuf, REF_CUBEMAP_STORE_SIZE, REF_CUBEMAP_STORE_SIZE, 4, qfalse);
-
-					fileCount++;
-					fileBufY = 0;
-				}
-			}
-#endif
-		}
-
-		// build the cubemap
-		//cubeProbe->cubemap = R_CreateCubeImage(va("_autoCube%d", j), (const byte **)tr.cubeTemp, REF_CUBEMAP_SIZE, REF_CUBEMAP_SIZE, IF_NOPICMIP, FT_LINEAR, WT_EDGE_CLAMP);
-		cubeProbe->cubemap = R_AllocImage(va("_autoCube%d", j), qfalse);
-		if (!cubeProbe->cubemap)
-		{
-			Ren_Print("R_BuildCubeMaps: Aborted - can't allocate image.\n");
-			return;
-		}
-
-		cubeProbe->cubemap->type = GL_TEXTURE_CUBE_MAP_ARB;
-
-		cubeProbe->cubemap->width  = REF_CUBEMAP_SIZE;
-		cubeProbe->cubemap->height = REF_CUBEMAP_SIZE;
-
-		cubeProbe->cubemap->bits       = IF_NOPICMIP;
-		cubeProbe->cubemap->filterType = FT_LINEAR;
-		cubeProbe->cubemap->wrapType   = WT_EDGE_CLAMP;
-
-		GL_Bind(cubeProbe->cubemap);
-
-		R_UploadImage((const byte **)tr.cubeTemp, 6, cubeProbe->cubemap);
-
-		glBindTexture(cubeProbe->cubemap->type, 0);
-	}
-	Ren_Print("\n");
-
-#if 0
-	// write buffer if theres any still unwritten
-	if (fileBufX != 0 || fileBufY != 0)
-	{
-		fileName = va("maps/%s/cm_%04d.png", s_worldData.baseName, fileCount);
-		Ren_Print("writing %s\n", fileName);
-		ri.FS_WriteFile(fileName, fileBuf, 1);  // create path
-		SavePNG(fileName, fileBuf, REF_CUBEMAP_STORE_SIZE, REF_CUBEMAP_STORE_SIZE, 4, qfalse);
-	}
-	Ren_Print("Wrote %d cubemaps in %d files.\n", j, fileCount + 1);
-	ri.Free(fileBuf);
-#endif
-
-	// turn pixel targets off
-	tr.refdef.pixelTarget = NULL;
-
-	// assign the surfs a cubemap
-#if 0
-	for (i = 0; i < tr.world->numnodes; i++)
-	{
-		msurface_t **mark;
-		msurface_t *surf;
-
-		if (tr.world->nodes[i].contents != CONTENTS_SOLID)
-		{
-			mark = tr.world->nodes[i].firstmarksurface;
-			j    = tr.world->nodes[i].nummarksurfaces;
-			while (j--)
-			{
-				int dist = 9999999;
-				int best = 0;
-
-				surf = *mark;
-				mark++;
-				sv = (void *)surf->data;
-				if (sv->surfaceType != SF_STATIC)
-				{
-					continue;   //
-				}
-				if (sv->numIndices == 0 || sv->numVerts == 0)
-				{
-					continue;
-				}
-				if (sv->cubemap != NULL)
-				{
-					continue;
-				}
-
-				for (x = 0; x < tr.cubeProbesCount; x++)
-				{
-					vec3_t pos;
-
-					pos[0] = tr.cubeProbes[x].origin[0] - sv->origin[0];
-					pos[1] = tr.cubeProbes[x].origin[1] - sv->origin[1];
-					pos[2] = tr.cubeProbes[x].origin[2] - sv->origin[2];
-
-					distance = VectorLength(pos);
-					if (distance < dist)
-					{
-						dist = distance;
-						best = x;
-					}
-				}
-				sv->cubemap = tr.cubeProbes[best].cubemap;
-			}
-		}
-	}
-#endif
-
-#ifdef LEGACY_DEBUG
-	endTime = ri.Milliseconds();
-	Ren_Developer("cubemap probes pre-rendering time of %i cubes = %5.2f seconds\n", tr.cubeProbes.currentElements,
-	              (endTime - startTime) / 1000.0);
-#endif
-}
 
 /**
  * @brief Called directly from cgame
@@ -8160,9 +7473,9 @@ void RE_LoadWorldMap(const char *name)
 	tr.fogDensity = 0;
 
 	// set default ambient color
-	tr.worldEntity.ambientLight[0] = r_forceAmbient->value;
-	tr.worldEntity.ambientLight[1] = r_forceAmbient->value;
-	tr.worldEntity.ambientLight[2] = r_forceAmbient->value;
+	tr.worldEntity.ambientLight[0] = 0;
+	tr.worldEntity.ambientLight[1] = 0;
+	tr.worldEntity.ambientLight[2] = 0;
 
 	tr.worldMapLoaded = qtrue;
 

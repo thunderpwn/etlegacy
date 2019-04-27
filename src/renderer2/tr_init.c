@@ -90,8 +90,8 @@ cvar_t *r_noInteractionSort;
 cvar_t *r_dynamicLight;
 cvar_t *r_staticLight;
 cvar_t *r_dynamicLightShadows;
-cvar_t *r_precomputedLighting;
-cvar_t *r_vertexLighting;
+
+
 cvar_t *r_compressDiffuseMaps;
 cvar_t *r_compressSpecularMaps;
 cvar_t *r_compressNormalMaps;
@@ -170,7 +170,7 @@ cvar_t *r_clear;
 cvar_t *r_textureMode;
 cvar_t *r_offsetFactor;
 cvar_t *r_offsetUnits;
-cvar_t *r_forceSpecular;
+
 cvar_t *r_specularExponent;
 cvar_t *r_specularExponent2;
 cvar_t *r_specularScale;
@@ -201,7 +201,7 @@ cvar_t *r_showImages;
 cvar_t *r_wolfFog;
 cvar_t *r_noFog;
 
-cvar_t *r_forceAmbient;
+
 cvar_t *r_ambientScale;
 cvar_t *r_lightScale;
 cvar_t *r_debugLight;
@@ -277,7 +277,7 @@ cvar_t *r_hdrDebug;
 
 cvar_t *r_screenSpaceAmbientOcclusion;
 cvar_t *r_depthOfField;
-cvar_t *r_reflectionMapping;
+
 cvar_t *r_highQualityNormalMapping;
 cvar_t *r_bloom;
 cvar_t *r_bloomBlur;
@@ -1176,8 +1176,8 @@ void R_Register(void)
 	r_subDivisions            = ri.Cvar_Get("r_subdivisions", "4", CVAR_ARCHIVE | CVAR_LATCH);
 	r_parallaxMapping         = ri.Cvar_Get("r_parallaxMapping", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_dynamicLightShadows     = ri.Cvar_Get("r_dynamicLightShadows", "1", CVAR_ARCHIVE);
-	r_precomputedLighting     = ri.Cvar_Get("r_precomputedLighting", "1", CVAR_ARCHIVE | CVAR_LATCH);
-	r_vertexLighting          = ri.Cvar_Get("r_vertexLighting", "0", CVAR_ARCHIVE | CVAR_LATCH);
+	
+	
 	r_compressDiffuseMaps     = ri.Cvar_Get("r_compressDiffuseMaps", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_compressSpecularMaps    = ri.Cvar_Get("r_compressSpecularMaps", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_compressNormalMaps      = ri.Cvar_Get("r_compressNormalMaps", "1", CVAR_ARCHIVE | CVAR_LATCH);
@@ -1192,11 +1192,10 @@ void R_Register(void)
 	ri.Cvar_CheckRange(r_screenSpaceAmbientOcclusion, 0, 2, qtrue);
 	r_depthOfField = ri.Cvar_Get("r_depthOfField", "0", CVAR_ARCHIVE);
 
-	r_reflectionMapping        = ri.Cvar_Get("r_reflectionMapping", "0", CVAR_ARCHIVE | CVAR_LATCH);
+	
 	r_highQualityNormalMapping = ri.Cvar_Get("r_highQualityNormalMapping", "0", CVAR_ARCHIVE | CVAR_LATCH);
 
-	r_forceAmbient = ri.Cvar_Get("r_forceAmbient", "0", CVAR_CHEAT | CVAR_LATCH);
-	ri.Cvar_CheckRange(r_forceAmbient, 0.0f, 0.3f, qfalse);
+	
 
 	// temporary latched variables that can only change over a restart
 	r_overBrightBits    = ri.Cvar_Get("r_overBrightBits", "0", CVAR_ARCHIVE | CVAR_LATCH);
@@ -1342,7 +1341,7 @@ void R_Register(void)
 	r_clear           = ri.Cvar_Get("r_clear", "0", CVAR_CHEAT);
 	r_offsetFactor    = ri.Cvar_Get("r_offsetFactor", "-1", CVAR_CHEAT);
 	r_offsetUnits     = ri.Cvar_Get("r_offsetUnits", "-2", CVAR_CHEAT);
-	r_forceSpecular   = ri.Cvar_Get("r_forceSpecular", "0", CVAR_CHEAT);
+	
 	//These makes the spec spot bigger or smaller, the higher the number the smaller the dot
 	r_specularExponent  = ri.Cvar_Get("r_specularExponent", "16", CVAR_CHEAT | CVAR_LATCH);
 	r_specularExponent2 = ri.Cvar_Get("r_specularExponent2", "3", CVAR_CHEAT | CVAR_LATCH);
@@ -1488,7 +1487,7 @@ void R_Register(void)
 	ri.Cmd_AddSystemCommand("screenshotPNG", R_ScreenShotPNG_f, "Takes a PNG screenshot of current frame.", NULL);
 	ri.Cmd_AddSystemCommand("gfxinfo", GfxInfo_f, "Prints GFX info of current system.", NULL);
 	//ri.Cmd_AddSystemCommand("generatemtr", R_GenerateMaterialFile_f, "Generate material file", NULL);
-	ri.Cmd_AddSystemCommand("buildcubemaps", R_BuildCubeMaps, "Builds cubemaps for the current loaded map.", NULL);
+	//ri.Cmd_AddSystemCommand("buildcubemaps", R_BuildCubeMaps, "Builds cubemaps for the current loaded map.", NULL);
 
 	ri.Cmd_AddSystemCommand("glsl_restart", GLSL_restart_f, "Restarts the GLSL subsystem.", NULL);
 }
@@ -1499,7 +1498,7 @@ void R_Register(void)
 void R_Init(void)
 {
 	int i;
-
+	
 	Ren_Print("----- R_Init -----\n");
 
 	//Swap_Init();

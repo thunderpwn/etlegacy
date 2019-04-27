@@ -57,10 +57,7 @@ void main()
 	// transform texcoords
 	var_Tex = (u_ColorTextureMatrix * attr_TexCoord0).st;
 
-#if defined(r_precomputedLighting)
-	// assign color
-	var_Color = attr_Color;
-#else
+
 	var_Color = vec4(u_AmbientColor, 1.0);
 #endif
 }

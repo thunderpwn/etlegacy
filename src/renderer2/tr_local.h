@@ -3727,15 +3727,15 @@ extern cvar_t *r_lodTest;
 extern cvar_t *r_wolfFog;
 extern cvar_t *r_noFog;
 
-extern cvar_t *r_forceAmbient;
+
 extern cvar_t *r_ambientScale;
 extern cvar_t *r_lightScale;
 extern cvar_t *r_debugLight;
 
 extern cvar_t *r_staticLight;               ///< static lights enabled/disabled
 extern cvar_t *r_dynamicLightShadows;
-extern cvar_t *r_precomputedLighting;
-extern cvar_t *r_vertexLighting;
+
+
 extern cvar_t *r_compressDiffuseMaps;
 extern cvar_t *r_compressSpecularMaps;
 extern cvar_t *r_compressNormalMaps;
@@ -3764,7 +3764,7 @@ extern cvar_t *r_extGenerateMipmap;
 
 extern cvar_t *r_collapseStages;
 
-extern cvar_t *r_forceSpecular;
+
 extern cvar_t *r_specularExponent;
 extern cvar_t *r_specularExponent2;
 extern cvar_t *r_specularScale;
@@ -4835,7 +4835,7 @@ const void *RB_TakeVideoFrameCmd(const void *data);
 void RE_TakeVideoFrame(int width, int height, byte *captureBuffer, byte *encodeBuffer, qboolean motionJpeg);
 
 // cubemap reflections stuff
-void R_BuildCubeMaps(void);
+//void R_BuildCubeMaps(void);
 void R_FindTwoNearestCubeMaps(const vec3_t position, cubemapProbe_t **cubeProbeNearest, cubemapProbe_t **cubeProbeSecondNearest);
 
 void FreeVertexHashTable(vertexHash_t **hashTable);
