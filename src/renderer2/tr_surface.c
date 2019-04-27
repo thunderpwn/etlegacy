@@ -675,11 +675,11 @@ static void Tess_SurfaceSprite(void)
 	}
 	else
 	{
-		float s, c;
+		
 		float ang = M_PI * backEnd.currentEntity->e.rotation / 180.0;
 
-		s = sin(ang);
-		c = cos(ang);
+		float s = sin(ang);
+		float c = cos(ang);
 
 		VectorScale(backEnd.viewParms.orientation.axis[1], c * radius, left);
 		VectorMA(left, -s * radius, backEnd.viewParms.orientation.axis[2], left);
@@ -2371,7 +2371,8 @@ static void Tess_SurfaceVBOMD5Mesh(srfVBOMD5Mesh_t *srf)
  * @param surf - dummy function for SF_SKIP
  */
 static void Tess_SurfaceSkip(void *surf)
-{
+{	//Note, added return here
+	return;
 }
 
 // *INDENT-OFF*
