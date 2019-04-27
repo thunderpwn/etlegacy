@@ -29,14 +29,17 @@ varying vec3 var_TangentFragPos;
 varying vec3 var_TangentViewPos;
 void main()
 {
-//#if defined(USE_PORTAL_CLIPPING)
-//	float dist = dot(var_FragPos.xyz, u_PortalPlane.xyz) - u_PortalPlane.w;
-//	if (dist < 0.0)
-//	{
-//		discard;
-//		return;
-//	}
-//#endif
+//this is for looking thru a portal
+#if defined(USE_PORTAL_CLIPPING)
+	{
+		float dist = dot(var_FragPos.xyz, u_PortalPlane.xyz) - u_PortalPlane.w;
+		if (dist < 0.0)
+		{
+			discard;
+			return;
+		}
+	}
+#endif
 
 	// compute view direction in tangent space
 	vec3 V =  normalize(var_TangentViewPos - var_TangentFragPos);

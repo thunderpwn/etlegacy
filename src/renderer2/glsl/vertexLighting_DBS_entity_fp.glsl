@@ -31,23 +31,25 @@ varying vec3 var_TangentViewPos;
 
 void main()
 {
-//#if defined(USE_PORTAL_CLIPPING)
-	//{
-		//float dist = dot(var_FragPos.xyz, u_PortalPlane.xyz) - u_PortalPlane.w;
-		//if (dist < 0.0)
-		//{
-			//discard;
-			//return;
-		//}
-	//}
-//#endif
+//this is for looking thru a portal
+#if defined(USE_PORTAL_CLIPPING)
+	{
+		float dist = dot(var_FragPos.xyz, u_PortalPlane.xyz) - u_PortalPlane.w;
+		if (dist < 0.0)
+		{
+			discard;
+			return;
+		}
+	}
+#endif
 
 	
 	
 
 #if defined(USE_NORMAL_MAPPING)
-	vec3 L =normalize(var_tangentlight);
-	
+	vec3 L = u_LightDir;
+
+	L = L*(inverse(var_TBN));
 	// compute view direction in tangent space
 	vec3 V =  normalize(var_TangentViewPos - var_TangentFragPos);
 
@@ -76,7 +78,7 @@ void main()
     vec3 N = texture2D(u_NormalMap, var_TexCoords).rgb;
 	N = normalize(N * 2.0 - vec3(1.0)); // this normal is in tangent space
 
-
+	L =normalize(L);
 
 	// compute half angle in world space
 	vec3 H = normalize(L + V);
@@ -86,16 +88,18 @@ void main()
 
 	// compute the light term
 	//with half lambert
-	float NL =dot(N, L) * 0.5 + 0.5;
-	NL = NL * NL;
- 	vec3 light = (u_LightColor + u_AmbientColor) * NL;
-	//vec3 ambient = u_AmbientColor * u_ambientStrenght;
+	float NL = max(dot(N, L),0.5);
+	//float ambNL =max(dot(N, L),0.5);
+
+ 	vec3 light = u_LightColor * NL;
+	//vec3 ambient = u_AmbientColor * ambNL;
 	
 	//vec3  specular = texture2D(u_SpecularMap, var_TexCoords).rgb * u_LightColor * pow(NH, r_SpecularExponent) * r_SpecularScale;
 	vec3  specular = texture2D(u_SpecularMap, var_TexCoords).rgb * u_LightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 
 	 // compute final color
     vec4 color = diffuse;
+	color.rgb *=u_AmbientColor;
 	color.rgb *=light;
 	color.rgb +=specular; 
      
@@ -109,7 +113,7 @@ void main()
 
 	vec3 N;
 	// compute light direction in world space
-	vec3 L = u_LightDir;
+	vec3 L = -u_LightDir;
 #if defined(TWOSIDED)
 	if (!gl_FrontFacing)
 	{
