@@ -470,7 +470,7 @@ models/mapobjects/flag/flag_dam
 models/mapobjects/furniture/sherman_s
 {
 	{
-		map models/mapobjects/furniture/sherman_SPEC.tga
+		map models/mapobjects/furniture/sherman_s.tga
 		blendfunc blend
 		rgbGen identity
 	}
