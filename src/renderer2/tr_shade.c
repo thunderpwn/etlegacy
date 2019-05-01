@@ -797,13 +797,18 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 	}
 
 	// bind u_DiffuseMap
-	SelectTexture(TEX_DIFFUSE);
+	
 	if (asColorMap)
 	{
+		// bind u_ColorMap
+		SelectTexture(TEX_COLOR);
 		GL_Bind(tr.whiteImage);
+		SetUniformMatrix16(UNIFORM_COLORTEXTUREMATRIX, tess.svars.texMatrices[TB_COLORMAP]);
+     //	GL_Bind(tr.whiteImage);
 	}
 	else
 	{
+		SelectTexture(TEX_DIFFUSE);
 		GL_Bind(pStage->bundle[TB_DIFFUSEMAP].image[0]);
 		SetUniformMatrix16(UNIFORM_DIFFUSETEXTUREMATRIX, tess.svars.texMatrices[TB_DIFFUSEMAP]);
 	}
