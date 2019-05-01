@@ -87,9 +87,9 @@ void main()
 	vec3 R =  reflect(-L, N);
 
 	// compute the light term
-	//with half lambert
+	//leave a bit ambient
 	float NL = max(dot(N, L),0.5);
-	//float ambNL =max(dot(N, L),0.5);
+	
 
  	vec3 light = u_LightColor * NL;
 	//vec3 ambient = u_AmbientColor * ambNL;
