@@ -14,7 +14,7 @@ uniform float     u_LightWrapAround;
 varying vec3 var_Position;
 varying vec3 var_FragPos;
 varying vec2 var_TexCoords;
-varying vec2 var_TexLight;
+
 varying vec4 var_LightColor;
 varying vec3 var_Tangent;
 varying vec3 var_Binormal;
@@ -70,7 +70,7 @@ void main()
 
 	// compute light direction in tangentspace
 	//using flatimage, wich needs some tweak
-    vec3 L = texture2D(u_DeluxeMap, var_TexLight).xyz;
+    vec3 L = texture2D(u_DeluxeMap, var_TexCoords).xyz;
 	L.z *=1.0;
 	L.x *=1.0;
 	L.y *=0.5;
@@ -93,7 +93,7 @@ void main()
 	vec3 specular = texture2D(u_SpecularMap, var_TexCoords).rgb * var_LightColor.rgb * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 	
 	// compute final color
-	vec4 color = vec4(diffuse.rgb, var_LightColor.a);
+	vec4 color = vec4(diffuse.rgb, diffuse.a);
 	color.rgb *= light;
 	color.rgb += specular;
 
