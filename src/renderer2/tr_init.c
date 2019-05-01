@@ -172,7 +172,6 @@ cvar_t *r_offsetFactor;
 cvar_t *r_offsetUnits;
 
 cvar_t *r_specularExponent;
-cvar_t *r_specularExponent2;
 cvar_t *r_specularScale;
 cvar_t *r_normalScale;
 cvar_t *r_normalMapping;
@@ -1263,7 +1262,7 @@ void R_Register(void)
 
 	r_dynamicBspOcclusionCulling    = ri.Cvar_Get("r_dynamicBspOcclusionCulling", "0", CVAR_ARCHIVE);
 	r_dynamicEntityOcclusionCulling = ri.Cvar_Get("r_dynamicEntityOcclusionCulling", "0", CVAR_ARCHIVE);
-	r_dynamicLightOcclusionCulling  = ri.Cvar_Get("r_dynamicLightOcclusionCulling", "0", CVAR_CHEAT);
+	r_dynamicLightOcclusionCulling  = ri.Cvar_Get("r_dynamicLightOcclusionCulling", "1", CVAR_CHEAT);
 	r_chcMaxPrevInvisNodesBatchSize = ri.Cvar_Get("r_chcMaxPrevInvisNodesBatchSize", "50", CVAR_CHEAT);
 	r_chcMaxVisibleFrames           = ri.Cvar_Get("r_chcMaxVisibleFrames", "10", CVAR_CHEAT);
 	r_chcVisibilityThreshold        = ri.Cvar_Get("r_chcVisibilityThreshold", "20", CVAR_CHEAT);
@@ -1276,7 +1275,7 @@ void R_Register(void)
 	r_hdrKey                 = ri.Cvar_Get("r_hdrKey", "0.28", CVAR_CHEAT);
 	r_hdrContrastThreshold   = ri.Cvar_Get("r_hdrContrastThreshold", "1.3", CVAR_CHEAT);
 	r_hdrContrastOffset      = ri.Cvar_Get("r_hdrContrastOffset", "3.0", CVAR_CHEAT);
-	r_hdrLightmap            = ri.Cvar_Get("r_hdrLightmap", "1", CVAR_CHEAT | CVAR_LATCH);
+	r_hdrLightmap            = ri.Cvar_Get("r_hdrLightmap", "0", CVAR_CHEAT | CVAR_LATCH);
 	r_hdrLightmapExposure    = ri.Cvar_Get("r_hdrLightmapExposure", "1.0", CVAR_CHEAT | CVAR_LATCH);
 	r_hdrLightmapGamma       = ri.Cvar_Get("r_hdrLightmapGamma", "1.7", CVAR_CHEAT | CVAR_LATCH);
 	r_hdrLightmapCompensate  = ri.Cvar_Get("r_hdrLightmapCompensate", "1.0", CVAR_CHEAT | CVAR_LATCH);
@@ -1344,7 +1343,6 @@ void R_Register(void)
 	
 	//These makes the spec spot bigger or smaller, the higher the number the smaller the dot
 	r_specularExponent  = ri.Cvar_Get("r_specularExponent", "16", CVAR_CHEAT | CVAR_LATCH);
-	r_specularExponent2 = ri.Cvar_Get("r_specularExponent2", "3", CVAR_CHEAT | CVAR_LATCH);
 	//this one sets the power of specular, the higher the brighter
 	r_specularScale      = ri.Cvar_Get("r_specularScale", "0.5", CVAR_CHEAT | CVAR_LATCH);
 	r_normalScale        = ri.Cvar_Get("r_normalScale", "1.0", CVAR_CHEAT | CVAR_LATCH);

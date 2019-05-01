@@ -847,7 +847,6 @@ static void GLSL_BuildShaderExtraDef()
 	#define ENABLEIFCVAR(x) if(x->value) BUFFEXT("#ifndef " #x "\n#define " #x " 1\n#endif\n")
 	#define SIMPLEDEFV(x,y) BUFFEXT("#ifndef " x "\n#define " x " " y "\n#endif\n")
 	BUFFCVARF(r_specularExponent);
-	BUFFCVARF(r_specularExponent2);
 	BUFFCVARF(r_specularScale);
 	BUFFCVARF(r_normalScale);
 	SIMPLEDEFV("M_PI", "3.14159265358979323846f");
@@ -856,7 +855,6 @@ static void GLSL_BuildShaderExtraDef()
 
 	// HACK: add some macros to avoid extra uniforms and save speed and code maintenance
 	BUFFEXT("#ifndef r_SpecularExponent\n#define r_SpecularExponent %f\n#endif\n", r_specularExponent->value);
-	BUFFEXT("#ifndef r_SpecularExponent2\n#define r_SpecularExponent2 %f\n#endif\n", r_specularExponent2->value);
 	BUFFEXT("#ifndef r_SpecularScale\n#define r_SpecularScale %f\n#endif\n", r_specularScale->value);
 	BUFFEXT("#ifndef r_NormalScale\n#define r_NormalScale %f\n#endif\n", r_normalScale->value);
 

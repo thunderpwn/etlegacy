@@ -3766,7 +3766,6 @@ extern cvar_t *r_collapseStages;
 
 
 extern cvar_t *r_specularExponent;
-extern cvar_t *r_specularExponent2;
 extern cvar_t *r_specularScale;
 extern cvar_t *r_normalScale;
 extern cvar_t *r_normalMapping;
@@ -3902,7 +3901,7 @@ extern cvar_t *r_smoothNormals;
 
 //====================================================================
 
-void R_SwapBuffers(int);
+//void R_SwapBuffers(int);
 
 void R_RenderView(viewParms_t *parms);
 
