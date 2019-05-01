@@ -1051,11 +1051,18 @@ static void RB_RenderInteractionsShadowMapped()
 	int           cubeSide;
 	int           splitFrustumIndex;
 	int           startTime = 0;
+	//I belive this one is more correct
+	//ref: https://community.khronos.org/t/what-is-the-scale-bias-matrix/35831
+	const mat4_t  bias = { 0.5, 0.0, 0.0, 0.5,
+								0.0, 0.5, 0.0, 0.5,
+								0.0, 0.0, 0.5, 0.5,
+								0.0, 0.0, 0.0, 1.0 };
+	/* old
 	const mat4_t  bias      = { 0.5, 0.0, 0.0, 0.0,
 		                        0.0,       0.5, 0.0, 0.0,
 		                        0.0,       0.0, 0.5, 0.0,
 		                        0.5,       0.5, 0.5, 1.0 };
-
+								*/
 	if (!glConfig2.framebufferObjectAvailable || !glConfig2.textureFloatAvailable)
 	{
 		RB_RenderInteractions();
