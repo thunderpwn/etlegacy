@@ -126,22 +126,19 @@ shaderCommands_t tess;
  */
 static void BindLightMap()
 {
-	image_t *lightmap;
+	image_t *lightmap = 0;
 
-	if (tess.lightmapNum >= 0 && tess.lightmapNum < tr.lightmaps.currentElements)
+	if (tess.lightmapNum >= 0)
 	{
 		lightmap = (image_t *) Com_GrowListElement(&tr.lightmaps, tess.lightmapNum);
 	}
 	else
 	{
-		lightmap = NULL;
-	}
-
-	if (!tr.lightmaps.currentElements || !lightmap)
-	{
+		tess.lightmapNum = LIGHTMAP_WHITEIMAGE;
 		GL_Bind(tr.whiteImage);
 		return;
 	}
+
 
 	GL_Bind(lightmap);
 }
@@ -656,7 +653,8 @@ static void Render_vertexLighting_DBS_world(int stage)
 	                          USE_ALPHA_TESTING, (pStage->stateBits & GLS_ATEST_BITS) != 0,
 	                          USE_DEFORM_VERTEXES, tess.surfaceShader->numDeforms,
 	                          USE_NORMAL_MAPPING, normalMapping,
-	                          USE_PARALLAX_MAPPING, normalMapping && r_parallaxMapping->integer && tess.surfaceShader->parallax);
+		                      USE_TCGEN_ENVIRONMENT, pStage->tcGen_Environment,
+		                      USE_TCGEN_LIGHTMAP, pStage->tcGen_Lightmap);
 	// now we are ready to set the shader program uniforms
 
 	GL_CheckErrors();
@@ -2344,16 +2342,10 @@ static void Render_volumetricFog()
 	{
 		FBO_t *previousFBO = glState.currentFBO;
 
-		if (r_hdrRendering->integer && glConfig2.framebufferObjectAvailable && glConfig2.textureFloatAvailable)
-		{
-			// copy deferredRenderFBO to occlusionRenderFBO
-			R_CopyToFBO(tr.deferredRenderFBO, tr.occlusionRenderFBO, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-		}
-		else
-		{
-			// copy depth of the main context to occlusionRenderFBO
-			R_CopyToFBO(NULL, tr.occlusionRenderFBO, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-		}
+		
+		// copy depth of the main context to occlusionRenderFBO
+		R_CopyToFBO(NULL, tr.occlusionRenderFBO, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+		
 
 		SetMacrosAndSelectProgram(trProg.gl_depthToColorShader, USE_VERTEX_SKINNING, glConfig2.vboVertexSkinningAvailable && tess.vboVertexSkinning);
 
@@ -3063,7 +3055,7 @@ void Tess_StageIteratorGeneric()
 			else
 			{
 				pStage->bundle[0].image[0] = tr.whiteImage;
-				Render_lightMapping(stage, qtrue, qfalse);
+				Render_generic(stage);
 				
 			}
 			if (pStage->tcGen_Lightmap)
@@ -3076,10 +3068,7 @@ void Tess_StageIteratorGeneric()
 		case ST_COLLAPSE_lighting_DB:
 		case ST_COLLAPSE_lighting_DBS:
 		{
-			
-			
-			
-				if (tess.lightmapNum >= 0 && tess.lightmapNum < tr.lightmaps.currentElements)
+			if (tess.lightmapNum >= 0)
 				{
 
 					if (tr.worldDeluxeMapping || r_normalMapping->integer)
@@ -3093,9 +3082,9 @@ void Tess_StageIteratorGeneric()
 						break;
 					}
 				}
+			
 
-
-				if (backEnd.currentEntity != &tr.worldEntity)
+			    else if (backEnd.currentEntity != &tr.worldEntity)
 				{
 					model_t *pmodel;
 
@@ -3119,18 +3108,19 @@ void Tess_StageIteratorGeneric()
 				
 		}
 		case ST_COLLAPSE_reflection_CB:
-		case ST_REFLECTIONMAP:
+			//not needed without cubemaps.. its just silly
+		/*case ST_REFLECTIONMAP:
 		{
-			
-				Render_reflection_CB(stage);
-			
-			break;
-		}
+		Render_reflection_CB(stage);
+		break;
+		}*/
+		//water?
 		case ST_REFRACTIONMAP:
 		{
 			Render_refraction_C(stage);
 			break;
 		}
+		//windows, glasssurfaces and such
 		case ST_DISPERSIONMAP:
 		{
 			Render_dispersion_C(stage);
@@ -3141,21 +3131,25 @@ void Tess_StageIteratorGeneric()
 			Render_skybox(stage);
 			break;
 		}
-		case ST_SCREENMAP:
+		//cant see the point of this one...
+		/*case ST_SCREENMAP:
 		{
 			Render_screen(stage);
 			break;
-		}
+		}*/
+		//for rendering portals? or portal skies?
 		case ST_PORTALMAP:
 		{
 			Render_portal(stage);
 			break;
 		}
+		//its for making heat distortion, TODO: inspect use
 		case ST_HEATHAZEMAP:
 		{
 			Render_heatHaze(stage);
 			break;
 		}
+		// its for water, needs normalmap
 		case ST_LIQUIDMAP:
 		{
 			Render_liquid(stage);
@@ -3188,83 +3182,6 @@ void Tess_StageIteratorGeneric()
 	}
 }
 
-/**
- * @brief Tess_StageIteratorDepthFill
- * @note Unused
-void Tess_StageIteratorDepthFill()
-{
-	int stage;
-
-	Ren_LogComment("--- Tess_StageIteratorDepthFill( %s, %i vertices, %i triangles ) ---\n", tess.surfaceShader->name,
-	               tess.numVertexes, tess.numIndexes / 3);
-
-	GL_CheckErrors();
-
-	Tess_DeformGeometry();
-
-	if (!glState.currentVBO || !glState.currentIBO || glState.currentVBO == tess.vbo || glState.currentIBO == tess.ibo)
-	{
-		Tess_UpdateVBOs(tess.attribsSet);
-	}
-
-	// set face culling appropriately
-	GL_Cull(tess.surfaceShader->cullType);
-
-	// set polygon offset if necessary
-	if (tess.surfaceShader->polygonOffset)
-	{
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		GL_PolygonOffset(r_offsetFactor->value, r_offsetUnits->value);
-	}
-
-	// call shader function
-	for (stage = 0; stage < MAX_SHADER_STAGES; stage++)
-	{
-		shaderStage_t *pStage = tess.surfaceStages[stage];
-
-		if (!pStage)
-		{
-			break;
-		}
-
-		if (RB_EvalExpression(&pStage->ifExp, 1.0f) == 0.f)
-		{
-			continue;
-		}
-
-		Tess_ComputeTexMatrices(pStage);
-
-		switch (pStage->type)
-		{
-		case ST_COLORMAP:
-		{
-			if (tess.surfaceShader->sort <= SS_OPAQUE)
-			{
-				Render_depthFill(stage);
-			}
-			break;
-		}
-		case ST_LIGHTMAP:
-		{
-			Render_depthFill(stage);
-			break;
-		}
-		case ST_DIFFUSEMAP:
-		case ST_COLLAPSE_lighting_DB:
-		case ST_COLLAPSE_lighting_DBS:
-		{
-			Render_depthFill(stage);
-			break;
-		}
-		default:
-			break;
-		}
-	}
-
-	// reset polygon offset
-	glDisable(GL_POLYGON_OFFSET_FILL);
-}
-*/
 
 /**
  * @brief Tess_StageIteratorShadowFill
