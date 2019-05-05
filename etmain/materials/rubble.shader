@@ -6,7 +6,6 @@ textures/rubble/burn_flr_m01
     qer_editorimage textures/rubble/burn_flr_m01.tga
 	diffusemap textures/rubble/burn_flr_m01.tga
 	bumpmap textures/rubble/burn_flr_m01_NORM.tga
-	specularmap textures/rubble/burn_flr_m01_SPEC.tga
 	surfaceparm woodsteps
 	implicitMap -
 }
@@ -16,7 +15,6 @@ textures/rubble/burn_flr_m01a
 	qer_editorimage textures/rubble/burn_flr_m01a.tga
 	diffusemap textures/rubble/burn_flr_m01a.tga
 	bumpmap textures/rubble/burn_flr_m01a_NORM.tga
-	specularmap textures/rubble/burn_flr_m01a_SPEC.tga
 	surfaceparm pointlight
 	surfaceparm woodsteps
 	{
@@ -36,7 +34,6 @@ textures/rubble/burn_flr_m01b
 	qer_editorimage textures/rubble/burn_flr_m01a.tga
 	diffusemap textures/rubble/burn_flr_m01a.tga
 	bumpmap textures/rubble/burn_flr_m01a_NORM.tga
-	specularmap textures/rubble/burn_flr_m01a_SPEC.tga
 	surfaceparm pointlight
 	surfaceparm woodsteps
 	{
@@ -56,7 +53,6 @@ textures/rubble/burn_flr_m01c
 	qer_editorimage textures/rubble/burn_flr_m01a.tga
 	diffusemap textures/rubble/burn_flr_m01a.tga
 	bumpmap textures/rubble/burn_flr_m01a_NORM.tga
-	specularmap textures/rubble/burn_flr_m01a_SPEC.tga
 	surfaceparm pointlight
 	surfaceparm woodsteps
 	{
@@ -76,7 +72,6 @@ textures/rubble/rebar_m01
     qer_editorimage textures/rubble/rebar_m01.tga
 	diffusemap textures/rubble/rebar_m01.tga
 	bumpmap textures/rubble/rebar_m01_NORM.tga
-	specularmap textures/rubble/rebar_m01_SPEC.tga
 	cull none
 	surfaceparm metalsteps
 	implicitMask -
@@ -88,6 +83,5 @@ textures/rubble/debri_m01
     qer_editorimage textures/rubble/debri_m01.tga
 	diffusemap textures/rubble/debri_m01.tga
 	bumpmap textures/rubble/debri_m01_NORM.tga
-	specularmap textures/rubble/debri_m01_SPEC.tga
 	implicitmask -
 }

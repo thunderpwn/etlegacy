@@ -422,35 +422,7 @@ textures/desert_sd/road_dirty_gravel
 		tcmod scale 1.2 1.2
 		alphaGen vertex
 	}
-	{
-	    stage specularMap
-		map textures/desert_sd/road_dirty_gravel_SPEC.tga
-		rgbGen identity
-		tcmod scale 1.2 1.2
-		alphaGen vertex
-	}
-	{
-	    stage diffuseMap
-		map textures/desert_sd/road_dirty_gravel.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		alphaGen vertex
-		tcMod scale 1.2 1.2
-		alphaGen vertex
-	}
-	{
-	    stage bumpMap
-		map textures/desert_sd/road_dirty_gravel_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		alphaGen vertex
-		tcMod scale 1.2 1.2
-	}
-	{
-	    stage specularMap
-		map textures/desert_sd/road_dirty_gravel_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		alphaGen vertex
-		tcMod scale 1.2 1.2
-	}
+	
 	
 	{
 		map $lightmap

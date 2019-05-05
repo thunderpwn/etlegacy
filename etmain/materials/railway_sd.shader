@@ -5,7 +5,6 @@ textures/railway_sd/d_cross
     qer_editorimage textures/railway_sd/d_cross.tga
 	diffusemap textures/railway_sd/d_cross.tga
 	bumpmap textures/railway_sd/d_cross_NORM.tga
-	specularmap textures/railway_sd/d_cross_SPEC.tga
 	polygonOffset
 	surfaceparm pointlight
 	{

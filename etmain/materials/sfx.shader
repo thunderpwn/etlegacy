@@ -35,8 +35,7 @@ textures/sfx/fan
 {
     qer_editorimage
 	diffusemap textures/sfx/fan.tga
-	bumpmap textures/sfx/fan_n.tga
-	specularmap textures/sfx/fan_r.tga
+	bumpmap textures/sfx/fan_NORM.tga
 	cull none
 	nopicmip
 	surfaceparm nomarks
@@ -60,8 +59,7 @@ textures/sfx/fan_static
 {
     qer_editorimage textures/sfx/fan.tga
 	diffusemap textures/sfx/fan.tga
-	bumpmap textures/sfx/fan_n.tga
-	specularmap textures/sfx/fan_r.tga
+	bumpmap textures/sfx/fan_NORM.tga
 	cull none
 	nopicmip
 	surfaceparm nomarks
