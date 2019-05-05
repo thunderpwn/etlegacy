@@ -5,7 +5,6 @@ textures/alpha/barb_wire
     qer_editorimage textures/alpha/barb_wire.tga
     diffuseMap textures/alpha/barb_wire.tga
 	bumpMap textures/alpha/barb_wire_NORM.tga
-	specularMap textures/alpha/barb_wire_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -22,7 +21,6 @@ textures/alpha/barb_wire_clip
 	qer_editorimage textures/alpha/barb_wire.tga
 	diffuseMap textures/alpha/barb_wire.tga
 	bumpMap textures/alpha/barb_wire_NORM.tga
-	specularMap textures/alpha/barb_wire_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -41,7 +39,6 @@ textures/alpha/bars_m01
     qer_editorimage textures/alpha/bars_m01.tga
 	diffuseMap textures/alpha/bars_m01.tga
 	bumpMap textures/alpha/bars_m01_NORM.tga
-	specularMap textures/alpha/bars_m01_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -58,7 +55,6 @@ textures/alpha/bel_orn_m01
     qer_editorimage textures/alpha/bel_orn_m01.tga
 	diffuseMap textures/alpha/bel_orn_m01.tga
 	bumpMap textures/alpha/bel_orn_m01_NORM.tga
-	specularMap textures/alpha/bel_orn_m01_SPEC.tga
 	surfaceparm nomarks
 	surfaceparm pointlight
 	surfaceparm trans
@@ -71,7 +67,6 @@ textures/alpha/chateau_c06a
     qer_editorimage textures/alpha/chateau_c06a.tga
 	diffuseMap textures/alpha/chateau_c06a.tga
 	bumpMap textures/alpha/chateau_c06a_NORM.tga
-	specularMap textures/alpha/chateau_c06a_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -92,7 +87,6 @@ textures/alpha/chateau_c06a_clipmissle
 	qer_editorimage textures/alpha/chateau_c06a.tga
 	diffuseMap textures/alpha/chateau_c06a.tga
 	bumpMap textures/alpha/chateau_c06a_NORM.tga
-	specularMap textures/alpha/chateau_c06a_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -113,7 +107,6 @@ textures/alpha/chateau_c07
     qer_editorimage textures/alpha/chateau_c07.tga
 	diffuseMap textures/alpha/chateau_c07.tga
 	bumpMap textures/alpha/chateau_c07_NORM.tga
-	specularMap textures/alpha/chateau_c07_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -134,8 +127,6 @@ textures/alpha/chateau_c07_clipmissle
 	qer_editorimage textures/alpha/chateau_c07.tga
 	diffuseMap textures/alpha/chateau_c07.tga
 	bumpMap textures/alpha/chateau_c07_NORM.tga
-	specularMap textures/alpha/chateau_c07_SPEC.tga
-	cull disable
 	nomipmaps
 	nopicmip
 
@@ -154,8 +145,7 @@ textures/alpha/chateau_c08
 {
     qer_editorimage textures/alpha/chateau_c08.tga
 	diffuseMap textures/alpha/chateau_c08.tga
-	bumpMap textures/alpha/chateau_c08.tga
-	specularMap textures/alpha/chateau_c08_SPEC.tga
+	bumpMap textures/alpha/chateau_c08_NORM.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -171,8 +161,7 @@ textures/alpha/chateau_c08_wils
 {
 	qer_editorimage textures/alpha/chateau_c08.tga
 	diffuseMap textures/alpha/chateau_c08.tga
-	bumpMap textures/alpha/chateau_c08.tga
-	specularMap textures/alpha/chateau_c08_SPEC.tga
+	bumpMap textures/alpha/chateau_c08_NORM.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -189,7 +178,6 @@ textures/alpha/chateau_c09
     qer_editorimage textures/alpha/chateau_c09.tga
 	diffuseMap textures/alpha/chateau_c09.tga
 	bumpMap textures/alpha/chateau_c09_NORM.tga
-	specularMap textures/alpha/chateau_c09_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -206,7 +194,6 @@ textures/alpha/chateau_c11
     qer_editorimage textures/alpha/chateau_c11.tga
 	diffuseMap textures/alpha/chateau_c11.tga
 	bumpMap textures/alpha/chateau_c11_NORM.tga
-	specularMap textures/alpha/chateau_c11_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -230,7 +217,6 @@ textures/alpha/chateau_c11_clipmissle
 	qer_editorimage textures/alpha/chateau_c11.tga
 	diffuseMap textures/alpha/chateau_c11.tga
 	bumpMap textures/alpha/chateau_c11_NORM.tga
-	specularMap textures/alpha/chateau_c11_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -251,7 +237,6 @@ textures/alpha/chateau_c14
     qer_editorimage textures/alpha/chateau_c14.tga
 	diffuseMap textures/alpha/chateau_c14.tga
 	bumpMap textures/alpha/chateau_c14_NORM.tga
-	specularMap textures/alpha/chateau_c14_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -268,7 +253,6 @@ textures/alpha/cweb_m01a
     qer_editorimage textures/alpha/cweb_m01a.tga
 	diffuseMap textures/alpha/cweb_m01a.tga
 	bumpMap textures/alpha/cweb_m01a_NORM.tga
-	specularMap textures/alpha/cweb_m01a_SPEC.tga
 	qer_trans 0.8
 	cull disable
 	deformVertexes wave 10 sin 0 2 0 0.2
@@ -286,7 +270,6 @@ textures/alpha/fence_c05
     qer_editorimage textures/alpha/fence_c05.tga
 	diffuseMap textures/alpha/fence_c05.tga
 	bumpMap textures/alpha/fence_c05_NORM.tga
-	specularMap textures/alpha/fence_c05_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -303,7 +286,6 @@ textures/alpha/fence_c10
     qer_editorimage textures/alpha/fence_c10.tga
 	diffuseMap textures/alpha/fence_c10.tga
 	bumpMap textures/alpha/fence_c10_NORM.tga
-	specularMap textures/alpha/fence_c10_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -320,7 +302,6 @@ textures/alpha/fence_c11
     qer_editorimage textures/alpha/fence_c11.tga
 	diffuseMap textures/alpha/fence_c11.tga
 	bumpmap textures/alpha/fence_c11_NORM.tga
-	specularMap textures/alpha/fence_c11_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -337,7 +318,6 @@ textures/alpha/fence_c14
     qer_editorimage textures/alpha/fence_c14.tga
 	diffuseMap textures/alpha/fence_c14.tga
 	bumpMap textures/alpha/fence_c14_NORM.tga
-	specularMap textures/alpha/fence_c14_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -357,7 +337,6 @@ textures/alpha/fence_c14_clipmissle
 	qer_editorimage textures/alpha/fence_c14.tga
 	diffuseMap textures/alpha/fence_c14.tga
 	bumpMap textures/alpha/fence_c14_NORM.tga
-	specularMap textures/alpha/fence_c14_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -378,7 +357,6 @@ textures/alpha/fence_m01
     qer_editorimage textures/alpha/fence_m01
 	diffuseMap textures/alpha/fence_m01.tga
 	bumpMap textures/alpha/fence_m01_NORM.tga
-	specularMap textures/alpha/fence_m01_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -395,7 +373,6 @@ textures/alpha/fence_m01b
     qer_editorimage textures/alpha/fence_m01b.tga
 	diffuseMap textures/alpha/fence_m01b.tga
 	bumpMap textures/alpha/fence_m01b_NORM.tga
-	specularMap textures/alpha/fence_m01b_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -412,7 +389,6 @@ textures/alpha/fence_m02
     qer_editorimage textures/alpha/fence_m02.tga
 	diffuseMap textures/alpha/fence_m02.tga
 	bumpMap textures/alpha/fence_m02_NORM.tga
-	specularMap textures/alpha/fence_m02_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -429,7 +405,6 @@ textures/alpha/fence_m03
     qer_editorimage textures/alpha/fence_m03.tga
 	diffuseMap textures/alpha/fence_m03.tga
 	bumpMap textures/alpha/fence_m03_NORM.tga
-	specularMap textures/alpha/fence_m03_SPEC.tga
 	qer_trans 0.5
 	cull disable
 	nomipmaps
@@ -447,7 +422,6 @@ textures/alpha/fence_m04
     qer_editorimage textures/alpha/fence_m04.tga
 	diffuseMap textures/alpha/fence_m04.tga
 	bumpMap textures/alpha/fence_m04_NORM.tga
-	specularMap textures/alpha/fence_m04_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -464,7 +438,6 @@ textures/alpha/fence_m06
     qer_editorimage textures/alpha/fence_m06.tga
 	diffuseMap textures/alpha/fence_m06.tga
 	bumpMap textures/alpha/fence_m06_NORM.tga
-	specularMap textures/alpha/fence_m06_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -481,7 +454,6 @@ textures/alpha/fence_m06b
     qer_editorimage textures/alpha/fence_m06b.tga
 	diffuseMap textures/alpha/fence_m06b.tga
 	bumpMap textures/alpha/fence_m06b_NORM.tga
-	specularMap textures/alpha/fence_m06b_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -498,7 +470,6 @@ textures/alpha/hay
 	qer_editorimage textures/props/hay.tga
 	diffuseMap textures/props/hay.tga
 	bumpMap textures/props/hay_NORM.tga
-	specularMap textures/props/hay_SPEC.tga
 	cull disable
 	surfaceparm nomarks
 	surfaceparm alphashadow
@@ -514,7 +485,6 @@ textures/alpha/ladder
     qer_editorimage textures/alpha/ladder.tga
 	diffuseMap textures/alpha/ladder.tga
 	bumpMap textures/alpha/ladder_NORM.tga
-	specularMap textures/alpha/ladder_SPEC.tga
 	cull disable
 	surfaceparm nomarks
 	surfaceparm alphashadow
@@ -530,7 +500,6 @@ textures/alpha/mesh_c02
     qer_editorimage textures/alpha/mesh_c02.tga
 	diffuseMap textures/alpha/mesh_c02.tga
 	bumpMap textures/alpha/mesh_c02_NORM.tga
-	specularMap textures/alpha/mesh_c02_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -549,7 +518,6 @@ textures/alpha/mesh_c02_clipmissle
 	qer_editorimage textures/alpha/mesh_c02.tga
 	diffuseMap textures/alpha/mesh_c02.tga
 	bumpMap textures/alpha/mesh_c02_NORM.tga
-	specularMap textures/alpha/mesh_c02_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -570,7 +538,6 @@ textures/alpha/mesh_c03
     qer_editorimage textures/alpha/mesh_c03.tga
 	diffuseMap textures/alpha/mesh_c03.tga
 	bumpMap textures/alpha/mesh_c03_NORM.tga
-	specularMap textures/alpha/mesh_c03_SPEC.tga
 	cull twosided
 	nomipmaps
 	nopicmip
@@ -588,7 +555,6 @@ textures/alpha/truss_m03
     qer_editorimage textures/alpha/truss_m03.tga
 	diffuseMap textures/alpha/truss_m03.tga
 	bumpMap textures/alpha/truss_m03_NORM.tga
-	specularMap textures/alpha/truss_m03_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -605,7 +571,6 @@ textures/alpha/truss_m06
     qer_editorimage textures/alpha/truss_m06.tga
 	diffuseMap textures/alpha/truss_m06.tga
 	bumpMap textures/alpha/truss_m06_NORM.tga
-	specularMap textures/alpha/truss_m06_SPEC.tga
 	cull disable
 	surfaceparm nomarks
 	surfaceparm alphashadow
@@ -621,7 +586,6 @@ textures/alpha/truss_m06a
     qer_editorimage textures/alpha/truss_m06a.tga
 	diffuseMap textures/alpha/truss_m06a.tga
 	bumpMap textures/alpha/truss_m06a_NORM.tga
-	specularMap textures/alpha/truss_m06a_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -639,7 +603,6 @@ textures/alpha/truss_m06r
     qer_editorimage textures/alpha/truss_m06r.tga
 	diffuseMap textures/alpha/truss_m06r.tga
 	bumpMap textures/alpha/truss_m06r_NORM.tga
-	specularMap textures/alpha/truss_m06r_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
@@ -656,7 +619,6 @@ textures/alpha/truss_m07
     qer_editorimage textures/alpha/truss_m07.tga
 	diffuseMap textures/alpha/truss_m07.tga
 	bumpMap textures/alpha/truss_m07_NORM.tga
-	specularMap textures/alpha/truss_m07_SPEC.tga
 	cull disable
 	nomipmaps
 	nopicmip
