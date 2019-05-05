@@ -5,7 +5,6 @@ textures/metals_sd/grate_a
     qer_editorimage textures/metals_sd/grate_a.tga
 	diffusemap textures/metals_sd/grate_a.tga
 	bumpmap textures/metals_sd/grate_a_NORM.tga
-	specularmap textures/metals_sd/grate_a_SPEC.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -32,13 +31,6 @@ textures/metals_sd/grate_b
 		depthWrite
 		rgbGen vertex
     }
-	{
-		stage specularmap
-	    map textures/metals_sd/grate_b_SPEC.tga
-		alphaFunc GE128
-		depthWrite
-		rgbGen vertex
-    }
 }
 
 metals_sd/detail_b
@@ -46,7 +38,6 @@ metals_sd/detail_b
     qer_editorimage metals_sd/detail_b.tga
 	diffusemap metals_sd/detail_b.tga
 	bumpmap metals_sd/detail_b_NORM.tga
-	specularmap metals_sd/detail_b_SPEC.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -56,7 +47,6 @@ textures/metals_sd/door_a
     qer_editorimage textures/metals_sd/door_a.tga
 	diffusemap textures/metals_sd/door_a.tga
 	bumpmap textures/metals_sd/door_a_NORM.tga
-	specularmap textures/metals_sd/door_a_SPEC.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -66,7 +56,6 @@ textures/metals_sd/duct_a2
     qer_editorimage textures/metals_sd/duct_a2.tga
 	diffusemap textures/metals_sd/duct_a2.tga
 	bumpmap textures/metals_sd/duct_a2_NORM.tga
-	specularmap textures/metals_sd/duct_a2_SPEC.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -76,7 +65,6 @@ textures/metals_sd/wall_b
     qer_editorimage textures/metals_sd/wall_b.tga
 	diffusemap textures/metals_sd/wall_b.tga
 	bumpmap textures/metals_sd/wall_b_NORM.tga
-	specularmap textures/metals_sd/wall_b_SPEC.tga
 	surfaceparm metalsteps
 	implicitMap -
 }

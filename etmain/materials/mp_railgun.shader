@@ -14,11 +14,6 @@ textures/mp_railgun/cable
 		map textures/props/cable_m01_NORM.tga
 		rgbGen vertex
 	}
-	{
-		stage specularmap
-		map textures/props/cable_m01_SPEC.tga
-		rgbGen vertex
-	}
 }
 
 textures/mp_railgun/fog
@@ -60,33 +55,6 @@ textures/mp_railgun/lmterrain_0
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/s_dirt_m03i_2_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage diffusemap
-		map textures/snow_sd/s_dirt_m03i_2_big.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage bumpmap
-		map textures/snow_sd/s_dirt_m03i_2_big_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_dirt_m03i_2_big_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
 		rgbgen identity
@@ -108,12 +76,7 @@ textures/mp_railgun/lmterrain_0to1
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_dirt_m03i_2_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		stage diffusemap
 		map textures/snow_sd/bigrock_rounded_faint.tga
@@ -128,13 +91,7 @@ textures/mp_railgun/lmterrain_0to1
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/bigrock_rounded_faint_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
@@ -157,12 +114,7 @@ textures/mp_railgun/lmterrain_0to2
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_dirt_m03i_2_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		stage diffusemap
 		map textures/snow_sd/snow_var01_big.tga
@@ -177,13 +129,7 @@ textures/mp_railgun/lmterrain_0to2
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_var01_big_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
+
 	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
@@ -206,12 +152,7 @@ textures/mp_railgun/lmterrain_0to3
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_dirt_m03i_2_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		stage diffusemap
 		map textures/snow_sd/snow_muddy.tga
@@ -226,13 +167,7 @@ textures/mp_railgun/lmterrain_0to3
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_muddy_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
@@ -255,12 +190,7 @@ textures/mp_railgun/lmterrain_0to4
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_dirt_m03i_2_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		stage diffusemap
 		map textures/snow_sd/mxrock4b_snow.tga
@@ -275,13 +205,7 @@ textures/mp_railgun/lmterrain_0to4
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/mxrock4b_snow_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
@@ -304,12 +228,7 @@ textures/mp_railgun/lmterrain_0to5
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_dirt_m03i_2_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		stage diffusemap
 		map textures/snow_sd/snow_noisy.tga
@@ -324,13 +243,7 @@ textures/mp_railgun/lmterrain_0to5
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_noisy_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
@@ -353,12 +266,7 @@ textures/mp_railgun/lmterrain_0to6
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_dirt_m03i_2_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		stage diffusemap
 		map textures/snow_sd/s_grass_ml03b_big.tga
@@ -373,13 +281,7 @@ textures/mp_railgun/lmterrain_0to6
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_grass_ml03b_big_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
@@ -399,33 +301,6 @@ textures/mp_railgun/lmterrain_1
 	{
 		stage bumpmap
 		map textures/snow_sd/bigrock_rounded_faint_NORM.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/bigrock_rounded_faint_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage diffusemap
-		map textures/snow_sd/bigrock_rounded_faint.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage bumpmap
-		map textures/snow_sd/bigrock_rounded_faint_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/bigrock_rounded_faint_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
 	}
@@ -451,12 +326,7 @@ textures/mp_railgun/lmterrain_1to2
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/bigrock_rounded_faint_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		stage diffusemap
 		map textures/snow_sd/snow_var01_big.tga
@@ -467,13 +337,6 @@ textures/mp_railgun/lmterrain_1to2
 	{
 		stage bumpmap
 		map textures/snow_sd/snow_var01_big_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_var01_big_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -501,12 +364,6 @@ textures/mp_railgun/lmterrain_1to3
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/bigrock_rounded_faint_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/snow_muddy.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -516,13 +373,6 @@ textures/mp_railgun/lmterrain_1to3
 	{
 		stage bumpmap
 		map textures/snow_sd/snow_muddy_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_muddy_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -550,12 +400,6 @@ textures/mp_railgun/lmterrain_1to4
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/bigrock_rounded_faint_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/mxrock4b_snow.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -565,13 +409,6 @@ textures/mp_railgun/lmterrain_1to4
 	{
 		stage bumpmap
 		map textures/snow_sd/mxrock4b_snow_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/mxrock4b_snow_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -599,12 +436,6 @@ textures/mp_railgun/lmterrain_1to5
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/bigrock_rounded_faint_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/snow_noisy.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -614,13 +445,6 @@ textures/mp_railgun/lmterrain_1to5
 	{
 		stage bumpmap
 		map textures/snow_sd/snow_noisy_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_noisy_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -648,12 +472,6 @@ textures/mp_railgun/lmterrain_1to6
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/bigrock_rounded_faint_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/s_grass_ml03b_big.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -663,13 +481,6 @@ textures/mp_railgun/lmterrain_1to6
 	{
 		stage bumpmap
 		map textures/snow_sd/s_grass_ml03b_big_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_grass_ml03b_big_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -697,34 +508,6 @@ textures/mp_railgun/lmterrain_2
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/snow_var01_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	
-	{
-		stage diffusemap
-		map textures/snow_sd/snow_var01_big.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage bumpmap
-		map textures/snow_sd/snow_var01_big_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_var01_big_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
 		rgbgen identity
@@ -747,12 +530,6 @@ textures/mp_railgun/lmterrain_2to3
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/snow_var01_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/snow_muddy.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -762,13 +539,6 @@ textures/mp_railgun/lmterrain_2to3
 	{
 		stage bumpmap
 		map textures/snow_sd/snow_muddy_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_muddy_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -796,12 +566,6 @@ textures/mp_railgun/lmterrain_2to4
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/snow_var01_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/mxrock4b_snow.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -811,13 +575,6 @@ textures/mp_railgun/lmterrain_2to4
 	{
 		stage bumpmap
 		map textures/snow_sd/mxrock4b_snow_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/mxrock4b_snow_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -845,12 +602,6 @@ textures/mp_railgun/lmterrain_2to5
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/snow_var01_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/snow_noisy.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -860,13 +611,6 @@ textures/mp_railgun/lmterrain_2to5
 	{
 		stage bumpmap
 		map textures/snow_sd/snow_noisy_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_noisy_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -894,12 +638,6 @@ textures/mp_railgun/lmterrain_2to6
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/snow_var01_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/s_grass_ml03b_big.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -909,13 +647,6 @@ textures/mp_railgun/lmterrain_2to6
 	{
 		stage bumpmap
 		map textures/snow_sd/s_grass_ml03b_big_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_grass_ml03b_big_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -941,34 +672,7 @@ textures/mp_railgun/lmterrain_3
 		map textures/snow_sd/snow_muddy_NORM.tga
 		rgbgen identity
 		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_muddy_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage diffusemap
-		map textures/snow_sd/snow_muddy.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage bumpmap
-		map textures/snow_sd/snow_muddy_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_muddy_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
+	} 
 	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
@@ -992,12 +696,6 @@ textures/mp_railgun/lmterrain_3to4
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/snow_muddy_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/mxrock4b_snow.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -1007,13 +705,6 @@ textures/mp_railgun/lmterrain_3to4
 	{
 		stage bumpmap
 		map textures/snow_sd/mxrock4b_snow_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/mxrock4b_snow_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -1041,12 +732,6 @@ textures/mp_railgun/lmterrain_3to5
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/snow_muddy_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/snow_noisy.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -1056,13 +741,6 @@ textures/mp_railgun/lmterrain_3to5
 	{
 		stage bumpmap
 		map textures/snow_sd/snow_noisy_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_noisy_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -1090,12 +768,6 @@ textures/mp_railgun/lmterrain_3to6
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/snow_muddy_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/s_grass_ml03b_big.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -1105,13 +777,6 @@ textures/mp_railgun/lmterrain_3to6
 	{
 		stage bumpmap
 		map textures/snow_sd/s_grass_ml03b_big_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_grass_ml03b_big_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -1139,33 +804,6 @@ textures/mp_railgun/lmterrain_4
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/mxrock4b_snow_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage diffusemap
-		map textures/snow_sd/mxrock4b_snow.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage bumpmap
-		map textures/snow_sd/mxrock4b_snow_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/mxrock4b_snow_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
 		rgbgen identity
@@ -1188,12 +826,6 @@ textures/mp_railgun/lmterrain_4to5
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/mxrock4b_snow_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/snow_noisy.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -1203,13 +835,6 @@ textures/mp_railgun/lmterrain_4to5
 	{
 		stage bumpmap
 		map textures/snow_sd/snow_noisy_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_noisy_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -1237,12 +862,6 @@ textures/mp_railgun/lmterrain_4to6
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/mxrock4b_snow_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/s_grass_ml03b_big.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -1252,13 +871,6 @@ textures/mp_railgun/lmterrain_4to6
 	{
 		stage bumpmap
 		map textures/snow_sd/s_grass_ml03b_big_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_grass_ml03b_big_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -1286,12 +898,6 @@ textures/mp_railgun/lmterrain_5
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/snow_noisy_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/snow_noisy.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -1301,13 +907,6 @@ textures/mp_railgun/lmterrain_5
 	{
 		stage bumpmap
 		map textures/snow_sd/snow_noisy_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/snow_noisy_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -1335,12 +934,6 @@ textures/mp_railgun/lmterrain_5to6
 		alphaGen vertex
 	}
 	{
-		stage specularmap
-		map textures/snow_sd/snow_noisy_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
 		stage diffusemap
 		map textures/snow_sd/s_grass_ml03b_big.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
@@ -1350,13 +943,6 @@ textures/mp_railgun/lmterrain_5to6
 	{
 		stage bumpmap
 		map textures/snow_sd/s_grass_ml03b_big_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_grass_ml03b_big_SPEC.tga
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 		rgbgen identity
 		alphaGen vertex
@@ -1383,33 +969,7 @@ textures/mp_railgun/lmterrain_6
 		rgbgen identity
 		alphaGen vertex
 	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_grass_ml03b_big_SPEC.tga
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage diffusemap
-		map textures/snow_sd/s_grass_ml03b_big.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage bumpmap
-		map textures/snow_sd/s_grass_ml03b_big_NORM.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
-	{
-		stage specularmap
-		map textures/snow_sd/s_grass_ml03b_big_SPEC.tga
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbgen identity
-		alphaGen vertex
-	}
+	
 	{
 		lightmap $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
