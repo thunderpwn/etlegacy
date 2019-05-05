@@ -5,7 +5,6 @@ textures/factory_sd/metal_wall1
     qer_editorimage textures/factory_sd/metal_wall1.tga
 	diffusemap textures/factory_sd/metal_wall1.tga
 	bumpmap textures/factory_sd/metal_wall1_NORM.tga
-	specularmap textures/factory_sd/metal_wall1_SPEC.tga
 	surfaceparm metalsteps
 	implicitMap -
 }

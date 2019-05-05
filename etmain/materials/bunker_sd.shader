@@ -24,7 +24,6 @@ textures/bunker_sd/girder02
 {
     qer_editorimage textures/bunker_sd/girder02.tga
 	diffusemap textures/bunker_sd/girder02.tga
-	specularmap textures/bunker_sd/girder02_SPEC.tga
 	bumpmap textures/bunker_sd/girder02_NORM.tga
 	surfaceparm metalsteps
 	implicitMap -
@@ -35,7 +34,6 @@ textures/bunker_sd/girder03
     qer_editorimage textures/bunker_sd/girder03.tga
 	diffusemap textures/bunker_sd/girder03.tga
 	bumpmap textures/bunker_sd/girder03_NORM.tga
-	specularmap textures/bunker_sd/girder03_SPEC.tga
 	surfaceparm metalsteps
 	implicitMap -
 }
@@ -64,7 +62,6 @@ textures/bunker_sd/concrete_c07bcmp_sand
     qer_editorimage textures/bunker_sd/concrete_c07bcmp_sand.tga
 	diffusemap textures/bunker_sd/concrete_c07bcmp_sand.tga
 	bumpmap textures/bunker_sd/concrete_c07bcmp_sand_NORM.tga
-	specularmap textures/bunker_sd/concrete_c07bcmp_sand_SPEC.tga
 	implicitMap -
 }
 
@@ -73,7 +70,6 @@ textures/bunker_sd/int_wall01
     qer_editorimage textures/bunker_sd/int_wall01.tga
 	diffusemap textures/bunker_sd/int_wall01.tga
 	bumpmap textures/bunker_sd/int_wall01_NORM.tga
-	specularmap textures/bunker_sd/int_wall01_SPEC.tga
 	implicitMap -
 }
 
@@ -82,7 +78,6 @@ textures/bunker_sd/int_wall01_rusty
     qer_editorimage textures/bunker_sd/int_wall01_rusty.tga
 	diffusemap textures/bunker_sd/int_wall01_rusty.tga
 	bumpmap textures/bunker_sd/int_wall01_rusty_NORM.tga
-	specularmap textures/bunker_sd/int_wall01_rusty_SPEC.tga
 	implicitMap -
 }
 
@@ -91,7 +86,6 @@ textures/bunker_sd/int_wall01_white
     qer_editorimage textures/bunker_sd/int_wall01_white.tga
 	diffusemap textures/bunker_sd/int_wall01_white.tga
 	bumpmap textures/bunker_sd/int_wall01_white_NORM.tga
-	specularmap textures/bunker_sd/int_wall01_white_SPEC.tga
 	implicitMap -
 }
 
@@ -100,7 +94,6 @@ textures/bunker_sd/int_wall07
     qer_editorimage textures/bunker_sd/int_wall07.tga
 	diffusemap textures/bunker_sd/int_wall07.tga
 	bumpmap textures/bunker_sd/int_wall07_NORM.tga
-	specularmap textures/bunker_sd/int_wall07_SPEC.tga
 	implicitMap -
 }
 
