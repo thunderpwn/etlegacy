@@ -93,7 +93,7 @@ cvar_t *r_dynamicLightShadows;
 
 
 cvar_t *r_compressDiffuseMaps;
-cvar_t *r_compressSpecularMaps;
+//cvar_t *r_compressSpecularMaps;
 cvar_t *r_compressNormalMaps;
 cvar_t *r_heatHazeFix;
 cvar_t *r_noMarksOnTrisurfs;
@@ -1178,7 +1178,7 @@ void R_Register(void)
 	
 	
 	r_compressDiffuseMaps     = ri.Cvar_Get("r_compressDiffuseMaps", "1", CVAR_ARCHIVE | CVAR_LATCH);
-	r_compressSpecularMaps    = ri.Cvar_Get("r_compressSpecularMaps", "1", CVAR_ARCHIVE | CVAR_LATCH);
+	//r_compressSpecularMaps    = ri.Cvar_Get("r_compressSpecularMaps", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_compressNormalMaps      = ri.Cvar_Get("r_compressNormalMaps", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_heatHazeFix             = ri.Cvar_Get("r_heatHazeFix", "0", CVAR_CHEAT);
 	r_noMarksOnTrisurfs       = ri.Cvar_Get("r_noMarksOnTrisurfs", "1", CVAR_CHEAT);

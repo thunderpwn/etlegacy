@@ -3,7 +3,7 @@
 
 uniform sampler2D u_DiffuseMap;
 uniform sampler2D u_NormalMap;
-uniform sampler2D u_SpecularMap;
+//uniform sampler2D u_SpecularMap;
 
 uniform samplerCube u_EnvironmentMap0;
 uniform samplerCube u_EnvironmentMap1;
@@ -95,7 +95,7 @@ void main()
 	//vec3 ambient = u_AmbientColor * ambNL;
 	
 	//vec3  specular = texture2D(u_SpecularMap, var_TexCoords).rgb * u_LightColor * pow(NH, r_SpecularExponent) * r_SpecularScale;
-	vec3  specular = texture2D(u_SpecularMap, var_TexCoords).rgb * u_LightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
+	vec3  specular = diffuse.rgb * u_LightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 
 	 // compute final color
     vec4 color = diffuse;

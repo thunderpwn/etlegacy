@@ -6,7 +6,7 @@ uniform bool SHOW_DELUXEMAP;
 
 uniform sampler2D u_DiffuseMap;
 uniform sampler2D u_NormalMap;
-uniform sampler2D u_SpecularMap;
+//uniform sampler2D u_SpecularMap;
 uniform sampler2D u_LightMap;
 uniform sampler2D u_DeluxeMap;
 uniform int       u_AlphaTest;
@@ -16,7 +16,7 @@ uniform vec4      u_PortalPlane;
 
 varying vec3 var_FragPos;
 varying vec2 var_TexCoords;
-varying vec2 var_TexSpecular;
+//varying vec2 var_TexSpecular;
 varying vec2 var_TexLight;
 
 varying vec3 var_Tangent;
@@ -107,7 +107,7 @@ void main()
 
 	// compute the specular term
 	//vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * lightColor * pow(clamp(dot(N, H), 0.0, 1.0), r_SpecularExponent) * r_SpecularScale;
-	vec3 specular = texture2D(u_SpecularMap, var_TexCoords).rgb * lightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
+	vec3 specular = diffuse.rgb * lightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 
 	// compute final color
 	vec4 color = diffuse;

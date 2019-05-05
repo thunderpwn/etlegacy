@@ -3,7 +3,7 @@
 
 uniform sampler2D u_DiffuseMap;
 uniform sampler2D u_NormalMap;
-uniform sampler2D u_SpecularMap;
+//uniform sampler2D u_SpecularMap;
 uniform sampler2D u_AttenuationMapXY;
 uniform sampler2D u_AttenuationMapZ;
 
@@ -1046,7 +1046,7 @@ void    main()
 #if defined(USE_NORMAL_MAPPING)
 	// compute the specular term
 	//vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * u_LightColor * pow(clamp(dot(N, H), 0.0, 1.0), r_SpecularExponent) * r_SpecularScale;
-	vec3 specular = texture2D(u_SpecularMap, texSpecular).rgb * u_LightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
+	vec3 specular = diffuse.rgb * u_LightColor * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 #endif
 
 

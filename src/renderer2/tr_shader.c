@@ -1610,11 +1610,11 @@ qboolean LoadMap(shaderStage_t *stage, char *buffer)
 			stage->bundle[0].image[0] = tr.whiteImage;
 			return qtrue;
 		}
-		if (stage->type == ST_SPECULARMAP)
+		/*if (stage->type == ST_SPECULARMAP)
 		{
 			stage->bundle[0].image[0] = tr.blackImage;
 			return qtrue;
-		}
+		}*/
 		//return something to keep gl happy
 		stage->bundle[0].image[0] = tr.whiteImage;
 		Ren_Warning("WARNING: LoadMap could not find image '%s' in shader '%s'\n", buffer, shader.name);
@@ -2160,10 +2160,10 @@ qboolean ParseStage(shaderStage_t *stage, char **text)
 			{
 				stage->type = ST_NORMALMAP;
 			}
-			else if (!Q_stricmp(token, "specularMap"))
+			/*else if (!Q_stricmp(token, "specularMap"))
 			{
 				stage->type = ST_SPECULARMAP;
-			}
+			}*/
 			else
 			{
 				// complex double blends
@@ -2216,7 +2216,8 @@ qboolean ParseStage(shaderStage_t *stage, char **text)
 			}
 			else if (!Q_stricmp(token, "specularMap"))
 			{
-				stage->type = ST_SPECULARMAP;
+				Ren_Print("specularmaps not supported anymore, not loading");
+				//stage->type = ST_SPECULARMAP;
 			}
 			else if (!Q_stricmp(token, "reflectionMap"))
 			{
@@ -3356,7 +3357,7 @@ void ParseNormalMap(shaderStage_t *stage, char **text)
  * @brief ParseSpecularMap
  * @param[in,out] stage
  * @param[in,out] text
- */
+ *
 void ParseSpecularMap(shaderStage_t *stage, char **text)
 {
 	char buffer[1024] = "";
@@ -4504,12 +4505,12 @@ static qboolean ParseShader(char *_text)
 			continue;
 		}
 		// specularMap <image>
-		else if (!Q_stricmp(token, "specularMap"))
+		/*else if (!Q_stricmp(token, "specularMap"))
 		{
 			ParseSpecularMap(&stages[s], text);
 			s++;
 			continue;
-		}
+		}*/
 		// glowMap <image>
 		else if (!Q_stricmp(token, "glowMap"))
 		{
@@ -4644,12 +4645,12 @@ static void CollapseStages()
 
 	qboolean hasDiffuseStage;
 	qboolean hasNormalStage;
-	qboolean hasSpecularStage;
+	//qboolean hasSpecularStage;
 	qboolean hasReflectionStage;
 
 	shaderStage_t tmpDiffuseStage;
 	shaderStage_t tmpNormalStage;
-	shaderStage_t tmpSpecularStage;
+	//shaderStage_t tmpSpecularStage;
 	shaderStage_t tmpReflectionStage;
 
 	//int           idxColorStage;
@@ -4679,12 +4680,12 @@ static void CollapseStages()
 	{
 		hasDiffuseStage    = qfalse;
 		hasNormalStage     = qfalse;
-		hasSpecularStage   = qfalse;
+		//hasSpecularStage   = qfalse;
 		hasReflectionStage = qfalse;
 
 		Com_Memset(&tmpDiffuseStage, 0, sizeof(shaderStage_t));
 		Com_Memset(&tmpNormalStage, 0, sizeof(shaderStage_t));
-		Com_Memset(&tmpSpecularStage, 0, sizeof(shaderStage_t));
+		//Com_Memset(&tmpSpecularStage, 0, sizeof(shaderStage_t));
 
 		//idxColorStage = -1;
 		Com_Memset(&tmpColorStage, 0, sizeof(shaderStage_t));
@@ -4806,11 +4807,11 @@ static void CollapseStages()
 				hasNormalStage = qtrue;
 				tmpNormalStage = stages[ji];
 			}
-			else if (stages[ji].type == ST_SPECULARMAP && !hasSpecularStage)
-			{
-				hasSpecularStage = qtrue;
-				tmpSpecularStage = stages[ji];
-			}
+			//else if (stages[ji].type == ST_SPECULARMAP && !hasSpecularStage)
+			//{
+			//	hasSpecularStage = qtrue;
+			//	tmpSpecularStage = stages[ji];
+			//}
 			else if (stages[ji].type == ST_REFLECTIONMAP && !hasReflectionStage)
 			{
 				hasReflectionStage = qtrue;
@@ -4821,7 +4822,7 @@ static void CollapseStages()
 		// NOTE: merge as many stages as possible
 
 		// try to merge diffuse/normal/specular
-		if (hasDiffuseStage && hasNormalStage && hasSpecularStage)
+		/*if (hasDiffuseStage && hasNormalStage && hasSpecularStage)
 		{
 			//Ren_Print("lighting_DBS\n");
 
@@ -4836,9 +4837,9 @@ static void CollapseStages()
 			numStages++;
 			j += 2;
 			continue;
-		}
+		}*/
 		// try to merge diffuse/normal
-		else if (hasDiffuseStage && hasNormalStage)
+		if (hasDiffuseStage && hasNormalStage)
 		{
 			//Ren_Print("lighting_DB\n");
 
@@ -5142,7 +5143,7 @@ static shader_t *FinishShader(void)
 			}
 			break;
 		}
-		case ST_SPECULARMAP:
+		/*case ST_SPECULARMAP:
 		{
 			if (!pStage->bundle[0].image[0])
 			{
@@ -5150,7 +5151,7 @@ static shader_t *FinishShader(void)
 				pStage->bundle[0].image[0] = tr.blackImage;
 			}
 			break;
-		}
+		}*/
 		case ST_ATTENUATIONMAP_XY:
 		{
 			if (!pStage->bundle[0].image[0])
@@ -5859,7 +5860,7 @@ shader_t *R_FindShader(const char *name, shaderType_t type, qboolean mipRawImage
 
 			// Note/FIXME: image file name has to be including extension, we use tga - make this more generic one day
 			// ETL: suffix for specularmaps is '_SPEC'
-			tmpImage = R_FindImageFile(va("%s_SPEC.tga", strippedName), !shader.noPicMip ? IF_NONE : IF_NOPICMIP, !shader.noPicMip ? FT_DEFAULT : FT_LINEAR, !shader.noPicMip ? WT_REPEAT : WT_EDGE_CLAMP, shader.name);
+			/*tmpImage = R_FindImageFile(va("%s_SPEC.tga", strippedName), !shader.noPicMip ? IF_NONE : IF_NOPICMIP, !shader.noPicMip ? FT_DEFAULT : FT_LINEAR, !shader.noPicMip ? WT_REPEAT : WT_EDGE_CLAMP, shader.name);
 			if (tmpImage)
 			{
 				stages[i].active             = qtrue;
@@ -5874,7 +5875,7 @@ shader_t *R_FindShader(const char *name, shaderType_t type, qboolean mipRawImage
 			
 				Ren_Developer("R_FindShader Warning: Specularmap image '%s' type %i not found.\n", va("%s_SPEC.tga", strippedName), shader.type);
 			}
-
+			*/
 			//tmpImage = R_FindImageFile(va("%s_disp", fileName), mipRawImage ? IF_NONE : IF_NOPICMIP, mipRawImage ? FT_DEFAULT : FT_LINEAR, mipRawImage ? WT_REPEAT : WT_CLAMP, shader.name);
 			//if(tmpImage)
 			//{

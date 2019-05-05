@@ -793,12 +793,12 @@ qboolean ParseShaderR1(char *_text)
 			continue;
 		}
 		// specularMap <image>
-		else if (!Q_stricmp(token, "specularMap"))
-		{
-			ParseSpecularMap(&stages[s], text);
-			s++;
-			continue;
-		}
+		//else if (!Q_stricmp(token, "specularMap"))
+		//{
+			//ParseSpecularMap(&stages[s], text);
+			//s++;
+			//continue;
+		//}
 		// glowMap <image>
 		else if (!Q_stricmp(token, "glowMap"))
 		{

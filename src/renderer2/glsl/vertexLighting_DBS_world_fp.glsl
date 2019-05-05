@@ -3,7 +3,7 @@
 
 uniform sampler2D u_DiffuseMap;
 uniform sampler2D u_NormalMap;
-uniform sampler2D u_SpecularMap;
+//uniform sampler2D u_SpecularMap;
 //we use this for fake light normals
 uniform sampler2D u_DeluxeMap;
 uniform int       u_AlphaTest;
@@ -90,7 +90,7 @@ void main()
 
 	// compute the specular term
 	//vec3 specular = texture2D(u_SpecularMap, var_TexCoords).rgb * var_LightColor.rgb * pow(clamp(dot(N, H), 0.0, 1.0), r_SpecularExponent) * r_SpecularScale;
-	vec3 specular = texture2D(u_SpecularMap, var_TexCoords).rgb * var_LightColor.rgb * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
+	vec3 specular = diffuse.rgb * var_LightColor.rgb * pow(max(dot(V, R), 0.0), r_SpecularExponent) * r_SpecularScale;
 	
 	// compute final color
 	vec4 color = vec4(diffuse.rgb, diffuse.a);

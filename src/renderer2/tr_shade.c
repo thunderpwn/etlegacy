@@ -603,7 +603,7 @@ static void Render_vertexLighting_DBS_entity(int stage)
 
 		SetUniformMatrix16(UNIFORM_NORMALTEXTUREMATRIX, tess.svars.texMatrices[TB_NORMALMAP]);
 
-		// bind u_SpecularMap
+	/*	// bind u_SpecularMap
 		SelectTexture(TEX_SPECULAR);
 		if (pStage->bundle[TB_SPECULARMAP].image[0])
 		{
@@ -615,7 +615,7 @@ static void Render_vertexLighting_DBS_entity(int stage)
 		}
 
 		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);
-
+		*/
 		
 	}
 		
@@ -713,7 +713,7 @@ static void Render_vertexLighting_DBS_world(int stage)
 
 		SetUniformMatrix16(UNIFORM_NORMALTEXTUREMATRIX, tess.svars.texMatrices[TB_NORMALMAP]);
 
-		// bind u_SpecularMap
+		/*// bind u_SpecularMap
 		SelectTexture(TEX_SPECULAR);
 		if (pStage->bundle[TB_SPECULARMAP].image[0])
 		{
@@ -725,7 +725,7 @@ static void Render_vertexLighting_DBS_world(int stage)
 		}
 
 		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);
-
+		*/
 		// bind u_DeluxeMap
 		SelectTexture(TEX_DELUXE);
 		GL_Bind(tr.flatImage);
@@ -831,7 +831,7 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 
 		SetUniformMatrix16(UNIFORM_NORMALTEXTUREMATRIX, tess.svars.texMatrices[TB_NORMALMAP]);
 
-		// bind u_SpecularMap
+	/*	// bind u_SpecularMap
 		SelectTexture(TEX_SPECULAR);
 		if (pStage->bundle[TB_SPECULARMAP].image[0])
 		{
@@ -843,7 +843,7 @@ static void Render_lightMapping(int stage, qboolean asColorMap, qboolean normalM
 		}
 
 		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);
-
+		*/
 		// bind u_DeluxeMap
 		SelectTexture(TEX_DELUXE);
 		BindDeluxeMap(pStage);
@@ -1183,7 +1183,7 @@ static void Render_forwardLighting_DBS_omni(shaderStage_t *diffuseStage,
 
 		SetUniformMatrix16(UNIFORM_NORMALTEXTUREMATRIX, tess.svars.texMatrices[TB_NORMALMAP]);
 
-		// bind u_SpecularMap
+	/*	// bind u_SpecularMap
 		SelectTexture(TEX_SPECULAR);
 		 if (diffuseStage->bundle[TB_SPECULARMAP].image[0])
 		{
@@ -1194,7 +1194,7 @@ static void Render_forwardLighting_DBS_omni(shaderStage_t *diffuseStage,
 			GL_Bind(tr.blackImage);
 		}
 
-		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);
+		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);*/
 	}
 
 	// bind u_AttenuationMapXY
@@ -1358,7 +1358,7 @@ static void Render_forwardLighting_DBS_proj(shaderStage_t *diffuseStage,
 
 		SetUniformMatrix16(UNIFORM_NORMALTEXTUREMATRIX, tess.svars.texMatrices[TB_NORMALMAP]);
 
-		// bind u_SpecularMap
+	/*	// bind u_SpecularMap
 		SelectTexture(TEX_SPECULAR);
 		
 		if (diffuseStage->bundle[TB_SPECULARMAP].image[0])
@@ -1370,7 +1370,7 @@ static void Render_forwardLighting_DBS_proj(shaderStage_t *diffuseStage,
 			GL_Bind(tr.blackImage);
 		}
 
-		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);
+		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);*/
 	}
 
 	// bind u_AttenuationMapXY
@@ -1545,7 +1545,7 @@ static void Render_forwardLighting_DBS_directional(shaderStage_t *diffuseStage,
 
 		SetUniformMatrix16(UNIFORM_NORMALTEXTUREMATRIX, tess.svars.texMatrices[TB_NORMALMAP]);
 
-		// bind u_SpecularMap
+		/*// bind u_SpecularMap
 		SelectTexture(TEX_SPECULAR);
 		
 		
@@ -1558,7 +1558,7 @@ static void Render_forwardLighting_DBS_directional(shaderStage_t *diffuseStage,
 			GL_Bind(tr.blackImage);
 		}
 
-		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);
+		SetUniformMatrix16(UNIFORM_SPECULARTEXTUREMATRIX, tess.svars.texMatrices[TB_SPECULARMAP]);*/
 	}
 
 	// bind u_ShadowMap
@@ -2071,7 +2071,7 @@ static void Render_liquid(int stage)
 	qboolean      normalMapping = qfalse;
 
 	Ren_LogComment("--- Render_liquid ---\n");
-
+	glEnable(GL_CLIP_PLANE0);
 	// let cvar decide
 	if (r_normalMapping->integer)
 	{
@@ -2116,14 +2116,9 @@ static void Render_liquid(int stage)
 
 	// capture current color buffer for u_CurrentMap
 	SelectTexture(TEX_CURRENT);
-	if (HDR_ENABLED())
-	{
-		GL_Bind(tr.deferredRenderFBOImage);
-	}
-	else
-	{
-		ImageCopyBackBuffer(tr.currentRenderImage);
-	}
+	ImageCopyBackBuffer(tr.currentRenderImage);
+	
+	
 
 	if (backEnd.viewParms.isPortal)
 	{
@@ -2162,6 +2157,7 @@ static void Render_liquid(int stage)
 	Tess_DrawElements();
 
 	GL_CheckErrors();
+	glDisable(GL_CLIP_PLANE0);
 }
 
 /**
@@ -3071,7 +3067,7 @@ void Tess_StageIteratorGeneric()
 		}
 		case ST_DIFFUSEMAP:
 		case ST_COLLAPSE_lighting_DB:
-		case ST_COLLAPSE_lighting_DBS:
+		//case ST_COLLAPSE_lighting_DBS:
 		{
 			if (tess.lightmapNum >= 0)
 				{
@@ -3248,7 +3244,7 @@ void Tess_StageIteratorShadowFill()
 		case ST_LIGHTMAP:
 		case ST_DIFFUSEMAP:
 		case ST_COLLAPSE_lighting_DB:
-		case ST_COLLAPSE_lighting_DBS:
+		//case ST_COLLAPSE_lighting_DBS:
 		{
 			Render_shadowFill(stage);
 			break;
@@ -3357,7 +3353,7 @@ void Tess_StageIteratorLighting()
 			{
 			case ST_DIFFUSEMAP:
 			case ST_COLLAPSE_lighting_DB:
-			case ST_COLLAPSE_lighting_DBS:
+			//case ST_COLLAPSE_lighting_DBS:
 				if (light->l.rlType == RL_OMNI)
 				{
 					Render_forwardLighting_DBS_omni(diffuseStage, attenuationXYStage, attenuationZStage, light);

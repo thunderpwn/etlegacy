@@ -620,7 +620,7 @@ typedef enum
 	DEFAULT = 0,
 	DIFFUSE,
 	NORMAL,
-	SPECULAR
+	//SPECULAR
 } BuffetType_t;
 
 /**
@@ -1120,8 +1120,8 @@ enum
 	TB_COLORMAP   = 0,
 	TB_DIFFUSEMAP = 0,
 	TB_NORMALMAP,
-	TB_SPECULARMAP,
-	MAX_TEXTURE_BUNDLES = 3
+	//TB_SPECULARMAP,
+	MAX_TEXTURE_BUNDLES = 2
 };
 
 /**
@@ -1154,7 +1154,7 @@ typedef enum
 	ST_COLORMAP = 0,            ///< vanilla Q3A style shader treatening
 	ST_DIFFUSEMAP,
 	ST_NORMALMAP,
-	ST_SPECULARMAP,
+	//ST_SPECULARMAP,
 	ST_REFLECTIONMAP,           ///< cubeMap based reflection
 	ST_REFRACTIONMAP,
 	ST_DISPERSIONMAP,
@@ -1167,7 +1167,7 @@ typedef enum
 	ST_LIGHTMAP,
 
 	ST_COLLAPSE_lighting_DB,    ///< diffusemap + bumpmap
-	ST_COLLAPSE_lighting_DBS,   ///< diffusemap + bumpmap + specularmap
+	//ST_COLLAPSE_lighting_DBS,   ///< diffusemap + bumpmap + specularmap
 	ST_COLLAPSE_reflection_CB,  ///< color cubemap + bumpmap
 
 	// light shader stage types
@@ -3507,7 +3507,7 @@ typedef struct
 
 	image_t *deferredDiffuseFBOImage;
 	image_t *deferredNormalFBOImage;
-	image_t *deferredSpecularFBOImage;
+	//image_t *deferredSpecularFBOImage;
 	image_t *deferredRenderFBOImage;
 	image_t *lightRenderFBOImage;
 	image_t *occlusionRenderFBOImage;
@@ -3737,7 +3737,7 @@ extern cvar_t *r_dynamicLightShadows;
 
 
 extern cvar_t *r_compressDiffuseMaps;
-extern cvar_t *r_compressSpecularMaps;
+//extern cvar_t *r_compressSpecularMaps;
 extern cvar_t *r_compressNormalMaps;
 extern cvar_t *r_heatHazeFix;
 extern cvar_t *r_noMarksOnTrisurfs;
