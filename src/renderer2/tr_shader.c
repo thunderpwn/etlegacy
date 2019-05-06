@@ -3353,29 +3353,7 @@ void ParseNormalMap(shaderStage_t *stage, char **text)
 	}
 }
 
-/**
- * @brief ParseSpecularMap
- * @param[in,out] stage
- * @param[in,out] text
- *
-void ParseSpecularMap(shaderStage_t *stage, char **text)
-{
-	char buffer[1024] = "";
 
-	stage->active    = qtrue;
-	stage->type      = ST_SPECULARMAP;
-	stage->rgbGen    = CGEN_IDENTITY;
-	stage->stateBits = GLS_DEFAULT;
-	if (!r_compressSpecularMaps->integer)
-	{
-		stage->forceHighQuality = qtrue;
-	}
-
-	if (ParseMap(stage, text, buffer, sizeof(buffer)))
-	{
-		LoadMap(stage, buffer);
-	}
-}
 
 /**
  * @brief ParseGlowMap
@@ -4504,13 +4482,7 @@ static qboolean ParseShader(char *_text)
 			s++;
 			continue;
 		}
-		// specularMap <image>
-		/*else if (!Q_stricmp(token, "specularMap"))
-		{
-			ParseSpecularMap(&stages[s], text);
-			s++;
-			continue;
-		}*/
+	
 		// glowMap <image>
 		else if (!Q_stricmp(token, "glowMap"))
 		{
@@ -4645,19 +4617,19 @@ static void CollapseStages()
 
 	qboolean hasDiffuseStage;
 	qboolean hasNormalStage;
-	//qboolean hasSpecularStage;
+	
 	qboolean hasReflectionStage;
 
 	shaderStage_t tmpDiffuseStage;
 	shaderStage_t tmpNormalStage;
-	//shaderStage_t tmpSpecularStage;
+
 	shaderStage_t tmpReflectionStage;
 
-	//int           idxColorStage;
+	int           idxColorStage;
 	shaderStage_t tmpColorStage;
 
-	//int           idxLightmapStage;
-	//shaderStage_t tmpLightmapStage;
+	int           idxLightmapStage;
+	shaderStage_t tmpLightmapStage;
 
 	shader_t tmpShader;
 
@@ -4680,18 +4652,18 @@ static void CollapseStages()
 	{
 		hasDiffuseStage    = qfalse;
 		hasNormalStage     = qfalse;
-		//hasSpecularStage   = qfalse;
+		
 		hasReflectionStage = qfalse;
 
 		Com_Memset(&tmpDiffuseStage, 0, sizeof(shaderStage_t));
 		Com_Memset(&tmpNormalStage, 0, sizeof(shaderStage_t));
-		//Com_Memset(&tmpSpecularStage, 0, sizeof(shaderStage_t));
+		
 
-		//idxColorStage = -1;
+		idxColorStage = -1;
 		Com_Memset(&tmpColorStage, 0, sizeof(shaderStage_t));
 
-		//idxLightmapStage = -1;
-		//Com_Memset(&tmpLightmapStage, 0, sizeof(shaderStage_t));
+		idxLightmapStage = -1;
+		Com_Memset(&tmpLightmapStage, 0, sizeof(shaderStage_t));
 
 		if (!stages[j].active)
 		{
@@ -4714,7 +4686,7 @@ static void CollapseStages()
 			continue;
 		}
 
-#if 0 //defined(COMPAT_Q3A) || defined(COMPAT_ET) FIXME?
+
 		for (i = 0; i < 2; i++)
 		{
 			if ((j + i) >= MAX_SHADER_STAGES)
@@ -4751,7 +4723,7 @@ static void CollapseStages()
 			tmpShader.collapseType = COLLAPSE_color_lightmap;
 
 			tmpStages[numStages]            = tmpColorStage;
-			tmpStages[numStages].type       = ST_DIFFUSEMAP;
+			tmpStages[numStages].type       = ST_COLORMAP;
 			tmpStages[numStages].stateBits &= ~(GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS);
 			//tmpStages[numStages].stateBits |= GLS_DEPTHMASK_TRUE;
 
@@ -4761,7 +4733,7 @@ static void CollapseStages()
 			j += 1;
 			continue;
 		}
-		/*
+		
 		else if(idxLightmapStage > idxColorStage)
 		{
 		    tmpStages[numStages] = tmpColorStage;
@@ -4771,7 +4743,7 @@ static void CollapseStages()
 		    numStages++;
 		    continue;
 		}
-		else
+		/*else
 		{
 		    tmpStages[numStages] = tmpLightmapStage;
 		    numStages++;
@@ -4781,7 +4753,7 @@ static void CollapseStages()
 		    continue;
 		}
 		*/
-#endif
+
 
 		for (i = 0; i < 3; i++)
 		{
@@ -4807,11 +4779,7 @@ static void CollapseStages()
 				hasNormalStage = qtrue;
 				tmpNormalStage = stages[ji];
 			}
-			//else if (stages[ji].type == ST_SPECULARMAP && !hasSpecularStage)
-			//{
-			//	hasSpecularStage = qtrue;
-			//	tmpSpecularStage = stages[ji];
-			//}
+			
 			else if (stages[ji].type == ST_REFLECTIONMAP && !hasReflectionStage)
 			{
 				hasReflectionStage = qtrue;
@@ -4821,23 +4789,7 @@ static void CollapseStages()
 
 		// NOTE: merge as many stages as possible
 
-		// try to merge diffuse/normal/specular
-		/*if (hasDiffuseStage && hasNormalStage && hasSpecularStage)
-		{
-			//Ren_Print("lighting_DBS\n");
-
-			tmpShader.collapseType = COLLAPSE_lighting_DBS;
-
-			tmpStages[numStages]      = tmpDiffuseStage;
-			tmpStages[numStages].type = ST_COLLAPSE_lighting_DBS;
-
-			tmpStages[numStages].bundle[TB_NORMALMAP]   = tmpNormalStage.bundle[0];
-			tmpStages[numStages].bundle[TB_SPECULARMAP] = tmpSpecularStage.bundle[0];
-
-			numStages++;
-			j += 2;
-			continue;
-		}*/
+		
 		// try to merge diffuse/normal
 		if (hasDiffuseStage && hasNormalStage)
 		{
