@@ -2106,11 +2106,9 @@ static void Render_liquid(int stage)
 		SetUniformFloat(UNIFORM_DEPTHSCALE, RB_EvalExpression(&pStage->depthScaleExp, r_parallaxDepthScale->value));
 	}
 
-#if 1
+
 	VectorCopy(tr.sunDirection, lightDirection);
-#else
-	VectorCopy(light->direction, lightDirection);
-#endif
+
 
 	SetUniformVec3(UNIFORM_LIGHTDIR, lightDirection);
 
