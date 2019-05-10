@@ -25,63 +25,7 @@ varying vec3 var_Binormal;
 varying vec3 var_Normal;
 varying vec4 var_LightColor;
 
-#if defined(USE_PARALLAX_MAPPING)
-float RayIntersectDisplaceMap(vec2 dp, vec2 ds)
-{
-	const int linearSearchSteps = 16;
-	const int binarySearchSteps = 6;
 
-	float depthStep = 1.0 / float(linearSearchSteps);
-
-	// current size of search window
-	float size = depthStep;
-
-	// current depth position
-	float depth = 0.0;
-
-	// best match found (starts with last position 1.0)
-	float bestDepth = 1.0;
-
-	// search front to back for first point inside object
-	for (int i = 0; i < linearSearchSteps - 1; ++i)
-	{
-		depth += size;
-
-		vec4 t = texture2D(u_NormalMap, dp + ds * depth);
-
-		if (bestDepth > 0.996)       // if no depth found yet
-		{
-			if (depth >= t.w)
-			{
-				bestDepth = depth;  // store best depth
-			}
-		}
-	}
-
-	depth = bestDepth;
-
-	// recurse around first point (depth) for closest match
-	for (int i = 0; i < binarySearchSteps; ++i)
-	{
-		size *= 0.5;
-
-		vec4 t = texture2D(u_NormalMap, dp + ds * depth);
-
-		if (depth >= t.w)
-		#ifdef RM_DOUBLEDEPTH
-			if (depth <= t.z)
-		#endif
-		{
-			bestDepth = depth;
-			depth    -= 2.0 * size;
-		}
-
-		depth += size;
-	}
-
-	return bestDepth;
-}
-#endif //USE_PARALLAX_MAPPING
 
 void main()
 {
@@ -114,55 +58,36 @@ void main()
 	vec2 texScreen = gl_FragCoord.st * r_FBufScale * r_NPOTScale;
 	vec2 texNormal = var_TexNormal.st;
 
-#if defined(USE_PARALLAX_MAPPING)
-	// ray intersect in view direction
 
-	mat3 worldToTangentMatrix = transpose(tangentToWorldMatrix);
-
-	// compute view direction in tangent space
-	vec3 Vts = normalize(worldToTangentMatrix * V);
-
-	// size and start position of search in texture space
-	vec2 S = Vts.xy * -u_DepthScale / Vts.z;
-
-	float depth = RayIntersectDisplaceMap(texNormal, S);
-
-	// compute texcoords offset
-	vec2 texOffset = S * depth;
-
-	texScreen.st += texOffset;
-	texNormal.st += texOffset;
-	//texSpecular.st += texOffset; FIXME?!
-#endif //USE_PARALLAX_MAPPING
 
 	// compute normals
 	vec3 N = var_Normal.xyz;
 
-#if defined(r_NormalScale)
-	N.z *= r_NormalScale;
-#endif
+    // compute light direction in world space
+	vec3 L = normalize(u_LightDir);
 
 	N = normalize(N);
 
-	vec3 N2 = 2.0 * (texture2D(u_NormalMap, texNormal).xyz - 0.5); // FIXME: normalize?
-	N2 = normalize(tangentToWorldMatrix * N2);
+	vec3 N2 = normalize(texture2D(u_NormalMap, texNormal).xyz *2.0 - 1.0); 
+	
 
 	vec3 N3 = normalize(N + V);
 
 	// compute fresnel term
-	float fresnel = clamp(u_FresnelBias + pow(1.0 - dot(N2, N3), u_FresnelPower) * u_FresnelScale, 0.0, 1.0);
+	float fresnel = max(u_FresnelBias + pow(1.0 - dot(N2, L), u_FresnelPower) * u_FresnelScale, 0.0);
 
 	texScreen += u_NormalScale * N2.xy;
 
 	vec3 refractColor = texture2D(u_CurrentMap, texScreen).rgb;
+	vec3 refract2 = reflect(refractColor,L);
 
 	// compute reflection ray
-	vec3 R = reflect(V, N2);
+	vec3 R = reflect(L, N2);
 	vec3 reflectColor = textureCube(u_PortalMap, R).rgb;
-
+	vec3 reflect2 = reflect(reflectColor,L);
 	vec4 color;
 
-	color.rgb = mix(refractColor, reflectColor, fresnel);
+	color.rgb = mix(refract2, reflect2, fresnel);
 	color.a   = 1.0;
 
 	if (u_FogDensity > 0.0)
@@ -184,8 +109,7 @@ void main()
 		color.rgb = mix(u_FogColor, color.rgb, fogFactor);
 	}
 
-	// compute light direction in world space
-	vec3 L = normalize(u_LightDir);
+	
 
 	// compute half angle in world space
 	vec3 H = normalize(L + V);
