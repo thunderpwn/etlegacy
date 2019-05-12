@@ -2096,7 +2096,7 @@ static void Render_liquid(int stage)
 	SetUniformFloat(UNIFORM_FRESNELBIAS, RB_EvalExpression(&pStage->fresnelBiasExp, 0.05f));
 	SetUniformFloat(UNIFORM_NORMALSCALE, RB_EvalExpression(&pStage->normalScaleExp, 0.05f));
 	SetUniformFloat(UNIFORM_FOGDENSITY, RB_EvalExpression(&pStage->fogDensityExp, 0.0005f));
-	SetUniformVec3(UNIFORM_FOGCOLOR, tess.svars.color);
+	SetUniformVec3(UNIFORM_FOGCOLOR, tr.fogColor);
 	SetUniformMatrix16(UNIFORM_UNPROJECTMATRIX, backEnd.viewParms.unprojectionMatrix);
 	SetUniformMatrix16(UNIFORM_MODELMATRIX, backEnd.orientation.transformMatrix);
 	SetUniformMatrix16(UNIFORM_MODELVIEWPROJECTIONMATRIX, GLSTACK_MVPM);
@@ -2144,10 +2144,18 @@ static void Render_liquid(int stage)
 	if (normalMapping)
 	{
 		GL_Bind(pStage->bundle[TB_COLORMAP].image[0]); // FIXME TB_COLORMAP
+		if (!pStage->bundle[TB_COLORMAP].image[0])
+		{
+			GL_Bind(tr.flatImage);
+		}
 	}
 	else
 	{
 		GL_Bind(pStage->bundle[TB_COLORMAP].image[0]);
+		if (!pStage->bundle[TB_COLORMAP].image[0])
+		{
+			GL_Bind(tr.whiteImage);
+		}
 	}
 
 	SetUniformMatrix16(UNIFORM_NORMALTEXTUREMATRIX, tess.svars.texMatrices[TB_COLORMAP]);
