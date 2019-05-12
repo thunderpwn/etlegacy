@@ -26,15 +26,6 @@ textures/village/villwin_c12m_glass
 		rgbgen vertex
 		depthWrite
 	}
-	{
-	   stage specularmap
-	   map textures/village/villwin_c12m_SPEC.tga
-       //blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		blendfunc blend
-		//alphaFunc GE128
-		rgbgen vertex
-		depthWrite
-	}
 }
 
 textures/village/villwin_c15
